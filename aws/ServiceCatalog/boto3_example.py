@@ -1,4 +1,4 @@
-import boto3
+import boto3 
 
 client = boto3.client('servicecatalog')
 
