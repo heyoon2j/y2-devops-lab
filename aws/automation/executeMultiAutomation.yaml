@@ -48,9 +48,8 @@ mainSteps:
       action: 'aws:executeAutomation'
       inputs:
         DocumentName: "{{ drAutomationName }}"
-
-        MaxConcurrency: 
-        MaxErrors:
+        MaxConcurrency: '100%'
+        MaxErrors: '100%'
 
         RuntimeParameters:
 
