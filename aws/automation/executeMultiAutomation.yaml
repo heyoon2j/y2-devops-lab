@@ -15,56 +15,45 @@ schemaVersion: '0.3'
 parameters:
   allOrOne:
     type: String
+    description: "all : execute all dr automaion/ one : execute specific dr automation"
     default: 'one'
+    allowedPattern: ""
+    maxItems: 1
   drAutomationName:
     type: String
     default: 'test'
+    maxItems: 1
 mainSteps:
   - name: 'selectDrAutomation'
     action: 'aws:branch'
     inputs:
       Choices:
-        - NextStep: 'countAllDRAutomation'
+        - NextStep: 'executeAllDRAutomation'
           Variable: "{{ allOrOne }}"
           StringEquals: 'all'
         - NextStep: 'executeOneDrAutomation'
           Variable: "{{ allOrOne }}"
           StringEquals: 'one'
       Default:
-        'sleep1s'
-    
-    - name: 'checkAllDRAutomationCount'
-      action: 'aws:executeAwsApi'
-      inputs:
-        Service: 
-        Api:
-      outputs:
-        - Name: 'allDRAutomationCount'
-          Selector: '$.Images[0].ImageId'
-          Type: String
-      nextStep: 'executeAllDrAutomation'
-
+        'sleep10s'
     - name: 'executeAllDrAutomation'
       action: 'aws:executeAutomation'
       inputs:
         DocumentName: "{{ drAutomationName }}"
         MaxConcurrency: '100%'
         MaxErrors: '100%'
-
-        RuntimeParameters:
-
-
+      isEnd: true
     - name: 'executeOneDrAutomation'
       action: 'aws:executeAutomation'
       inputs:
         DocumentName: "{{ drAutomationName }}"
         RuntimeParameters:
-
-    - name: 'sleep1s'
+      isEnd: true
+    - name: 'sleep10s'
       action: 'aws:sleep'
       inputs:
-        Duration: 
-      
+        Duration: PT10S
+      isEnd: true
 
 
 
