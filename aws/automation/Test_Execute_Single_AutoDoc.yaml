@@ -23,17 +23,6 @@ parameters:
     type: String
     default: test
 mainSteps:
-  - name: selectDrAutomation
-    action: 'aws:branch'
-    inputs:
-      Choices:
-        - NextStep: executeAllDrAutomation
-          Variable: '{{ allOrOne }}'
-          StringEquals: all
-        - NextStep: executeOneDrAutomation
-          Variable: '{{ allOrOne }}'
-          StringEquals: one
-      Default: sleep1s
   - name: executeAllDrAutomation
     action: 'aws:executeAutomation'
     inputs:
@@ -52,9 +41,4 @@ mainSteps:
     action: 'aws:sleep'
     inputs:
       Duration: PT10S
-
-
-
-
-
 

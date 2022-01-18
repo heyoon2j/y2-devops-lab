@@ -23,28 +23,22 @@ parameters:
     type: String
     default: test
 mainSteps:
-  - name: selectDrAutomation
+  - name: selectAutomation
     action: 'aws:branch'
     inputs:
       Choices:
-        - NextStep: executeAllDrAutomation
+        - NextStep: executeMultiDrAutomation
           Variable: '{{ allOrOne }}'
           StringEquals: all
-        - NextStep: executeOneDrAutomation
+        - NextStep: executeSingleDrAutomation
           Variable: '{{ allOrOne }}'
           StringEquals: one
       Default: sleep1s
-  - name: executeAllDrAutomation
+  - name: executeMultiDrAutomation
     action: 'aws:executeAutomation'
     inputs:
       DocumentName: '{{ drAutomationName }}'
-      MaxConcurrency: 100%
-      MaxErrors: 100%
-      TargetParameterName: 'drAutomationName'
-      Targets:
-        - Key: 'resource-groups:Name'
-          Value: '{{ drResourceGroup }}'
-  - name: executeOneDrAutomation
+  - name: executeSingleDrAutomation
     action: 'aws:executeAutomation'
     inputs:
       DocumentName: '{{ drAutomationName }}'
@@ -52,9 +46,4 @@ mainSteps:
     action: 'aws:sleep'
     inputs:
       Duration: PT10S
-
-
-
-
-
 
