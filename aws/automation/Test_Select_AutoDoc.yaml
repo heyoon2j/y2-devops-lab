@@ -13,9 +13,9 @@ description: |-
   You can create a [link to another webpage](https://aws.amazon.com/).
 schemaVersion: '0.3'
 parameters:
-  allOrOne:
+  singleOrMulti:
     type: String
-    default: one
+    default: single
   drAutomationName:
     type: String
     default: test
@@ -27,22 +27,23 @@ mainSteps:
     action: 'aws:branch'
     inputs:
       Choices:
-        - NextStep: executeMultiDrAutomation
-          Variable: '{{ allOrOne }}'
-          StringEquals: all
         - NextStep: executeSingleDrAutomation
-          Variable: '{{ allOrOne }}'
-          StringEquals: one
-      Default: sleep1s
+          Variable: '{{ singleOrMulti }}'
+          StringEquals: 'single'      
+        - NextStep: executeMultiDrAutomation
+          Variable: '{{ singleOrMulti }}'
+          StringEquals: 'multi'
+      Default: sleep10s
   - name: executeMultiDrAutomation
     action: 'aws:executeAutomation'
     inputs:
       DocumentName: '{{ drAutomationName }}'
+      
   - name: executeSingleDrAutomation
     action: 'aws:executeAutomation'
     inputs:
       DocumentName: '{{ drAutomationName }}'
-  - name: sleep1s
+  - name: sleep10s
     action: 'aws:sleep'
     inputs:
       Duration: PT10S
