@@ -15,15 +15,6 @@ schemaVersion: '0.3'
 parameters:
   allOrOne:
     type: String
-<<<<<<< HEAD
-    default: one
-  drAutomationName:
-    type: String
-    default: test
-  drResourceGroup:
-    type: String
-    default: test
-=======
     description: "all : execute all dr automaion/ one : execute specific dr automation"
     default: 'one'
     allowedPattern: ""
@@ -32,39 +23,11 @@ parameters:
     type: String
     default: 'test'
     maxItems: 1
->>>>>>> ac40b8c63855c6d80ad29679c7b50b498c43ddf6
 mainSteps:
   - name: selectDrAutomation
     action: 'aws:branch'
     inputs:
       Choices:
-<<<<<<< HEAD
-        - NextStep: executeAllDrAutomation
-          Variable: '{{ allOrOne }}'
-          StringEquals: all
-        - NextStep: executeOneDrAutomation
-          Variable: '{{ allOrOne }}'
-          StringEquals: one
-      Default: sleep1s
-  - name: executeAllDrAutomation
-    action: 'aws:executeAutomation'
-    inputs:
-      DocumentName: '{{ drAutomationName }}'
-      MaxConcurrency: 100%
-      MaxErrors: 100%
-      TargetParameterName: 'drAutomationName'
-      Targets:
-        - Key: 'resource-groups:Name'
-          Value: '{{ drResourceGroup }}'
-  - name: executeOneDrAutomation
-    action: 'aws:executeAutomation'
-    inputs:
-      DocumentName: '{{ drAutomationName }}'
-  - name: sleep1s
-    action: 'aws:sleep'
-    inputs:
-      Duration: PT10S
-=======
         - NextStep: 'executeAllDRAutomation'
           Variable: "{{ allOrOne }}"
           StringEquals: 'all'
@@ -91,7 +54,6 @@ mainSteps:
       inputs:
         Duration: PT10S
       isEnd: true
->>>>>>> ac40b8c63855c6d80ad29679c7b50b498c43ddf6
 
 
 
