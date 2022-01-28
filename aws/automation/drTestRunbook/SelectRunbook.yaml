@@ -1,0 +1,51 @@
+description: |-
+  # Automation Runbook : SelectRunbook
+  * This Runbook executes specific child runbook or concurrently multi child runbook.
+
+  ## Select
+  * 
+  * 
+  *Replace this default text with instructions or other information about your document.*  
+schemaVersion: '0.3'
+parameters:
+  isSingle:
+    type: Boolean
+    description: 'true : Execute single runbook / false : Execute multi runbook'
+    default: true
+  runbookName:
+    type: String
+    default: 'test'
+  runbookGroupName:
+    type: String
+    default: 'rg-dr-test'
+mainSteps:
+  - name: SelectRunbook
+    action: 'aws:branch'
+    inputs:
+      Choices:
+        - NextStep: ExecuteRunbookGroup
+          Variable: '{{ isSingle }}'
+          BooleanEquals: false
+      Default: ExecuteSingleRunbook
+  - name: ExecuteSingleRunbook
+    action: 'aws:executeAutomation'
+    inputs:
+      DocumentName: '{{ runbookName }}'
+    nextStep: sleep10s
+  - name: ExecuteRunbookGroup
+    action: 'aws:executeAutomation'
+    inputs:
+      DocumentName: 'ExecuteRunbookGroup'
+      MaxConcurrency: 100%
+      MaxErrors: 100%
+      TargetParameterName: 'runbookName'
+      Targets:
+        - Key: ResourceGroup
+          Values:
+            - '{{ runbookGroupName }}'
+    nextStep: sleep10s
+  - name: sleep10s
+    action: 'aws:sleep'
+    inputs:
+      Duration: PT10S
+    isEnd: true

@@ -6,9 +6,9 @@ description: |-
   Markdown is a lightweight markup language that converts your content with plain text formatting to structurally valid rich text.
   ## You can add headings
   You can add *italics* or make the font **bold**.  
-  1. Create numbered lists 
-  * Add bullet points 
-  >Indent `code samples` 
+  1. Create numbered lists
+  * Add bullet points
+  >Indent `code samples`
 
   You can create a [link to another webpage](https://aws.amazon.com/).
 schemaVersion: '0.3'
@@ -28,7 +28,7 @@ parameters:
     default: 'test'
     maxItems: 1
 mainSteps:
-  - name: 'selectDrAutomation'
+  - name: selectDrAutomation
     action: 'aws:branch'
     inputs:
       Choices:

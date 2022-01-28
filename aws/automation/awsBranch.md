@@ -63,6 +63,24 @@ mainSteps:
       sleep3
 ```
 </br>
+
+### Operation 종류
+1. String operations
+  * StringEquals
+  * EqualsIgnoreCase
+  * StartsWith
+  * EndsWith
+  * Contains
+2. Numeric operations
+  * NumericEquals
+  * NumericGreater
+  * NumericLesser
+  * NumericGreaterOrEquals
+  * NumericLesser
+  * NumericLesserOrEquals
+3. Boolean operation
+  * BooleanEquals
+</br>
 </br>
 
 
