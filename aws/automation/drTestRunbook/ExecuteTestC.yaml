@@ -1,0 +1,14 @@
+description: |-
+  # Automation Runbook : SelectRunbook
+  * This Runbook executes specific child runbook or concurrently multi child runbook.
+
+  ## Select Runbook
+  * Single Runbook  ('isSingle' == true  / choice 'runbookName')
+  * Multi Runbook ('isSingle' == false  / choice 'runbookGroupName')
+schemaVersion: '0.3'
+mainSteps:
+  - name: sleep10s
+    action: 'aws:sleep'
+    inputs:
+      Duration: PT10S
+    isEnd: true

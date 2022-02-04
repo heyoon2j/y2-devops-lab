@@ -2,10 +2,9 @@ description: |-
   # Automation Runbook : SelectRunbook
   * This Runbook executes specific child runbook or concurrently multi child runbook.
 
-  ## Select
-  * 
-  * 
-  *Replace this default text with instructions or other information about your document.*  
+  ## Select Runbook
+  * Single Runbook  ('isSingle' == true  / choice 'runbookName')
+  * Multi Runbook ('isSingle' == false  / choice 'runbookGroupName')
 schemaVersion: '0.3'
 parameters:
   isSingle:
@@ -14,10 +13,18 @@ parameters:
     default: true
   runbookName:
     type: String
-    default: 'test'
+    description: If 'isSingle' is 'true', Select this value
+    default: 'dummy'
+    allowedValues: [
+      'ExecuteTestA', 'ExecuteTestB', 'ExecuteTestC'
+    ]
   runbookGroupName:
     type: String
-    default: 'rg-dr-test'
+    description: If 'isSingle' is 'false', Select this value
+    default: 'dummy'
+    allowedValues: [
+      'rg-dr-test'
+    ]
 mainSteps:
   - name: SelectRunbook
     action: 'aws:branch'
@@ -43,6 +50,9 @@ mainSteps:
         - Key: ResourceGroup
           Values:
             - '{{ runbookGroupName }}'
+      RuntimeParameters:
+        parameter1: 
+        parameter2: 
     nextStep: sleep10s
   - name: sleep10s
     action: 'aws:sleep'

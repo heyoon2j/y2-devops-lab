@@ -1,0 +1,66 @@
+description: |-
+  # Automation Runbook : ExecuteTestA-EC2
+  * This Runbook creates EC2 Instance CloudFormation Stack
+
+  ## Parameters
+  * SubnetId
+  * 
+  * 
+  * 
+  * 
+
+  ## Step
+  ### Step 1. Security Group
+  * 
+
+
+  ### Step 2. Instance
+  * 
+
+
+  ### Step 3. Application Load Balance
+  * 
+
+schemaVersion: '0.3'
+parameters:
+  instanceName:
+    type: String
+    description: Instance Name
+    default: true
+  subnetId:
+    type: String
+    description: Sunbet ID
+    default: 'dummy'
+  amiId:
+    type: String
+    description: AMI ID
+    default: 'dummy'
+mainSteps:
+  name: makeStack
+  action: aws:createStack
+  maxAttempts: 1
+  onFailure: Abort
+  inputs:
+    # Capabilities:
+    # - CAPABILITY_IAM
+    StackName: "{{ instance-Name }}-Test"
+    # RoleARN: "arn"
+    DisableRollback: false
+    onFailure: 'ROLLBACK'
+    TemplateURL: http://s3.amazonaws.com/doc-example-bucket/myStackTemplate
+    # TimeoutInMinutes: 5
+    Parameters:
+      - ParameterKey: LambdaRoleArn
+        ParameterValue: "{{LambdaAssumeRole}}"
+      - ParameterKey: createdResource
+        ParameterValue: createdResource-{{automation:EXECUTION_ID}}
+      - ParameterKey: LambdaRoleArn
+        ParameterValue: "{{LambdaAssumeRole}}"
+      - ParameterKey: createdResource
+        ParameterValue: createdResource-{{automation:EXECUTION_ID}}
+      - ParameterKey: LambdaRoleArn
+        ParameterValue: "{{LambdaAssumeRole}}"
+      - ParameterKey: createdResource
+        ParameterValue: createdResource-{{automation:EXECUTION_ID}}  
+
+
