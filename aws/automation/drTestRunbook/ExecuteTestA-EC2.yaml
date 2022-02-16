@@ -21,6 +21,9 @@ description: |-
   ### Step 3. Application Load Balance
   * 
 
+  ### Step 4. Target Group
+  * 
+
 schemaVersion: '0.3'
 parameters:
   instanceName:
