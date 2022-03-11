@@ -1,0 +1,90 @@
+description: |-
+  # Automation Runbook : ExecuteTestA-EC2
+  * This Runbook creates EC2 Instance CloudFormation Stack
+
+  ## Parameters
+  * 
+  * 
+  * 
+  * 
+
+  ## Step
+  ### Step 1. Security Group
+  * 
+
+
+  ### Step 2. Instance
+  * 
+
+
+  ### Step 3. Application Load Balance
+  * 
+
+schemaVersion: '0.3'
+parameters:
+  clusterName:
+    type: String
+    description: 'Aurora Cluster Name'
+    default: 'rds-y2-test-cluster'
+  instanceName:
+    type: String
+    description: 'Aurora Instance Name'
+    default: 'rds-y2-test-cluster-instance1'
+  snapshotArn:
+    type: string
+    description: 'Snapshot ARN'
+    default: ''
+#  : 
+
+mainSteps:
+- name: DeleteAurora
+  action: aws:executeAwsApi
+  maxAttempts: 1
+  onFailure: Abort
+  inputs:
+    Service: rds
+    Api: DeleteDBCluster
+    DBClusterIdentifier: {{ clusterName }}
+    SkipFinalSnapshot: True
+  outputs: 
+  - Name: The name for a user-specified output key
+    Selector: A response object specified by using jsonpath format
+    Type: The data type
+
+ 
+- name: WatingDeleted_Complated
+  action: aws:assertAwsResourceProperty
+
+
+
+- name: CreateAuroraCluster
+  maxAttempts: 1
+  onFailure: Abort
+  action: aws:executeAwsApi
+  inputs:
+    Service: rds
+    Api: RestoreDBClusterFromSnapshot
+    DBClusterIdentifier : {{ clusterName }}
+    SnapshotIdentifier : {{ snapshotArn }}
+    Engine : 'aurora-postgres'
+    EngineVersion : ''
+    PortParam : 15432
+    ClusterParameterGroupName : 'testauroraoption-dbclusterparametergroup-v6ybdapxzlhq'
+    SubnetGroupNameParam : ''
+    SecurityGroupListParam : 
+    BackupRetentionPeriodParam
+    PreferredBackupWindowParam
+    EnableCloudwatchLogsExportParam
+    PreferredMaintenanceWindowParam
+
+
+
+
+
+- name: CreateAuroraInstance
+  maxAttempts: 1
+  onFailure: Abort
+  action: aws:executeAwsApi
+  inputs:
+    Service: rds
+    Api: CreateDB
