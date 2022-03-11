@@ -1,0 +1,37 @@
+description: |-
+  # Automation Runbook : ExecuteTestA-RDS
+  * This Runbook creates RDS DB Instance CloudFormation Stack
+
+
+  ## Parameters
+  * SubnetId
+  * 
+  * 
+  * 
+  * 
+
+  ## Step
+  ### Step 1. RDS DB
+  * Subnet Group
+  * Parameter Group
+  * Option Group
+  * RDS DB Instance
+
+
+
+  ### Step 2. Parameter Group
+  * 
+
+
+
+  ### Step 3. Option Group
+  * 
+
+
+  ### Step 4. Security Group
+  * 
+
+
+  ###
+
+
