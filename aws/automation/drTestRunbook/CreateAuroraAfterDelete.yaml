@@ -1,5 +1,5 @@
 description: |-
-  # Automation Runbook : ExecuteTestA-EC2
+  # Automation Runbook : CreateAuroraAfterDelete
   * This Runbook creates EC2 Instance CloudFormation Stack
 
   ## Parameters
@@ -31,12 +31,38 @@ parameters:
     description: 'Aurora Instance Name'
     default: 'rds-y2-test-cluster-instance1'
   snapshotArn:
-    type: string
+    type: String
     description: 'Snapshot ARN'
-    default: ''
+    default: 'qwer'
+  engineName:
+    type: String
+    description: 'Engine Name'
+    default: 'aurora-postgresql'
 #  : 
 
 mainSteps:
+- name: DeleteInstance
+  action: aws:executeAwsApi
+  maxAttempts: 1
+  onFailure: Abort
+  inputs:
+    Service: rds
+    Api: DeleteDBInstance
+    DBInstanceIdentifier: '{{ instanceName }}'
+    SkipFinalSnapshot: True
+
+
+- name: Wating-DeleteInstance
+  action: aws:assertAwsResourceProperty
+  inputs:
+    Service: rds
+    Api: DescribeDBInstances
+    DBInstanceIdentifier: '{{ instanceName }}'
+    PropertySelector: Response object
+    DesiredValues:
+    - Desired property values
+
+
 - name: DeleteAurora
   action: aws:executeAwsApi
   maxAttempts: 1
@@ -44,17 +70,18 @@ mainSteps:
   inputs:
     Service: rds
     Api: DeleteDBCluster
-    DBClusterIdentifier: {{ clusterName }}
-    SkipFinalSnapshot: True
-  outputs: 
-  - Name: The name for a user-specified output key
-    Selector: A response object specified by using jsonpath format
-    Type: The data type
+    DBClusterIdentifier: '{{ clusterName }}'
+    SkipFinalSnapshot: true
 
- 
-- name: WatingDeleted_Complated
+- name: Wating-DeleteAurora
   action: aws:assertAwsResourceProperty
-
+  inputs:
+    Service: rds
+    Api: DescribeDBClusters
+    DBClusterIdentifier: '{{ clusterName }}'
+    PropertySelector: "$.DBInstances[0].DBInstanceStatus"
+    DesiredValues:
+    - 
 
 
 - name: CreateAuroraCluster
@@ -64,19 +91,37 @@ mainSteps:
   inputs:
     Service: rds
     Api: RestoreDBClusterFromSnapshot
-    DBClusterIdentifier : {{ clusterName }}
-    SnapshotIdentifier : {{ snapshotArn }}
-    Engine : 'aurora-postgres'
-    EngineVersion : ''
-    PortParam : 15432
-    ClusterParameterGroupName : 'testauroraoption-dbclusterparametergroup-v6ybdapxzlhq'
-    SubnetGroupNameParam : ''
-    SecurityGroupListParam : 
-    BackupRetentionPeriodParam
-    PreferredBackupWindowParam
-    EnableCloudwatchLogsExportParam
-    PreferredMaintenanceWindowParam
+    DBClusterIdentifier: '{{ clusterName }}'
+    SnapshotIdentifier: '{{ snapshotArn }}'
+    Engine: '{{ engineName }}'
+    EngineVersion: '12.7'
+    Port: 5432
+    DBClusterParameterGroupName: testauroraoption-dbclusterparametergroup-1ldnzt43yellj
+    DBSubnetGroupName: sg-cluster-y2-test
+    VpcSecurityGroupIds: ['sg-05b5cd25857dcb617']
+    #BackupRetentionPeriod: 1
+    #PreferredBackupWindow: 'sat:16:00-sat:16:30'
+#    KmsKeyId=''
+    CopyTagsToSnapshot: true
+    #PreferredMaintenanceWindow: 'sat:16:00-sat:16:30'
+    #BacktrackWindow: 
+    EnableCloudwatchLogsExports: ['postgresql']
+    DeletionProtection: false
+    Tags:
+      - Key: Name
+        Value: '{{ clusterName }}'
 
+
+
+- name: WatingDeleted_Complated
+  action: aws:assertAwsResourceProperty
+  inputs:
+    Service: rds
+    Api: DescribeDBClusters
+    API operation inputs or parameters: A value
+    PropertySelector: Response object
+    DesiredValues:
+    - Desired property values
 
 
 
@@ -87,4 +132,25 @@ mainSteps:
   action: aws:executeAwsApi
   inputs:
     Service: rds
-    Api: CreateDB
+#    Api: RestoreDBInstanceFromeDBSnashot
+    Api: CreateDBInstance
+    DBClusterIdentifier: '{{ clusterName }}'
+    DBInstanceIdentifier: '{{ instanceName }}'
+    DBInstanceClass: 'db.r5.large'
+    PromotionTier: 1
+    Engine: '{{ engineName }}'
+
+    DBParameterGroupName: 'testauroraoption-dbparametergroup-1gm4i6t0q0ikd'
+    #CACertificateIdentifier
+    PubliclyAccessible: false
+    AvailabilityZone: 'us-west-1a'
+#    DeleteAutomatedBackups: true
+    #MonitoringInterval: 
+    #MonitoringRoleArn: 
+    PreferredMaintenanceWindow: 'sat:16:00-sat:16:30'
+    EnablePerformanceInsights: false
+#    AllowMajorVersionUpgrade: true
+    AutoMinorVersionUpgrade: false
+#    Tags:
+#      - Key: Name
+#      - Value: '{{ instanceName }}'
