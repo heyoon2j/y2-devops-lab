@@ -21,7 +21,12 @@ description: |-
   * 
 
 schemaVersion: '0.3'
+assumeRole: "{{ automationAssumeRole }}"
 parameters:
+  automationAssumeRole:
+    type: String
+    description: "(Optional) The ARN of the role that allows Automation to perform the actions on your behalf."
+    default: ''
   clusterName:
     type: String
     description: 'Aurora Cluster Name'
@@ -37,7 +42,7 @@ parameters:
   engineName:
     type: String
     description: 'Engine Name'
-    default: 'aurora-postgresql'
+    default: 'aurora-postgresql'    
 #  : 
 
 mainSteps:
@@ -73,7 +78,7 @@ mainSteps:
     DBClusterIdentifier: '{{ clusterName }}'
     SkipFinalSnapshot: true
 
-- name: Wating-DeleteAurora
+- name: Waiting-DeleteAurora
   action: aws:assertAwsResourceProperty
   inputs:
     Service: rds
@@ -81,7 +86,7 @@ mainSteps:
     DBClusterIdentifier: '{{ clusterName }}'
     PropertySelector: "$.DBInstances[0].DBInstanceStatus"
     DesiredValues:
-    - 
+    - 'available'
 
 
 - name: CreateAuroraCluster
@@ -113,7 +118,7 @@ mainSteps:
 
 
 
-- name: WatingDeleted_Complated
+- name: WaitingDeleted_Complated
   action: aws:assertAwsResourceProperty
   inputs:
     Service: rds
