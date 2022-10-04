@@ -29,13 +29,28 @@
 
 
 ## Directory Structure
-* qwer
-
-* ebs
-* efs
-* s3
-
-
+```
+terraform
+├─env
+│  ├─dev
+│  ├─prd
+│  └─stg
+└─modules
+    ├─computing
+    │  ├─alb
+    │  └─nlb
+    ├─container
+    │  └─eks
+    ├─networking
+    │  ├─cf
+    │  ├─tgw
+    │  └─vpc
+    ├─security
+    │  └─iam
+    └─storage
+        ├─efs
+        └─s3
+```
 
 
 
