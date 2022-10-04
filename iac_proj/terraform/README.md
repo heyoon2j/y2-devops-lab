@@ -3,10 +3,37 @@
 * 
 
 ## 
-* Create __immutable resource__ using Terraform. Because Terraform state will conflict with aws resource state.
-    > EC2 Instance(Auto Scaling) / RDS etc
+1. Create __immutable resource__ using Terraform.
+    * ELB (NLB, ALB)
+    * EKS
+    * S3
+    * EFS
+    * VPC
+    * Transit Gateway
+    * CloudFront
+    * IAM
+2. Don't create __mutable resource__ using Terraform. Because Terraform state will conflict with aws resource state, create resouce using cli or others.
+    * EC2 Instance (Auto Scaling)
+    * RDS
+    * Redis
+    * Redshift
+3. Don't manage __AWS Managed Service__ using Terraform. Use services by console.
+    * Organization
+    * Route53
+    * Backup
+    * CloudWatch
+    * CloudTrail
 * Create resources for each project. Because 
 * 
+
+
+
+## Directory Structure
+* qwer
+
+* ebs
+* efs
+* s3
 
 
 
