@@ -9,6 +9,56 @@
 * 
 
 
+## (Current Project)
+```
+├─ terraform/
+│  ├─ env/
+│  │  ├─ dev/
+│  │  │  ├─ apps/
+│  │  │  │  ├─ blog/
+│  │  │  ├─ data/
+│  │  │  │  ├─ s3-blog/
+│  │  │  ├─ network/
+│  │  ├─ prd/
+│  │  │  ├─ apps/
+│  │  │  │  ├─ blog/
+│  │  │  │  ├─ ecommerce/
+│  │  │  ├─ data/
+│  │  │  │  ├─ efs-ecommerce/
+│  │  │  │  ├─ rds-ecommerce/
+│  │  │  │  ├─ s3-blog/
+│  │  │  ├─ general/
+│  │  │  │  ├─ main.tf
+│  │  │  ├─ network/
+│  │  │  │  ├─ main.tf
+│  │  │  │  ├─ terraform.tfvars
+│  │  │  │  ├─ variables.tf
+│  │  ├─ stg/
+│  │  │  ├─ apps/
+│  │  │  │  ├─ ecommerce/
+│  │  │  │  ├─ blog/
+│  │  │  ├─ data/
+│  │  │  │  ├─ efs-ecommerce/
+│  │  │  │  ├─ rds-ecommerce/
+│  │  │  │  ├─ s3-blog/
+  │  │  ├─ network/
+  ├─ modules/
+  │  ├─ apps/
+  │  │  ├─ blog/
+  │  │  ├─ ecommerce/
+  │  ├─ common/
+  │  │  ├─ acm/
+  │  │  ├─ user/
+  │  ├─ computing/
+  │  │  ├─ alb/
+  |  |  ├─ nlb/
+  │  ├─ networking/
+  │  │  ├─ tgw/
+  │  │  ├─ vpc/
+  │  ├─ storage/
+  │  │  ├─ efs/
+  │  │  ├─ s3/
+```
 
 
 
