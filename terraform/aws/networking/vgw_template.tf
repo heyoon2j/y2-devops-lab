@@ -1,10 +1,12 @@
 /*
 # VPC
-1. Create VPC
-2. Create Subnet
-3. Create Routing
-4. Create VGW
-5. Create TGW
+1. Virtual Private Gateway
+    1) Transit Gateway 생성
+    2) Transit Gateway의 Routing Table 생성
+    3) Attachement 생성 (어떤, 무엇을, 어떻게 연결을 할 것인지 등의 정보가 저장)
+    4) Attachment를 Transit Gateway의 Routing Table에 Association
+    5) Attachment를 Transit Gateway의 Routing Table에 Propagation
+    6) Transit Gateway Routing 추가 작업
 */
 
 
@@ -18,15 +20,20 @@
 
 
 ############################################################
-# 1. Create a VPC
+# 1. VPC
 /*
 'VPC Resource'
 
 Args:
     cidr_block
-        description = "VPC CIDR"
+        description = "VPC IPv4 CIDR"
         type = string
         validation { 10.0.0.0/16, 172.16.30.0/24 ... }
+
+    ipv6_cidr_block 
+        description = "VPC IPv6 CIDR"
+        type = string
+        validation {}
 
     instance_tenancy
         description = "VPC에서 생성하는 인스턴스의 테넌시 기본 설정"
@@ -43,15 +50,10 @@ Args:
         type = bool
         validation { true, false (Default) }
 
-    ipv6_cidr_block 
-        description = ""
-        type = string
-        validation {}
 */
 
 
-resource "aws_vpc" "vpc-proj" {
-
+resource "aws_vpc" "vpc-propj" {
     cidr_block = var.vpc_cidr
 
     #ipv6_cidr_block = var.vpc_v6cidr
@@ -68,17 +70,3 @@ resource "aws_vpc" "vpc-proj" {
         Name = var.vpc_name
     }
 }
-
-
-
-############################################################
-# 2. Create Subnet
-
-############################################################
-# 3. Create Routing
-
-############################################################
-# 4. Create VGW
-
-############################################################
-# 5. Create TGW
