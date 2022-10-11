@@ -22,7 +22,7 @@
 ############################################################
 # 1. Transit Gateway
 /*
-'VPC Resource'
+'Transit Gateway Resource'
 
 Args:
     cidr_block
@@ -52,29 +52,7 @@ Args:
 
 */
 
-
-resource "aws_vpc" "vpc-propj" {
-    cidr_block = var.vpc_cidr
-
-    #ipv6_cidr_block = var.vpc_v6cidr
-
-    instance_tenancy = "default"
-
-    enable_dns_hostnames = "true"
-    enable_dns_support = "true"
-
-    # enable_classiclink = "false"
-    # enable_classiclink_dns_support = "false"
-
-    tags = {
-        Name = var.vpc_name
-    }
-}
-
-
-
-##### Transit Gateway #####
-resource "aws_ec2_transit_gateway" "tgw-y2net-prd-an2" {
+resource "aws_ec2_transit_gateway" "tgw-proj" {
     description = "Transit Gateway"
 
     amazon_side_asn = 64512
@@ -87,7 +65,7 @@ resource "aws_ec2_transit_gateway" "tgw-y2net-prd-an2" {
 
     # DNS Support
     dns_support = "enable"
-    # 
+    # VPN ECMP Routing
     vpn_ecmp_support = "enable"
 
     tags = {
