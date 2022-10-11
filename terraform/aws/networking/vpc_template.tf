@@ -6,14 +6,12 @@
 2. NAT Gateway
     1) EIP 생성
     2) NAT Gateway 생성
-    2) Routing Table의 Route 추가
 3. IGW Gateway
     1) IGW Gateway 생성
-    2) Routing Table의 Route 추가
 4. Routing
     1) Routing Table 생성
-    2) Routing Table의 Route 추가
-    3) Routing Table Association
+    2) Routing Table Association
+    3) Routing Table의 Route 추가
 */
 
 
@@ -59,16 +57,15 @@ Args:
 
 */
 
-
-resource "aws_vpc" "vpc-propj" {
+resource "aws_vpc" "vpc-proj" {
     cidr_block = var.vpc_cidr
 
     #ipv6_cidr_block = var.vpc_v6cidr
 
     instance_tenancy = "default"
 
-    enable_dns_hostnames = "true"
-    enable_dns_support = "true"
+    enable_dns_hostnames = true
+    enable_dns_support = true
 
     # enable_classiclink = "false"
     # enable_classiclink_dns_support = "false"
@@ -94,9 +91,9 @@ Args:
         validation { 10.0.0.0/24, 172.16.30.0/26 ... }
 
     availability_zone
-        description = "Subnet CIDR"
+        description = "Availablity Zone"
         type = string
-        validation { 10.0.0.0/24, 172.16.30.0/26 ... }
+        validation { ap-northeast-2a, ap-northeast-2c ... }
 
     private_dns_hostname_type_on_launch
         description = "Private Hostname FQDN 지정 시, 들어갈 내용 선택"
@@ -127,9 +124,9 @@ resource "aws_subnet" "sbn-proj-pub" {
 
     #private_dns_hostname_type_on_launch =  
     #ipv6_cidr_block =
-    assign_ipv6_address_on_creation = "false"    
+    assign_ipv6_address_on_creation = false   
 
-    map_public_ip_on_launch = "true"
+    map_public_ip_on_launch = false
 
     tags = {
         Name : 
@@ -145,63 +142,14 @@ resource "aws_subnet" "sbn-proj-pri" {
 
     #private_dns_hostname_type_on_launch =  
     #ipv6_cidr_block =
-    assign_ipv6_address_on_creation = "false"    
+    assign_ipv6_address_on_creation = false  
 
-    map_public_ip_on_launch = "false"
+    map_public_ip_on_launch = false
 
     tags = {
         Name : 
     }
 }
-
-
-/*
-'Routing Resource'
-
-Args:
-    vpc_id
-        description = " VPC ID"
-        type = string
-        validation {}
-
-    cidr_block
-        description = "Subnet IPv4 CIDR"
-        type = string
-        validation { 10.0.0.0/24, 172.16.30.0/26 ... }
-
-    availability_zone
-        description = "Subnet CIDR"
-        type = string
-        validation { 10.0.0.0/24, 172.16.30.0/26 ... }
-
-    private_dns_hostname_type_on_launch
-        description = "Private Hostname FQDN 지정 시, 들어갈 내용 선택"
-        type = string
-        validation { ip-name, resource-name }
-
-    ipv6_cidr_block
-        description = "Subnet IPv6 CIDR"
-        type = string
-        validation { ... }
-
-    assign_ipv6_address_on_creation
-        description = "Use IPv6 address or not "
-        type = bool
-        validation { true, false (Default) }
-
-    map_public_ip_on_launch
-        description = "해당 Subnet에서 인스턴스 시작 시, Public IP 할당할지 여부"
-        type = bool
-        validation { true, false (Default) }
-*/
-
-
-
-
-
-
-
-
 
 
 
@@ -233,6 +181,10 @@ resource "aws_nat_gateway" "nat-y2net-prd-an2" {
     }    
 }
 
+
+
+
+
 ############################################################
 # 3. IGW Gateway
 
@@ -253,11 +205,35 @@ resource "aws_internet_gateway_attachment" "igw-attach-proj" {
 
 ############################################################
 # 4. Routing
-resource "aws_route_table" "rt-y2net-prd-an2-a-pub" {
-    vpc_id = aws_vpc.vpc-y2net-prd-an2.id # local.vpc_id
+/*
+'Routing Resource'
+
+Args:
+
+    vpc_id
+        description = " VPC ID"
+        type = string
+        validation {}
+
+*/
+
+
+resource "aws_route_table" "rt-proj-pub" {
+    vpc_id = aws_vpc.vpc-proj.id
+
+    route = [
+        {
+           cidr_block = "10.0.1.0/24"
+           gateway_id = aws_internet_gateway.example.id
+        },
+        {
+           cidr_block = "10.0.1.0/24"
+           transit_gateway_id = aws_ec2_transit_gateway.tgw-y2net-prd-an2.id        
+        }
+    ]
 
     tags = {
-        Name = local.pubSubRT["name"]
+        Name = ""
     }
     /*
     depends_on = [
@@ -267,118 +243,8 @@ resource "aws_route_table" "rt-y2net-prd-an2-a-pub" {
 }
 
 ## Association 할 때, 기본적으로 local에 대한 Routing은 자동으로 추가된다.
-resource "aws_route_table_association" "rt-assoc-y2net-prd-an2-a-pub" {
-    subnet_id = aws_subnet.sbn-y2net-prd-an2-a-pub.id # local.pubSub_id
-    route_table_id = aws_route_table.rt-y2net-prd-an2-a-pub.id # local.pubSubRT_id
+resource "aws_route_table_association" "rt-assoc-proj-pub" {
+    subnet_id = aws_subnet.sbn-proj-pub.id
+    route_table_id = aws_route_table.rt-proj-pub.id
 }
-
-resource "aws_route" "rt-route-y2net-prd-an2-a-pub-igw" {
-    route_table_id = aws_route_table.rt-y2net-prd-an2-a-pub.id # local.pubSubRT_id
-    destination_cidr_block = "0.0.0.0/0"
-    gateway_id = aws_internet_gateway.igw-y2net-prd-an2.id
-}
-
-resource "aws_route" "rt-route-y2net-prd-an2-a-pub-tgw-devVpc" {
-    route_table_id = aws_route_table.rt-y2net-prd-an2-a-pub.id # local.pubSubRT_id
-    destination_cidr_block = "10.20.10.0/24"
-    transit_gateway_id = aws_ec2_transit_gateway.tgw-y2net-prd-an2.id
-}
-
-resource "aws_route" "rt-route-y2net-prd-an2-a-pub-tgw-prdVpc" {
-    route_table_id = aws_route_table.rt-y2net-prd-an2-a-pub.id # local.pubSubRT_id
-    destination_cidr_block = "10.20.20.0/24"
-    transit_gateway_id = aws_ec2_transit_gateway.tgw-y2net-prd-an2.id
-}
-
-
-resource "aws_route_table" "rt-y2net-prd-an2-a-pri" {
-    vpc_id = aws_vpc.vpc-y2net-prd-an2.id # local.vpc_id
-
-    tags = {
-        Name = local.priSubRT["name"]
-    }
-    /*
-    depends_on = [
-        aws_internet_gateway.igw
-    ]
-    */
-}
-
-## Association 할 때, 기본적으로 local에 대한 Routing은 자동으로 추가된다.
-resource "aws_route_table_association" "rt-assoc-y2net-prd-an2-a-pri" {
-    subnet_id = aws_subnet.sbn-y2net-prd-an2-a-pri.id # local.pubSub_id
-    route_table_id = aws_route_table.rt-y2net-prd-an2-a-pri.id # local.pubSubRT_id
-}
-
-resource "aws_route" "rt-route-y2net-prd-an2-a-pri-nat" {
-    route_table_id = aws_route_table.rt-y2net-prd-an2-a-pri.id # local.pubSubRT_id
-    destination_cidr_block = "0.0.0.0/0"
-    nat_gateway_id = aws_nat_gateway.nat-y2net-prd-an2.id
-}
-
-
-
-
-
-
-
-
-
-
-
-locals {
-   ## VPC
-    vpc = {
-        name = "vpc-y2net-prd-an2"
-        cidr = "10.20.0.0/24"
-        # id = aws_vpc.vpc-y2net-prd-an2.id
-    }
-
-    ## Subnet
-    pubSub = {
-        name = "sbn-y2net-prd-an2-a-pub"
-        cidr = "10.20.0.0/26"
-        # id = aws_subnet.sbn-y2net-prd-an2-a-pub.id
-    }
-
-    priSub = {
-        name = "sbn-y2net-prd-an2-a-pri"
-        cidr = "10.20.0.64/26"
-    }
-
-    ## Gateway
-    ## Internet Gateway
-    igw = {
-        name = "igw-y2net-prd-an2"
-    }
-
-    ## NAT Gateway
-    ngw = {
-        name = "nat-y2net-prd-an2"
-    }
-
-    ## Transit Gateway
-    tgw = {
-        name = "tgw-y2net-prd-an2"
-        # id = aws_ec2_transit_gateway.tgw-y2net-prd-an2.id
-    }
-
-    ## EIP
-    eipNat = {
-        name = "eip-nat-y2net-prd-an2"
-        # id = aws_eip.eip-nat-y2net-prd-an2.id
-    }
-
-    ## Routing Table
-    pubSubRT = {
-        name = "rt-y2net-prd-an2-a-pub"
-        # id = aws_route_table.rt-y2net-prd-an2-a-pub.id
-    }
-
-    priSubRT = {
-        name = "rt-y2net-prd-an2-a-pri"
-    }
-}
-
-
 
