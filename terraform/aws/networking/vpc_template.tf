@@ -43,16 +43,19 @@ Args:
     instance_tenancy
         description = "VPC에서 생성하는 인스턴스의 테넌시 기본 설정"
         type = string
+        default = "default"
         validation { "default"(Default), "dedicated" }
 
     enable_dns_support
         description = "VPC에서 DNS 지원을 활성화/비활성화"
         type = bool
+        default = true
         validation { true (Default), false }
     
     enable_dns_hostnames
         description = "Public IP Address에 Hostname을 받을지에 대한 여부"
         type = bool
+        default = false
         validation { true, false (Default) }
 
 */

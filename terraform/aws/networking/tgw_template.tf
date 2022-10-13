@@ -25,31 +25,53 @@
 'Transit Gateway Resource'
 
 Args:
-    cidr_block
-        description = "VPC IPv4 CIDR"
+    description
+        description = "Description"
         type = string
-        validation { 10.0.0.0/16, 172.16.30.0/24 ... }
+        default = "Transit Gateway"
+        #validation { 10.0.0.0/16, 172.16.30.0/24 ... }
 
-    ipv6_cidr_block 
-        description = "VPC IPv6 CIDR"
+    amazon_side_asn
+        description = "AWS ASN"
+        type = number
+        default = 64512
+        validation { 64512 ~ 65534, 4200000000 ~ 4294967294 }
+
+    auto_accept_shared_attachments
+        description = "auto acception about shared account"
         type = string
-        validation {}
+        default = "disable"
+        validation { "disable" (Default), "enable" }
 
-    instance_tenancy
-        description = "VPC에서 생성하는 인스턴스의 테넌시 기본 설정"
+    default_route_table_association 
+        description = "default rout table associate to tgw"
         type = string
-        validation { "default"(Default), "dedicated" }
+        default = "disable"
+        validation { "enable" (Default), "disable" }
 
-    enable_dns_support
-        description = "VPC에서 DNS 지원을 활성화/비활성화"
-        type = bool
-        validation { true (Default), false }
-    
-    enable_dns_hostnames
-        description = "Public IP Address에 Hostname을 받을지에 대한 여부"
-        type = bool
-        validation { true, false (Default) }
+    default_route_table_propagation
+        description = "default rout table propagate to tgw"
+        type = string
+        default = "disable"
+        validation { "enable" (Default), "disable" }
 
+    dns_support
+        description = "DNS Support"
+        type = string
+        default = "enable"
+        validation { "enable" (Default), "disable" }
+
+    vpn_ecmp_support
+        description = "VPN ECMP Routing Support"
+        type = string
+        default = "enable"
+        validation { "enable" (Default), "disable" }
+
+    multicast_support
+        description = "Multicast Support"
+        type = string
+        default = "disable"
+        validation { "enable", "disable" (Disable) }
 */
 
 resource "aws_ec2_transit_gateway" "tgw-proj" {
@@ -57,7 +79,7 @@ resource "aws_ec2_transit_gateway" "tgw-proj" {
 
     amazon_side_asn = 64512
     ## 연결된 교차 계정 연결을 자동으로 수락할지 여부
-    # auto_accept_shared_attachments = ""
+    auto_accept_shared_attachments = "disable"
 
     # TGW에 Default Routing Table 할당
     default_route_table_association = "disable"
@@ -67,25 +89,67 @@ resource "aws_ec2_transit_gateway" "tgw-proj" {
     dns_support = "enable"
     # VPN ECMP Routing
     vpn_ecmp_support = "enable"
+    # Multicast Support
+    multicast_support = "disable"
 
     tags = {
-        Name = local.tgw["name"]
+        Name = ""
     }    
 }
 
 
-resource "aws_ec2_transit_gateway_route_table" "tgw-rt-y2net-prd-an2" {
-    transit_gateway_id = aws_ec2_transit_gateway.tgw-y2net-prd-an2.id
+## Attachment
+/*
+'Transit Gateway Attachment Resource'
 
-    tags = {
-        Name = "tgw-y2net-prd-an2"
-    }    
-}
+Args:
+    transit_gateway_id
+        description = "Transit Gateway ID"
+        type = string
+        validation {}
 
-resource "aws_ec2_transit_gateway_vpc_attachment" "tgw-attach-y2net-prd-an2" {
+    vpc_id
+        description = "VPC ID for attachment"
+        type = string
+        validation { vpc-012345abcdef }
+
+    subnet_ids
+        description = "Subnet ID for attachment interface"
+        type = string
+        validation { vpc-012345abcdef }
+
+    dns_support = "enable"
+        description = "DNS Support"
+        type = string
+        default = "enable"
+        validation { "enable" (Default), "disable" }
+
+    ipv6_support = "disable"
+        description = "DNS Support"
+        type = string
+        default = "disable"
+        validation { "enable", "disable" (Default) }
+
+
+    transit_gateway_default_route_table_association
+        description = "default rout table associate to tgw"
+        type = bool
+        default = false
+        validation { true (Default), false }
+
+    transit_gateway_default_route_table_propagation
+        description = "default rout table propagate to tgw"
+        type = bool
+        default = false
+        validation { true (Default), false }
+*/
+
+resource "aws_ec2_transit_gateway_vpc_attachment" "tgw-attach-proj" {
+
+    transit_gateway_id = aws_ec2_transit_gateway.tgw-proj.id 
+    vpc_id             = aws_vpc.vpc-proj.id
+    # Attachment용 IP를 설정할 Subnet IDs(Multi-AZ)
     subnet_ids         = ["${aws_subnet.sbn-y2net-prd-an2-a-pri.id}"]
-    transit_gateway_id = aws_ec2_transit_gateway.tgw-y2net-prd-an2.id # local.tgw["id"]
-    vpc_id             = aws_vpc.vpc-y2net-prd-an2.id # local.vpc["id"]
 
     dns_support = "enable"
     ipv6_support = "disable"
@@ -97,31 +161,93 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "tgw-attach-y2net-prd-an2" {
     transit_gateway_default_route_table_propagation = "false"
 
     tags = {
-        Name = "tgw-attach-y2net-prd-an2"
+        Name = ""
     }    
 }
 
-resource "aws_ec2_transit_gateway_route_table_association" "tgw-rt-assoc-y2net-prd-an2" {
-    transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-y2net-prd-an2.id
-    transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-y2net-prd-an2.id
-}
 
-resource "aws_ec2_transit_gateway_route_table_propagation" "tgw-rt-prop-y2net-prd-an2" {
-    transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-y2net-prd-an2.id
-    transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-y2net-prd-an2.id
-}
 
-resource "aws_ec2_transit_gateway_route" "tgw-rt-rule0" {
-    destination_cidr_block         = "0.0.0.0/0"
-    transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-y2net-prd-an2.id
-    transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-y2net-prd-an2.id
-}
-
+## Routing 작업
 /*
-resource "aws_ec2_transit_gateway_route" "tgw-rt-rule" {
-    destination_cidr_block         = "10.20.0.0/24"
-    transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw_attch.id
-    transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt.id 
-}
+'Transit Gateway Routing Resource'
+
+Args:
+    description
+        description = "Description"
+        type = string
+        default = "Transit Gateway"
+        #validation { 10.0.0.0/16, 172.16.30.0/24 ... }
+
+    amazon_side_asn
+        description = "AWS ASN"
+        type = number
+        default = 64512
+        validation { 64512 ~ 65534, 4200000000 ~ 4294967294 }
+
+    auto_accept_shared_attachments
+        description = "auto acception about shared account"
+        type = string
+        default = "disable"
+        validation { "disable" (Default), "enable" }
+
+    default_route_table_association 
+        description = "default rout table associate to tgw"
+        type = string
+        default = "disable"
+        validation { "enable" (Default), "disable" }
+
+    default_route_table_propagation
+        description = "default rout table propagate to tgw"
+        type = string
+        default = "disable"
+        validation { "enable" (Default), "disable" }
+
+    dns_support
+        description = "DNS Support"
+        type = string
+        default = "enable"
+        validation { "enable" (Default), "disable" }
+
+    vpn_ecmp_support
+        description = "VPN ECMP Routing Support"
+        type = string
+        default = "enable"
+        validation { "enable" (Default), "disable" }
+
+    multicast_support
+        description = "Multicast Support"
+        type = string
+        default = "disable"
+        validation { "enable", "disable" (Disable) }
 */
 
+
+resource "aws_ec2_transit_gateway_route_table" "tgw-rt-proj-xxx" {
+    transit_gateway_id = aws_ec2_transit_gateway.tgw-proj.id
+
+    tags = {
+        Name = ""
+    }    
+}
+
+resource "aws_ec2_transit_gateway_route_table_association" "tgw-rt-assoc-proj" {
+    transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
+    transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-y2net-prd-an2.id
+}
+
+resource "aws_ec2_transit_gateway_route_table_propagation" "tgw-rt-prop-proj" {
+    transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
+    transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-y2net-prd-an2.id
+}
+
+resource "aws_ec2_transit_gateway_route" "tgw-rt-rule-proj-01" {
+    destination_cidr_block         = "0.0.0.0/0"
+    transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-proj.id
+    transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
+}
+
+resource "aws_ec2_transit_gateway_route" "tgw-rt-rule-proj-02" {
+    destination_cidr_block         = "172.13.0.0/24"
+    blackhole = true
+    transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
+}
