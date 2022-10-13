@@ -1,12 +1,11 @@
 /*
-# VPC
-1. Virtual Private Gateway
-    1) Transit Gateway 생성
-    2) Transit Gateway의 Routing Table 생성
-    3) Attachement 생성 (어떤, 무엇을, 어떻게 연결을 할 것인지 등의 정보가 저장)
-    4) Attachment를 Transit Gateway의 Routing Table에 Association
-    5) Attachment를 Transit Gateway의 Routing Table에 Propagation
-    6) Transit Gateway Routing 추가 작업
+# VPN Gateway
+1. VPN Gateway
+    1) Customer Gateway 생성
+    2) Virtual Private Gateway 생성
+    3) VPN Attachment 생성
+    4) Routing 추가 (VPC or TGW Routing Table)
+    5) VPN Propagation 생성 (VPC 연결인 경우)
 */
 
 
