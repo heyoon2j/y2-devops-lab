@@ -50,6 +50,15 @@ Args:
         validation { true, false (Default) }
 
 */
+resource "aws_customer_gateway" "cgw-proj" {
+    bgp_asn    = 65000
+    ip_address = "172.83.124.10"
+    type       = "ipsec.1"
+
+    tags = {
+        Name = "main-customer-gateway"
+    }
+}
 
 
 resource "aws_vpc" "vpc-propj" {
