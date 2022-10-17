@@ -4,8 +4,9 @@
     1) Customer Gateway 생성
     2) Virtual Private Gateway 생성
     3) VPN Attachment 생성
-    4) Routing 추가 (VPC or TGW Routing Table)
-    5) VPN Propagation 생성 (VPC 연결인 경우)
+    4) VPN Connection 생성 (사이트 확인 : https://registry.terraform.io/providers/hashicorp/aws/latest/docs/resources/vpn_connection)
+    5) Routing 추가 (VPC or TGW Routing Table)
+    6) VPN Propagation 생성 (VPC 연결인 경우)
 */
 
 
@@ -19,38 +20,38 @@
 
 
 ############################################################
-# 1. VPC
+# 1. VPN Gateway
 /*
-'VPC Resource'
+'Customer Gateway Resource'
 
 Args:
-    cidr_block
-        description = "VPC IPv4 CIDR"
+    device_name
+        description = "Customer gateway device's name"
         type = string
-        validation { 10.0.0.0/16, 172.16.30.0/24 ... }
+        validation { }
 
-    ipv6_cidr_block 
-        description = "VPC IPv6 CIDR"
+    bgp_asn
+        description = "Customer gateway device's BGP ASN"
+        type = number
+        validation { 1 ~ 2147483647 }
+
+    ip_address
+        description = "Customer gateway device's outside interface"
         type = string
-        validation {}
+        validation { "10.0.0.5", "172.16.30.12" ... }
 
-    instance_tenancy
-        description = "VPC에서 생성하는 인스턴스의 테넌시 기본 설정"
+    type
+        description = "The type of customer gateway"
         type = string
-        validation { "default"(Default), "dedicated" }
-
-    enable_dns_support
-        description = "VPC에서 DNS 지원을 활성화/비활성화"
-        type = bool
-        validation { true (Default), false }
-    
-    enable_dns_hostnames
-        description = "Public IP Address에 Hostname을 받을지에 대한 여부"
-        type = bool
-        validation { true, false (Default) }
+        default = "ipsec.1"
+        validation { "ipsec.1" (Only) }
 
 */
+
 resource "aws_customer_gateway" "cgw-proj" {
+    device_name = "cgw-proj"
+
+    # Customer Information
     bgp_asn    = 65000
     ip_address = "172.83.124.10"
     type       = "ipsec.1"
@@ -61,20 +62,34 @@ resource "aws_customer_gateway" "cgw-proj" {
 }
 
 
-resource "aws_vpc" "vpc-propj" {
-    cidr_block = var.vpc_cidr
+/*
+'Customer Gateway Resource'
 
-    #ipv6_cidr_block = var.vpc_v6cidr
+Args:
+    vpc_id
+        description = "VPC ID"
+        type = string
+        validation { }
+ 
+    amazon_side_asn
+        description = "Amazon side ASN"
+        type = number
+        validation { 64512 ~ 65534, 4200000000 ~ 4294967294 }  
 
-    instance_tenancy = "default"
+*/
 
-    enable_dns_hostnames = "true"
-    enable_dns_support = "true"
-
-    # enable_classiclink = "false"
-    # enable_classiclink_dns_support = "false"
+resource "aws_vpn_gateway" "vgw-proj" {
+    vpc_id = aws_vpc.main.id
+    amazon_side_asn = 64512
 
     tags = {
-        Name = var.vpc_name
+        Name = "main"
     }
 }
+
+resource "aws_vpn_gateway_attachment" "vpn_attach-proj" {
+    vpc_id         = aws_vpc.network.id
+    vpn_gateway_id = aws_vpn_gateway.vgw-proj.id
+}
+
+
