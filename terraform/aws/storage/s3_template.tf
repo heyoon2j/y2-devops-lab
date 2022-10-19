@@ -2,7 +2,7 @@
 # S3
 1. S3
     1) Bucket 생성
-    2) ACL 설정
+    2) ACL & Policy 설정
     3) 암호화 설정
     4) Object의 Life cycle 설정
     5) Logging 설정 (필요시)
@@ -24,53 +24,9 @@
 'S3 Bucket Resource'
 
 Args:
-    bucket = "my-tf-test-bucket"
-        description = "Description"
+    bucket
+        description = "Bucket name"
         type = string
-        default = "Transit Gateway"
-        #validation { 10.0.0.0/16, 172.16.30.0/24 ... }
-
-    amazon_side_asn
-        description = "AWS ASN"
-        type = number
-        default = 64512
-        validation { 64512 ~ 65534, 4200000000 ~ 4294967294 }
-
-    auto_accept_shared_attachments
-        description = "auto acception about shared account"
-        type = string
-        default = "disable"
-        validation { "disable" (Default), "enable" }
-
-    default_route_table_association 
-        description = "default rout table associate to tgw"
-        type = string
-        default = "disable"
-        validation { "enable" (Default), "disable" }
-
-    default_route_table_propagation
-        description = "default rout table propagate to tgw"
-        type = string
-        default = "disable"
-        validation { "enable" (Default), "disable" }
-
-    dns_support
-        description = "DNS Support"
-        type = string
-        default = "enable"
-        validation { "enable" (Default), "disable" }
-
-    vpn_ecmp_support
-        description = "VPN ECMP Routing Support"
-        type = string
-        default = "enable"
-        validation { "enable" (Default), "disable" }
-
-    multicast_support
-        description = "Multicast Support"
-        type = string
-        default = "disable"
-        validation { "enable", "disable" (Disable) }
 */
 
 resource "aws_s3_bucket" "s3-proj-temp" {
@@ -83,149 +39,150 @@ resource "aws_s3_bucket" "s3-proj-temp" {
     }
 }
 
-
-
-/*
-'S3 Bucket ACL Resource'
-
-Args:
-    bucket = "my-tf-test-bucket"
-        description = "Description"
-        type = string
-        default = "Transit Gateway"
-        #validation { 10.0.0.0/16, 172.16.30.0/24 ... }
-
-    amazon_side_asn
-        description = "AWS ASN"
-        type = number
-        default = 64512
-        validation { 64512 ~ 65534, 4200000000 ~ 4294967294 }
-
-    auto_accept_shared_attachments
-        description = "auto acception about shared account"
-        type = string
-        default = "disable"
-        validation { "disable" (Default), "enable" }
-*/
-
 resource "aws_s3_bucket_acl" "s3-acl-proj-temp" {
-  bucket = aws_s3_bucket.s3-proj-temp.id
-  acl    = "private"
+    bucket = aws_s3_bucket.s3-proj-temp.id
+    acl    = "private"
 }
 
+resource "aws_s3_bucket_public_access_block" "s3-pub-access-proj-temp" {
+    bucket = aws_s3_bucket.s3-proj-temp.id
+
+    #새로운 Public ACL 차단
+    block_public_acls       = true
+    # 기존 Public ACL 차단
+    ignore_public_acls      = true
+    # 새로운 Public bucket & access point 차단
+    block_public_policy     = true
+    # 기존 Public bucket & access point 차단
+    restrict_public_buckets = true
+}
 
 /*
-'S3 Bucket Resource'
+resource "aws_s3_bucket_policy" "allow_access_from_another_account" {
+    bucket = aws_s3_bucket.example.id
+    policy = data.aws_iam_policy_document.allow_access_from_another_account.json
+}
 
-Args:
-    bucket = "my-tf-test-bucket"
-        description = "Description"
-        type = string
-        default = "Transit Gateway"
-        #validation { 10.0.0.0/16, 172.16.30.0/24 ... }
+data "aws_iam_policy_document" "allow_access_from_another_account" {
+    statement {
+        principals {
+            type        = "AWS"
+            identifiers = ["123456789012"]
+        }
 
-    amazon_side_asn
-        description = "AWS ASN"
-        type = number
-        default = 64512
-        validation { 64512 ~ 65534, 4200000000 ~ 4294967294 }
+        actions = [
+            "s3:GetObject",
+            "s3:ListBucket",
+        ]
 
-    auto_accept_shared_attachments
-        description = "auto acception about shared account"
-        type = string
-        default = "disable"
-        validation { "disable" (Default), "enable" }
-
-    default_route_table_association 
-        description = "default rout table associate to tgw"
-        type = string
-        default = "disable"
-        validation { "enable" (Default), "disable" }
-
-    default_route_table_propagation
-        description = "default rout table propagate to tgw"
-        type = string
-        default = "disable"
-        validation { "enable" (Default), "disable" }
-
-    dns_support
-        description = "DNS Support"
-        type = string
-        default = "enable"
-        validation { "enable" (Default), "disable" }
-
-    vpn_ecmp_support
-        description = "VPN ECMP Routing Support"
-        type = string
-        default = "enable"
-        validation { "enable" (Default), "disable" }
-
-    multicast_support
-        description = "Multicast Support"
-        type = string
-        default = "disable"
-        validation { "enable", "disable" (Disable) }
+        resources = [
+            aws_s3_bucket.example.arn,
+            "${aws_s3_bucket.example.arn}/*",
+        ]
+    }
+}
 */
 
 
+/*
+'S3 Bucket encryption Resource'
+
+Args:
+    bucket
+        description = "Bucket name"
+        type = string
+
+    kms_master_key_id
+        description = "AWS KMS ARN for S3"
+        type = string
+        validation { "^arn:*"}    
+
+    sse_algorithm
+        description = "SSE Algorithm"
+        type = number
+        default = "aws:kms"
+        validation { "aws.kms", "AES256" }
+
+    bucket_key_enabled
+        description = "Whether or not to use bucket key"
+        type = bool
+        default = true
+        validation { true (Default), false }
+*/
 
 resource "aws_s3_bucket_server_side_encryption_configuration" "s3-encrypt-proj-temp" {
     bucket = aws_s3_bucket.s3-proj-temp.id
 
     rule {
         apply_server_side_encryption_by_default {
-            kms_master_key_id = aws_kms_key.mykey.arn
+            kms_master_key_id = ""
             sse_algorithm     = "aws:kms"
         }
+        bucket_key_enabled = true
     }
 }
+
 
 
 /*
 'S3 Bucket Resource'
 
 Args:
-    bucket = "my-tf-test-bucket"
-        description = "Description"
+    bucket
+        description = "Bucket name"
         type = string
-        default = "Transit Gateway"
-        #validation { 10.0.0.0/16, 172.16.30.0/24 ... }
+        #validation { }
 
-    amazon_side_asn
-        description = "AWS ASN"
-        type = number
-        default = 64512
-        validation { 64512 ~ 65534, 4200000000 ~ 4294967294 }
-
-    auto_accept_shared_attachments
-        description = "auto acception about shared account"
-        type = string
-        default = "disable"
-        validation { "disable" (Default), "enable" }
-
-    default_route_table_association 
-        description = "default rout table associate to tgw"
-        type = string
-        default = "disable"
-        validation { "enable" (Default), "disable" }
-
-    default_route_table_propagation
-        description = "default rout table propagate to tgw"
-        type = string
-        default = "disable"
-        validation { "enable" (Default), "disable" }
-
+    rule
+        description = "Lifecycle Rule"
+        type = 
+        #validation { }
 */
 
 resource "aws_s3_bucket_lifecycle_configuration" "s3-lifecycle-proj-temp" {
     bucket = aws_s3_bucket.s3-proj-temp.id
 
     rule {
-        id = "rule-1"
+        id = "log"
 
-        filter {}
+        filter {
+            and {
+                prefix = "log/"
 
-        # ... other transition/expiration actions ...
+                tags = {
+                    rule      = "log"
+                    autoclean = "true"
+                }
+            }
+        }
+
+        status = "Enabled"
+
+        transition {
+            days          = 30
+            storage_class = "STANDARD_IA"
+        }
+
+        transition {
+            days          = 60
+            storage_class = "GLACIER"
+        }
+
+        expiration {
+            days = 90
+        }
+    }
+
+    rule {
+        id = "tmp"
+
+        filter {
+            prefix = "tmp/"
+        }
+
+        expiration {
+            date = "2023-01-13T00:00:00Z"
+        }
 
         status = "Enabled"
     }
