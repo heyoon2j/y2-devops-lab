@@ -73,26 +73,21 @@ Args:
         default = "disable"
         validation { "enable", "disable" (Disable) }
 */
+resource "aws_efs_file_system" "foo_with_lifecyle_policy" {
+    creation_token = "my-product"
 
-resource "aws_ec2_transit_gateway" "tgw-proj" {
-    description = "Transit Gateway"
+    encrypted = true
+    kms_key_id = ""
 
-    amazon_side_asn = 64512
-    ## 연결된 교차 계정 연결을 자동으로 수락할지 여부
-    auto_accept_shared_attachments = "disable"
+    lifecycle_policy {
+        transition_to_ia = "AFTER_30_DAYS"
+        "AFTER_7_DAYS", "AFTER_14_DAYS", "AFTER_30_DAYS", "AFTER_60_DAYS", "AFTER_90_DAYS"
+        transition_to_primary_storage_class = "AFTER_1_ACCESS"
+    }
 
-    # TGW에 Default Routing Table 할당
-    default_route_table_association = "disable"
-    default_route_table_propagation = "disable"
+    performance_mode = "generalPurpose"
+    "generalPurpose" (Default), "maxIO"
 
-    # DNS Support
-    dns_support = "enable"
-    # VPN ECMP Routing
-    vpn_ecmp_support = "enable"
-    # Multicast Support
-    multicast_support = "disable"
 
-    tags = {
-        Name = ""
-    }    
+
 }
