@@ -1,14 +1,10 @@
 /*
-# Transit Gateway
-1. Transit Gateway
-    1) Transit Gateway 생성
-    2) Transit Gateway의 Routing Table 생성
-    3) Attachement 생성 (어떤, 무엇을, 어떻게 연결을 할 것인지 등의 정보가 저장)
-    4) Attachment를 Transit Gateway의 Routing Table에 Association
-    5) Attachment를 Transit Gateway의 Routing Table에 Propagation
-    6) Transit Gateway Routing 추가 작업
+# Network Load Balancer
+1. NLB
+    1) Network Load Balancer 생성
+    2) Target Group 생성
+    3) Listener 생성 (어떤, 무엇을, 어떻게 연결을 할 것인지 등의 정보가 저장)
 */
-
 
 ## Input Value
 
@@ -74,25 +70,39 @@ Args:
         validation { "enable", "disable" (Disable) }
 */
 
-resource "aws_ec2_transit_gateway" "tgw-proj" {
-    description = "Transit Gateway"
+resource "aws_lb" "nlb-proj-temp" {
+    name               = "nlb-proj-temp"
+    internal           = true
+    load_balancer_type = "network"
+    subnets            = [for subnet in aws_subnet.public : subnet.id]
+    ip_address_type = "ipv4"
+    "ipv4", "dualstack"
 
-    amazon_side_asn = 64512
-    ## 연결된 교차 계정 연결을 자동으로 수락할지 여부
-    auto_accept_shared_attachments = "disable"
+    subnet_mapping {
+        subnet_id            = aws_subnet.example1.id
+        private_ipv4_address = "10.0.1.15"
+    }
 
-    # TGW에 Default Routing Table 할당
-    default_route_table_association = "disable"
-    default_route_table_propagation = "disable"
+        subnet_mapping {
+        subnet_id            = aws_subnet.example2.id
+        private_ipv4_address = "10.0.2.15"
+    }
 
-    # DNS Support
-    dns_support = "enable"
-    # VPN ECMP Routing
-    vpn_ecmp_support = "enable"
-    # Multicast Support
-    multicast_support = "disable"
+    enable_deletion_protection = true
+
+    # NLB Option
+    enable_cross_zone_load_balancing = false
+    true, false (Default)
+
+
+
+    access_logs {
+        bucket  = aws_s3_bucket.lb_logs.bucket
+        prefix  = "test-lb"
+        enabled = true
+    }
 
     tags = {
-        Name = ""
-    }    
+        Environment = "production"
+    }
 }

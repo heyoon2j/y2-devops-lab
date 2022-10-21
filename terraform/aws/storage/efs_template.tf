@@ -18,61 +18,11 @@
 
 
 ############################################################
-# 1. Transit Gateway
+# 1. EFS
 /*
-'Transit Gateway Resource'
+'EFS Resource'
 
 Args:
-    description
-        description = "Description"
-        type = string
-        default = "Transit Gateway"
-        #validation { 10.0.0.0/16, 172.16.30.0/24 ... }
-
-    amazon_side_asn
-        description = "AWS ASN"
-        type = number
-        default = 64512
-        validation { 64512 ~ 65534, 4200000000 ~ 4294967294 }
-
-    auto_accept_shared_attachments
-        description = "auto acception about shared account"
-        type = string
-        default = "disable"
-        validation { "disable" (Default), "enable" }
-
-    default_route_table_association 
-        description = "default rout table associate to tgw"
-        type = string
-        default = "disable"
-        validation { "enable" (Default), "disable" }
-
-    default_route_table_propagation
-        description = "default rout table propagate to tgw"
-        type = string
-        default = "disable"
-        validation { "enable" (Default), "disable" }
-
-    dns_support
-        description = "DNS Support"
-        type = string
-        default = "enable"
-        validation { "enable" (Default), "disable" }
-
-    vpn_ecmp_support
-        description = "VPN ECMP Routing Support"
-        type = string
-        default = "enable"
-        validation { "enable" (Default), "disable" }
-
-    multicast_support
-        description = "Multicast Support"
-        type = string
-        default = "disable"
-        validation { "enable", "disable" (Disable) }
-
-
-
     creation_token
         description = "EFS Name"
         type = string
@@ -138,15 +88,11 @@ resource "aws_efs_file_system" "efs-proj-temp" {
 
     lifecycle_policy {
         transition_to_ia = "AFTER_30_DAYS"
-        "AFTER_7_DAYS", "AFTER_14_DAYS", "AFTER_30_DAYS", "AFTER_60_DAYS", "AFTER_90_DAYS"
         transition_to_primary_storage_class = "AFTER_1_ACCESS"
     }
 
     performance_mode = "generalPurpose"
-    "generalPurpose" (Default), "maxIO"
-
     throughput_mode = "bursting"
-    "bursting", "provisioned"
 
     # throughput_mode = "provisioned"인 경우에만 사용 가능
     #provisioned_throughput_in_mibps = 
@@ -162,7 +108,6 @@ resource "aws_efs_backup_policy" "efs-bak-proj-temp" {
 
     backup_policy {
         status = "DISABLED"
-        "ENABLED" (Default), "DISABLED"
     }
 }
 
