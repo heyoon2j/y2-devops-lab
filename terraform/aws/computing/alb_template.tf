@@ -4,6 +4,8 @@
     1) Application Load Balancer 생성
     2) Target Group 생성
     3) Listener 생성 (어떤, 무엇을, 어떻게 연결을 할 것인지 등의 정보가 저장)
+    4) Listener Rule 생성
+    * Attachment는 직접 / 이유 : 변경되는 리소스 자원이므로
 */
 
 
@@ -19,7 +21,7 @@
 ############################################################
 # 1. ALB
 /*
-'Load Balancer Resource'
+'Application Load Balancer Resource'
 
 Args:
     name
@@ -51,7 +53,7 @@ Args:
     security_groups    = [aws_security_group.lb_sg.id]
 
     enable_deletion_protection = true
-        description = "Is nable to delete LB (Protection Setting)"
+        description = "Is enable to delete LB (Protection Setting)"
         type = bool
         default = true
         validation { true, false (Default) }
@@ -146,63 +148,151 @@ resource "aws_lb" "alb-proj-temp" {
 
 
 /*
-'Target Group Resource'
+'ALB Listener Resource'
 
 Args:
     name
-        description = "LB Name"
+        description = "LB Target Group Name"
         type = string
         #default = "Transit Gateway"
         #validation { 10.0.0.0/16, 172.16.30.0/24 ... }
 
-    internal
-        description = "Internal or Internet-facing"
+    vpc_id
+        description = "VPC ID"
+        type = string
+        #default = true
+        #validation { true, false }    
+
+    target_type
+        description = "Target Type"
+        type = string
+        default = "instance"
+        validation { "instance", "ip", "lambda", "alb" }
+
+    port
+        description = "Port Number"
+        type = number
+        default = 80
+        validation { 1 ~ 65535 }
+
+    protocol
+        description = "Protocol"
+        type = string
+        default = HTTP
+        validation { "HTTP", "HTTPS" }
+
+    protocol_version
+        description = "Protoclo Version"
+        type = string
+        default = "HTTP1"
+        validation { "HTTP1", "HTTP2", "GRPC" }
+
+    #ALB Option
+    deregistration_delay
+        description = "Deregistration delay time"
+        type = number
+        default = 300
+        validation { 0 - 3600, 300 (Default) }
+
+    slow_start
+        description = "Warming up time after set target"
+        type = number
+        default = 0
+        validation { 0 (==Disable, Default), 30-900 }
+    
+    load_balancing_algorithm_type
+        description = "Load balancing algorithm type"
+        type = string
+        default = "round_robin"
+        validation { "round_robin", "least_outstanding_requests" }
+    #stickiness = {}
+
+    #health_check
+    enabled
+        description = "Whether health checks are enabled"
         type = bool
         default = true
-        validation { true, false }
+        validation { true (Default), false } 
 
-    load_balancer_type
-        description = "Load Balancer Type"
+    #health_check_port = 8080 - (Optional) Port to use to connect with the target. Valid values are either ports 1-65535, or traffic-port. Defaults to traffic-port.
+    health_check_protocol
+        description = "Protocol for Health Check"
+        type = bool
+        default = "HTTP"
+        validation { "HTTP", "HTTPS", "TCP" } 
+
+    healthy_threshold
+        description = "Number of consecutive health checks successes required before considering an unhealthy target healthy"
+        type = number
+        default = 3
+        validation { 3 (Default), 2 - 10 }
+
+    unhealthy_threshold
+        description = "Number of consecutive health check failures required before considering the target unhealthy"
+        type = number
+        default = 3
+        validation { 3 (Default), 2 - 10 }
+
+    interval
+        description = "Approximate amount of time, in seconds, between health checks of an individual target"
+        type = number
+        default = 30
+        validation { 30, (Default), 5 - 300 }
+
+    timeout
+        description = "Amount of time, in seconds, during which no response means a failed health check."
+        type = number
+        default = 5
+        validation { 5 (Default), 2 - 120 }
+
+    path
+        description = "Destination for the health check request"
         type = string
-        default = "application"
-        validation { "application" (Default), "gateway", "network" }
+        default = "/"
+        validation { "^/*" }
 
-    subnets            = [for subnet in aws_subnet.public : subnet.id]
+    matcher
+        description = "Response codes to use when checking for a healthy responses from a target"
+        type = string
+        default = "200"
+        validation { "200" or" 300-302" }
 */
 
 # Instance Type
-resource "aws_lb_target_group" "test" {
+resource "aws_lb_target_group" "tg-proj-temp" {
     name     = "tf-example-lb-tg"
+    vpc_id   = aws_vpc.main.id
     target_type = "instance"
+    "instance", "ip", "lambda", "alb"
     port     = 80
     protocol = "HTTP"
-    "HTTP", "HTTPS", "GRPC"
-    vpc_id   = aws_vpc.main.id
+    "HTTP", "HTTPS"
+    protocol_version = "HTTP1"
+    "HTTP1", "HTTP2", "GRPC"
 
     #ALB Option
     deregistration_delay = 300
     0 - 3600, 300 (Default)
+    slow_start = 0
+    0 (Disable, Default), 30-900
     load_balancing_algorithm_type = "round_robin"
     "round_robin", "least_outstanding_requests"
-    protocol_version = "HTTP1"
-    "HTTP1", "HTTP2", ""
-
-
-
-
-    #NLB Option
-    connection_termination = false
-    true, false (Default)
-    deregistration_delay = 300
-    preserve_client_ip = true
-    true (Default), false
-
-
-
-
+    #stickiness = {}
 
     health_check = {
+        enabled = true
+        #port = 8080 - (Optional) Port to use to connect with the target. Valid values are either ports 1-65535, or traffic-port. Defaults to traffic-port.
+        protocol "HTTP"
+        healthy_threshold = 3
+        unhealthy_threshold = 3
+        interval = 30
+        timeout = 5
+        path = "/test/index.html"
+        matcher = "200"
+    }
 
+    tags = {
+        Environment = "production"
     }
 }
 
@@ -219,8 +309,40 @@ resource "aws_lb_target_group" "ip-example" {
 }
 
 
+/*
+'LB Listener Rule Resource'
+    직접 생성
+*/
 
+resource "aws_lb_listener" "alb-listen-proj-temp" {
+    load_balancer_arn = aws_lb.front_end.arn
+    port              = "443"
+    protocol          = "HTTPS"
+    ssl_policy        = "ELBSecurityPolicy-2016-08"
+    certificate_arn   = "arn:aws:iam::187416307283:server-certificate/test_cert_rab3wuqwgja25ct3n4jdj2tzu4"
 
+    default_action {
+        type             = "forward"
+        target_group_arn = aws_lb_target_group.front_end.arn
+    }
+}
 
+resource "aws_lb_listener_rule" "alb-listen-rule-proj-temp" {
+    listener_arn = aws_lb_listener.front_end.arn
+    priority     = 99
+    1 - 50000 (1 > 5000)
 
+    action {
+        type             = "forward"
+        "forward", "redirect", "fixed-response", "authenticate-cognito","authenticate-oidc"
+        target_group_arn = aws_lb_target_group.static.arn
+    }
+
+    condition {
+        host_header {
+            values = ["my-service.*.terraform.io"]
+        }
+    }
+
+}
 
