@@ -152,33 +152,36 @@ Args:
     protocol
         description = "Protocol"
         type = string
-        default = HTTP
-        validation { "HTTP", "HTTPS" }
+        default = "TCP"
+        validation { "TCP", "TCP_UDP", "TLS", "UDP" }
 
-    protocol_version
-        description = "Protoclo Version"
-        type = string
-        default = "HTTP1"
-        validation { "HTTP1", "HTTP2", "GRPC" }
 
-    #ALB Option
+    #NLB Option
     deregistration_delay
         description = "Deregistration delay time"
         type = number
         default = 300
         validation { 0 - 3600, 300 (Default) }
 
-    slow_start
-        description = "Warming up time after set target"
-        type = number
-        default = 0
-        validation { 0 (==Disable, Default), 30-900 }
-    
-    load_balancing_algorithm_type
-        description = "Load balancing algorithm type"
-        type = string
-        default = "round_robin"
-        validation { "round_robin", "least_outstanding_requests" }
+    preserve_client_ip
+        description = "Instance : true, IP : false"
+        type = bool
+        default = true
+        validation { true, false }
+
+    proxy_protocol_v2
+        description = "Use this protocol when connect to other netwrok"
+        type = bool
+        default = false
+        validation { true, false (Default) }
+
+    connection_termination
+        description = "Whether to terminate connections at the end of the deregistration timeout"
+        type = bool
+        default = false
+        validation { true, false (Default) }
+    false
+
     #stickiness = {}
 
     #health_check
@@ -192,7 +195,7 @@ Args:
     health_check_protocol
         description = "Protocol for Health Check"
         type = bool
-        default = "HTTP"
+        default = "TCP"
         validation { "HTTP", "HTTPS", "TCP" } 
 
     healthy_threshold
@@ -219,50 +222,45 @@ Args:
         default = 5
         validation { 5 (Default), 2 - 120 }
 
-    path
-        description = "Destination for the health check request"
-        type = string
-        default = "/"
-        validation { "^/*" }
+    #path
+    #    description = "Destination for the health check request"
+    #    type = string
+    #    default = "/"
+    #    validation { "^/*" }
 
-    matcher
-        description = "Response codes to use when checking for a healthy responses from a target"
-        type = string
-        default = "200"
-        validation { "200" or" 300-302" }
+    #matcher
+    #    description = "Response codes to use when checking for a healthy responses from a target"
+    #    type = string
+    #    default = "200"
+    #    validation { "200" or" 300-302" }
 */
 
-# Instance Type
+# Instance
 resource "aws_lb_target_group" "tg-proj-temp" {
     name     = "tf-example-lb-tg"
     vpc_id   = aws_vpc.main.id
     target_type = "instance"
-    "instance", "ip", "lambda", "alb"
     port     = 80
-    protocol = "HTTP"
-    "HTTP", "HTTPS"
-    protocol_version = "HTTP1"
-    "HTTP1", "HTTP2", "GRPC"
+    protocol = "TCP"
+    
 
-    #ALB Option
+    #NLB Option
     deregistration_delay = 300
-    0 - 3600, 300 (Default)
-    slow_start = 0
-    0 (Disable, Default), 30-900
-    load_balancing_algorithm_type = "round_robin"
-    "round_robin", "least_outstanding_requests"
+    connection_termination = false
+    preserve_client_ip = true
+    proxy_protocol_v2 = false
     #stickiness = {}
 
     health_check = {
         enabled = true
         #port = 8080 - (Optional) Port to use to connect with the target. Valid values are either ports 1-65535, or traffic-port. Defaults to traffic-port.
-        protocol "HTTP"
+        protocol = "TCP"
         healthy_threshold = 3
         unhealthy_threshold = 3
         interval = 30
         timeout = 5
-        path = "/test/index.html"
-        matcher = "200"
+        #path = "/test/index.html"
+        #matcher = "200"
     }
 
     tags = {
@@ -270,7 +268,7 @@ resource "aws_lb_target_group" "tg-proj-temp" {
     }
 }
 
-# IP Type
+# IP인 경우
 resource "aws_lb_target_group" "ip-example" {
     name        = "tf-example-lb-tg"
     target_type = "ip"
@@ -284,9 +282,8 @@ resource "aws_lb_target_group" "ip-example" {
 
 
 
-
 /*
-'LB Listener Rule Resource'
+'NLB Listener Resource'
     직접 생성
 */
 

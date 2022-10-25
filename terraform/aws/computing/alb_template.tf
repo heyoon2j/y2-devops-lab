@@ -205,6 +205,7 @@ Args:
         type = string
         default = "round_robin"
         validation { "round_robin", "least_outstanding_requests" }
+
     #stickiness = {}
 
     #health_check
@@ -258,31 +259,25 @@ Args:
         validation { "200" or" 300-302" }
 */
 
-# Instance Type
+# Instance
 resource "aws_lb_target_group" "tg-proj-temp" {
     name     = "tf-example-lb-tg"
     vpc_id   = aws_vpc.main.id
     target_type = "instance"
-    "instance", "ip", "lambda", "alb"
     port     = 80
     protocol = "HTTP"
-    "HTTP", "HTTPS"
     protocol_version = "HTTP1"
-    "HTTP1", "HTTP2", "GRPC"
 
     #ALB Option
     deregistration_delay = 300
-    0 - 3600, 300 (Default)
     slow_start = 0
-    0 (Disable, Default), 30-900
     load_balancing_algorithm_type = "round_robin"
-    "round_robin", "least_outstanding_requests"
     #stickiness = {}
 
     health_check = {
         enabled = true
         #port = 8080 - (Optional) Port to use to connect with the target. Valid values are either ports 1-65535, or traffic-port. Defaults to traffic-port.
-        protocol "HTTP"
+        protocol = "HTTP"
         healthy_threshold = 3
         unhealthy_threshold = 3
         interval = 30
@@ -296,7 +291,7 @@ resource "aws_lb_target_group" "tg-proj-temp" {
     }
 }
 
-# IP Type
+# IP
 resource "aws_lb_target_group" "ip-example" {
     name        = "tf-example-lb-tg"
     target_type = "ip"
@@ -310,7 +305,7 @@ resource "aws_lb_target_group" "ip-example" {
 
 
 /*
-'LB Listener Rule Resource'
+'ALB Listener Resource'
     직접 생성
 */
 
