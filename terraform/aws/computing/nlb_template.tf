@@ -180,9 +180,9 @@ Args:
         type = bool
         default = false
         validation { true, false (Default) }
-    false
 
     #stickiness = {}
+
 
     #health_check
     enabled
@@ -242,7 +242,6 @@ resource "aws_lb_target_group" "tg-proj-temp" {
     target_type = "instance"
     port     = 80
     protocol = "TCP"
-    
 
     #NLB Option
     deregistration_delay = 300
