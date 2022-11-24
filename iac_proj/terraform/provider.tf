@@ -1,3 +1,4 @@
+# Provider
 terraform {
     required_providers {
         aws = {
@@ -6,28 +7,14 @@ terraform {
             configuration_aliases = [ aws.apn2, aws.aps1 ]
         }
     }
-
-    backend "s3" {
-        bucket = "s3-proj-temp"
-        key    = "backend/${terraform.workspace}/terraform.tfstate"
-        region = "ap-northeast-2"
-    }
-    # 현재 Backend를 Workspace 별로 구분하기 위해서는 CLI를 써야 된다.
+    # CLI for Backend
+    # terraform init -backend-config=PATH
 }
-
-provider "aws" {
-    access_key = "<AWS_ACCESS_KEY>"
-    secret_key = "<AWS_SECRET_KEY>"
-    region = "ap-northeast-2"
-}
-
 
 provider "aws" {
     alias = "apn2"
     region = "ap-northeast-2"
-    #assume_role { role_arn = "" }
-    #profile = ""
-
+    
     default_tags {
         tags = {
             Environment = "Test"
@@ -39,8 +26,6 @@ provider "aws" {
 provider "aws" {
     alias = "aps1"
     region = "ap-south-1"
-    #assume_role { role_arn = "" }
-    #profile = ""
 
     default_tags {
         tags = {
