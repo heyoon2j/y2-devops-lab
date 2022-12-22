@@ -40,38 +40,53 @@ print(solution([9, -1, 0]))
 최빈값 구하기
 """
 def solution(array):
-    count = dict()
-    cList = []
-
-    if len(array) == 1:
-        return 1
+    answer = 0
+    countMap = dict()
+    cKey = []
 
     for i in range(len(array)):
-        if array[i] in count:
-            count[array[i]] += 1
+        if array[i] in countMap:
+            countMap[array[i]] += 1
         else:
-            count[array[i]] = 1
+            countMap[array[i]] = 1
 
-    cList = list(count.values())
-    cList.sort(reverse=True)
+    cKey = list(countMap.keys())
+    print(countMap, cKey)
     
-    if cList[0] == cList[1]:
+    if len(cKey) == 1:
+        return array[0]
+
+    # else
+    answer = cKey[0]
+    check = False
+
+    for i in range(1, len(cKey)):
+        if countMap[cKey[i]] == countMap[answer]:
+            check = True
+        if countMap[cKey[i]] > countMap[answer]:
+            check = False
+            answer = cKey[i]
+
+    if check == True:
         return -1
 
     else:
-        return cList[0]
+        return answer
 
-print(solution([1, 2, 3, 3, 3, 4]))
-
-
-"""
-"""
-
+print(solution([1]))
 
 
 """
+짝수는 싫어요
 """
 
+def solution(n):
+    answer = []
 
+    for i in range(1, n+1):
+        if (i % 2) != 0:
+            answer.append(i)
+    return answer
 
+print(solution(15))
 
