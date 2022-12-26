@@ -1,8 +1,20 @@
-# Child Config에 들어갈 내용
 /*
+Child Config
+- 상속 받을 내용
+- Module을 위한 내용
 
-Backend
-
+1. 상속 받을 내용
+    - Provider 설정
+    - Backend 설정
+    - 모든 Command에 대한 옵션 값 지정
+    - 모든 Command에 대한 Hooking
+2. Module을 위한 내용
+    - Module Source 위치
+    - Variables 파일 지정
+    - Input 값 입력
+    - Module 종속성 지정
+    - 해당 Module에 해당하는 Command에 대한 옵션 값 지정
+    - 해당 Module에 해당하는 Command에 대한 Hooking
 */
 
 
@@ -121,6 +133,10 @@ inputs = {
 dependencies {
     paths = ["../vpc", "../rds"]
 }
+
+include 
+
+
 
 include "remote_state" {
     path   = find_in_parent_folders()

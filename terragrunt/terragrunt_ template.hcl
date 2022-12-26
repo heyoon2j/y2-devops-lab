@@ -1,17 +1,8 @@
-/*
-Root Config
-- 상속 시킬 내용
-
-1. 상속 시킬 내용
-    - Provider 설정
-    - Backend 설정
-    - 모든 Command에 대한 옵션 값 지정
-    - 모든 Command에 대한 Hooking
-
-*/
-
 
 terraform {
+    # source = "../modules/networking/vpc"
+    source = "git::git@github.com:acme/infrastructure-modules.git//networking/vpc?ref=v0.0.1"
+
     #######################################################
     # CLI Flag
     extra_arguments "retry_lock" {
@@ -19,28 +10,43 @@ terraform {
         arguments = ["-lock-timeout=20m"]
     }
 
-    extra_arguments "parallelism" {
-        commands  = get_terraform_commands_that_need_parallelism()
-        arguments = ["-parallelism=5"]
-    }
+    extra_arguments "custom_vars" {
+        commands = [
+            "apply",
+            "plan",
+            "import",
+            "push",
+            "refresh"
+        ]
 
+        required_var_files = [
+            "${get_parent_terragrunt_dir()}/terraform.tfvars"
+        ]
+
+        optional_var_files = [
+            "${get_parent_terragrunt_dir()}/${get_env("TF_VAR_env", "dev")}.tfvars",
+            "${get_parent_terragrunt_dir()}/${get_env("TF_VAR_region", "us-east-1")}.tfvars",
+            "${get_terragrunt_dir()}/${get_env("TF_VAR_env", "dev")}.tfvars",
+            "${get_terragrunt_dir()}/${get_env("TF_VAR_region", "us-east-1")}.tfvars"
+        ]
+    }
 
     #######################################################
     # Hooking
-    before_hook "before_hook_change" {
+    before_hook "before_hook_1" {
         commands     = ["apply", "plan"]
         execute      = ["echo", "########## Execute Terragrunt command for changing infra (Before Hook) ##########"]
         #run_on_error = true
     }
 
-    after_hook "after_hook_change" {
+    after_hook "after_hook_1" {
         commands     = ["apply", "plan"]
         execute      = ["echo", "########## End Terragrunt command for changing infra (After Hook) ##########"]
         run_on_error = true
     }
 
     # after any error, with the ".*" expression.
-    error_hook "error_hook" {
+    error_hook "error_hook_1" {
         commands  = ["apply", "plan"]
         execute   = ["echo", "########## Error Hook executed ##########"]
         on_errors = [
@@ -92,14 +98,35 @@ terraform {
 EOF
 }
 
+dependency "vpc" {
+    config_path = "../vpc"
+}
+
+dependency "rds" {
+    config_path = "../rds"
+}
+
+inputs = {
+    vpc_id = dependency.vpc.outputs.vpc_id
+    db_url = dependency.rds.outputs.db_url
+}
+
+dependencies {
+    paths = ["../vpc", "../rds"]
+}
+
+include "remote_state" {
+    path   = find_in_parent_folders()
+    expose = true
+}
+
+include "region" {
+    path           = find_in_parent_folders("region.hcl")
+    expose         = true
+    merge_strategy = "no_merge"
+}
+
 inputs = {
     remote_state_config = include.remote_state.remote_state
     region              = include.region.region
 }
-
-
-
-
-
-
-
