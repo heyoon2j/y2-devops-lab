@@ -134,12 +134,21 @@ dependencies {
     paths = ["../vpc", "../rds"]
 }
 
-include 
 
 
+
+include "root" {
+    path   = find_in_parent_folders()
+    expose = true 
+}
+
+include "provider" {
+    path   = find_in_parent_folders("provider.hcl")
+    expose = true 
+}
 
 include "remote_state" {
-    path   = find_in_parent_folders()
+    path   = find_in_parent_folders("remote_state")
     expose = true
 }
 
