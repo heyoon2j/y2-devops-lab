@@ -59,8 +59,11 @@ print(solution(	[30, 10, 23, 6, 100]))
 def solution(n):
     answer = 0
 
-    for i in range(n):
-        
+    for i in range(1, n+1):
+        div = n % i
+        if div == 0:
+            answer += 1
+            
     return answer
 
 
