@@ -53,8 +53,6 @@ def solution(numbers, direction):
     if direction == "left":
         numbers.insert(len(numbers), numbers.pop(0))
     else:
-        numbers.insert(0, numbers.pop(len(numbers)))
+        numbers.insert(0, numbers.pop(len(numbers)-1))
     return numbers
-
-
 
