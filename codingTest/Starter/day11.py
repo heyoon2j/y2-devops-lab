@@ -40,6 +40,9 @@ print(solution(15))
 def solution(numbers):
     answer = 4
     print(answer)
+    answer = 2
+    a = 3
+    print (answer + a)
     return answer
 
 
