@@ -38,7 +38,7 @@ print(solution(15))
 최댓값 만들기(1)
 """
 def solution(numbers):
-    answer = 4
+    answer = 2
     a = 3
     print (answer + a)
     return answer
