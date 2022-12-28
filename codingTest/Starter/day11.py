@@ -20,16 +20,12 @@ def solution(n):
     answer = 0
     nList = [2, 3]
 
-
     for i in range(4, n+1):
         if chkdiv(i, nList) == True:
             answer += 1
-            print(i)
         else:
             nList.append(i)
-    print("===========")
     return answer
-
 
 print(solution(15))
 
@@ -38,15 +34,29 @@ print(solution(15))
 최댓값 만들기(1)
 """
 def solution(numbers):
-    answer = 4
-    print(answer)
-    answer = 2
-    a = 3
-    print (answer + a)
-    return answer
+    numbers.sort(reverse=True)
+    return numbers[0]*numbers[1]
 
 
 
 """
 팩토리얼
 """
+
+def solution(n):
+    answer = 1
+
+    if n == 1:
+        return 1
+
+    while True:
+        val = 1
+        for i in range(1, answer + 1):
+            val *= i
+        
+        if val > n:
+            return answer - 1
+        else:
+            answer += 1
+
+print(solution(3628800))
