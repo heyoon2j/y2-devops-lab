@@ -29,12 +29,18 @@ def solution(my_string):
     answer = ''
     strList = []
     for ch in my_string:
-        if ch in strList
+        if ch not in strList:
+            answer += ch
+            strList.append(ch)
     return answer
 
 
 """
 삼각형의 완성조건 (1)
 """
-
-
+def solution(sides):
+    maxVal = max(sides)
+    if maxVal < sum(sides) - maxVal:
+        return 1
+    else:
+        return 2

@@ -55,6 +55,5 @@ def solution(n):
         while (n % i) == 0:
             n = int(n / i)
 
-    
     return answer
 
