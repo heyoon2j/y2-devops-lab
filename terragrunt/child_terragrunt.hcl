@@ -4,12 +4,12 @@ Child Config
 - Module을 위한 내용
 
 1. 상속 받을 내용
-    - Provider 설정
-    - Backend 설정
-    - 모든 Command에 대한 옵션 값 지정
-    - 모든 Command에 대한 Hooking
+    - Provider 설정 (include)
+    - Backend 설정 (include)
+    - 모든 Command에 대한 옵션 값 지정 (include)
+    - 모든 Command에 대한 Hookin (include)
 2. Module을 위한 내용
-    - Module Source 위치
+    - Module Source 위치 
     - Variables 파일 지정
     - Input 값 입력
     - Module 종속성 지정
@@ -89,54 +89,8 @@ terraform {
     }
 }
 
-generate "provider" {
-    path      = "provider.tf"
-    if_exists = "overwrite"
-    contents = <<EOF
-provider "aws" {
-  region              = "us-east-1"
-  version             = "= 2.3.1"
-  allowed_account_ids = ["1234567890"]
-}
-EOF
-}
-
-generate "backend" {
-    path      = "backend.tf"
-    if_exists = "overwrite_terragrunt"
-    contents = <<EOF
-terraform {
-    backend "s3" {
-        bucket         = "my-terraform-state"
-        key            = "${path_relative_to_include()}/terraform.tfstate"
-        region         = "us-east-1"
-        encrypt        = true
-        dynamodb_table = "my-lock-table"
-    }
-}
-EOF
-}
-
-dependency "vpc" {
-    config_path = "../vpc"
-}
-
-dependency "rds" {
-    config_path = "../rds"
-}
-
-inputs = {
-    vpc_id = dependency.vpc.outputs.vpc_id
-    db_url = dependency.rds.outputs.db_url
-}
-
-dependencies {
-    paths = ["../vpc", "../rds"]
-}
-
-
-
-
+#####################################################
+# 구성 상속
 include "root" {
     path   = find_in_parent_folders()
     expose = true 
@@ -161,4 +115,24 @@ include "region" {
 inputs = {
     remote_state_config = include.remote_state.remote_state
     region              = include.region.region
+}
+
+
+#####################################################
+# 종속성
+dependency "vpc" {
+    config_path = "../vpc"
+}
+
+dependency "rds" {
+    config_path = "../rds"
+}
+
+dependencies {
+    paths = ["../vpc", "../rds"]
+}
+
+inputs = {
+    vpc_id = dependency.vpc.outputs.vpc_id
+    db_url = dependency.rds.outputs.db_url
 }

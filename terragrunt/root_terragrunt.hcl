@@ -91,15 +91,3 @@ terraform {
 }
 EOF
 }
-
-inputs = {
-    remote_state_config = include.remote_state.remote_state
-    region              = include.region.region
-}
-
-
-
-
-
-
-
