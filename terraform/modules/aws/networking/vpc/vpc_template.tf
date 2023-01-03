@@ -65,10 +65,10 @@ resource "aws_vpc" "vpc-proj" {
 
     #ipv6_cidr_block = var.vpc_v6cidr
 
-    instance_tenancy = "default"
+    instance_tenancy = var.instance_tenancy # "default"
 
-    enable_dns_hostnames = true
-    enable_dns_support = true
+    enable_dns_hostnames = var.enable_dns_hostnames # true
+    enable_dns_support = var.enable_dns_support # true
 
     # enable_classiclink = "false"
     # enable_classiclink_dns_support = "false"
