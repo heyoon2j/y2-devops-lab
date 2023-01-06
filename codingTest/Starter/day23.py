@@ -60,10 +60,12 @@ def solution(babbling):
             word = word.replace(babble, " ")
         answer.append(word)
 
+    count = 0
     for word in answer:
-        
+        if word in "    ":
+            count += 1
 
-    return answer.count("")
+    return count
 
 solution(["aya", "yee", "u", "maa", "wyeoo"])
 
