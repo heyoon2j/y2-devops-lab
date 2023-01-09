@@ -55,9 +55,6 @@ def solution(i, j, k):
     for n in range(i,j+1):
         nStr = str(n)
         answer += nStr.count(str(k))
-        if str(k) in nStr:
-            answer 
-            print(nStr)
 
     return answer
 solution(1,13,1)
