@@ -4,11 +4,10 @@ generate "backend" {
     contents = <<EOF
 terraform {
     backend "s3" {
-        bucket         = "${get_env("bucket")}"
-        key            = "${path_relative_to_include()}/terraform.tfstate"
-        region         = "${get_env("region", "ap-northeast-2")}"
+        bucket         = "${get_env("bucket", "s3-proj-aps1-tfstate")}"
+        key            = "${path_relative_to_include("remote_state.hcl")}/terraform.tfstate"
+        region         = "${get_env("region", "ap-south-1")}"
         encrypt        = true
-        dynamodb_table = "my-lock-table"
     }
 }
 EOF
