@@ -1,8 +1,3 @@
-variable "vpc_name" {
-    description = "VPC Name"
-    type = string
-}
-
 variable "cidr_block" {
     description = "VPC IPv4 CIDR"
     type = string
@@ -135,13 +130,48 @@ variable "pri_subnet" {
 }
 
 variable "pub_rt" {
-    description = "Public Routing Table"
-    type = map({
-        rt_name = list(string)
-        
-    })
+    description = "Public Subnet Dictionary Value"
+    type = list(object({
+        rt_name = string
+        route = list(object({
+            cidr_block = string
+            target_id = string
+        }))
+    }))
 }
 
 variable "pri_rt" {
+    description = "Private Subnet Dictionary Value"
+    type = list(object({
+        rt_name = string
+        route = list(object({
+            cidr_block = string
+            target_id = string
+        }))
+    }))
+}
 
+##################################################################
+## Config Input
+variable "proj_region" {
+    description = "Project Region"
+    type = string
+    validation {
+        condition = can(regex("^[a-z]{2}[1-3]{1}$", var.proj_region))
+        error_message = "Like ap2, as1 ..."
+    }
+}
+
+variable "proj_name" {
+    description = "Project Name"
+    type = string
+}
+
+variable "proj_env" {
+    description = "Project Environment"
+    type = string
+    validation { 
+        condition = contains(["dev", "stg", "prd"], var.proj_env)
+        error_message = "Only use dev, stg, prd"
+    }
 }

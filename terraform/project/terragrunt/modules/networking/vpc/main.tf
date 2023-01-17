@@ -22,6 +22,12 @@
 ## Outpu Value
 
 
+###########################################################
+    locals {
+        pub_rt_cnt = length(var.pub_rt)
+        #pri_rt_cnt = length(var.pri_rt)
+    }
+
 
 
 ############################################################
@@ -74,7 +80,7 @@ resource "aws_vpc" "vpc-proj" {
     # enable_classiclink_dns_support = "false"
 
     tags = {
-        Name = var.vpc_name
+        Name = "vpc-${var.proj_name}-${var.proj_env}-${var.proj_region}"
     }
 }
 
@@ -136,7 +142,7 @@ resource "aws_subnet" "sbn-proj-pub" {
     map_public_ip_on_launch = var.pub_subnet["map_public_ip_on_launch"]
 
     tags = {
-        Name : "${var.pub_subnet["subnet_name"][count.index]}"
+        Name = "sbn-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.pub_subnet["subnet_name"][count.index]}"
     }
 }
 
@@ -152,7 +158,7 @@ resource "aws_subnet" "sbn-proj-pri" {
     map_public_ip_on_launch = var.pri_subnet["map_public_ip_on_launch"]
 
     tags = {
-        Name : "${var.pri_subnet["subnet_name"][count.index]}"
+        Name = "sbn-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.pri_subnet["subnet_name"][count.index]}"
     }
 }
 
@@ -173,21 +179,13 @@ Args:
 
 
 resource "aws_route_table" "rt-proj-pub" {
-    vpc_id = aws_vpc.vpc-proj.id
+    count = length(var.pub_rt)
 
-    route = [
-        {
-           cidr_block = "10.0.1.0/24"
-           gateway_id = aws_internet_gateway.example.id
-        },
-        {
-           cidr_block = "10.0.1.0/24"
-           transit_gateway_id = aws_ec2_transit_gateway.tgw-y2net-prd-an2.id        
-        }
-    ]
+    vpc_id = aws_vpc.vpc-proj.id
+    #route = var.pub_rt[count.index]["route"]
 
     tags = {
-        Name = var.rt["rt_name"]
+        Name = "rt-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.pub_rt[count.index]["rt_name"]}"
     }
     /*
     depends_on = [
@@ -196,24 +194,44 @@ resource "aws_route_table" "rt-proj-pub" {
     */
 }
 
-## Association 할 때, 기본적으로 local에 대한 Routing은 자동으로 추가된다.
 resource "aws_route_table_association" "rt-assoc-proj-pub" {
-    subnet_id = aws_subnet.sbn-proj-pub.id
-    route_table_id = aws_route_table.rt-proj-pub.id
+    count = length(var.pub_subnet["subnet_name"])
+    subnet_id = aws_subnet.sbn-proj-pub[count.index].id
+
+    route_table_id = aws_route_table.rt-proj-pub[local.pub_rt_cnt == 1 ? 0 : (count.index)/local.pub_rt_cnt].id
 }
 
+resource "aws_route" "rt-proj-pub-igw-conn" {
+    route_table_id            = aws_route_table.rt-proj-pub[0].id
+    destination_cidr_block    = "0.0.0.0/0"
+    gateway_id  = aws_internet_gateway.igw-proj.id
+    depends_on                = [aws_internet_gateway.igw-proj]
+}
+/*
+    route = [
+        {
+           cidr_block = "10.0.1.0/24"
+           gateway_id = aws_internet_gateway.example.id
+        }
+        {
+           cidr_block = "10.0.1.0/24"
+           transit_gateway_id = aws_ec2_transit_gateway.tgw-y2net-prd-an2.id        
+        }
+    ]
+*/
+## Association 할 때, 기본적으로 local에 대한 Routing은 자동으로 추가된다.
 
 
 
 
+
+###################################################################
 # Internet Gateway
-
-
 resource "aws_internet_gateway" "igw-proj" {
     vpc_id = aws_vpc.vpc-proj.id
 
     tags = {
-        Name = 
+        Name = "igw-${var.proj_name}-${var.proj_region}"
     }
 }
 
