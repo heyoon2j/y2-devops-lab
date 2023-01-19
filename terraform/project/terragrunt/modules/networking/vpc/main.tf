@@ -23,10 +23,10 @@
 
 
 ###########################################################
-    locals {
-        pub_rt_cnt = length(var.pub_rt)
-        #pri_rt_cnt = length(var.pri_rt)
-    }
+locals {
+    pub_rt_cnt = length(var.pub_rt)
+    pri_rt_cnt = length(var.pri_rt)
+}
 
 
 
@@ -177,36 +177,6 @@ Args:
 
 */
 
-
-resource "aws_route_table" "rt-proj-pub" {
-    count = length(var.pub_rt)
-
-    vpc_id = aws_vpc.vpc-proj.id
-    #route = var.pub_rt[count.index]["route"]
-
-    tags = {
-        Name = "rt-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.pub_rt[count.index]["rt_name"]}"
-    }
-    /*
-    depends_on = [
-        aws_internet_gateway.igw
-    ]
-    */
-}
-
-resource "aws_route_table_association" "rt-assoc-proj-pub" {
-    count = length(var.pub_subnet["subnet_name"])
-    subnet_id = aws_subnet.sbn-proj-pub[count.index].id
-
-    route_table_id = aws_route_table.rt-proj-pub[local.pub_rt_cnt == 1 ? 0 : (count.index)/local.pub_rt_cnt].id
-}
-
-resource "aws_route" "rt-proj-pub-igw-conn" {
-    route_table_id            = aws_route_table.rt-proj-pub[0].id
-    destination_cidr_block    = "0.0.0.0/0"
-    gateway_id  = aws_internet_gateway.igw-proj.id
-    depends_on                = [aws_internet_gateway.igw-proj]
-}
 /*
     route = [
         {
@@ -220,15 +190,63 @@ resource "aws_route" "rt-proj-pub-igw-conn" {
     ]
 */
 ## Association 할 때, 기본적으로 local에 대한 Routing은 자동으로 추가된다.
+resource "aws_route_table" "rt-proj-pub" {
+    count = length(var.pub_rt)
+
+    vpc_id = aws_vpc.vpc-proj.id
+    #route = var.pub_rt[count.index]["route"]
+
+    tags = {
+        Name = "rt-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.pub_rt[count.index]["rt_name"]}"
+        attach_igw = "true"
+    }
+    /*
+    depends_on = [
+        aws_internet_gateway.igw
+    ]
+    */
+}
+
+resource "aws_route_table_association" "rt-assoc-proj-pub" {
+    count = length(var.pub_subnet["subnet_name"])
+
+    subnet_id = aws_subnet.sbn-proj-pub[count.index].id
+    route_table_id = aws_route_table.rt-proj-pub[local.pub_rt_cnt == 1 ? 0 : floor((count.index)/local.pub_rt_cnt)].id
+}
 
 
 
+
+
+#### Private Routing Table
+resource "aws_route_table" "rt-proj-pri" {
+    count = length(var.pri_rt)
+
+    vpc_id = aws_vpc.vpc-proj.id
+    #route = var.pri_rt[count.index]["route"]
+
+    tags = {
+        Name = "rt-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.pri_rt[count.index]["rt_name"]}"
+    }
+    /*
+    depends_on = [
+        aws_internet_gateway.igw
+    ]
+    */
+}
+
+resource "aws_route_table_association" "rt-assoc-proj-pri" {
+    count = length(var.pri_subnet["subnet_name"])
+    subnet_id = aws_subnet.sbn-proj-pri[count.index].id
+    route_table_id = aws_route_table.rt-proj-pri[local.pri_rt_cnt == 1 ? 0 : floor((count.index)/local.pri_rt_cnt)].id
+}
 
 
 ###################################################################
 # Internet Gateway
 resource "aws_internet_gateway" "igw-proj" {
-    vpc_id = aws_vpc.vpc-proj.id
+    #count = var.use_internet_gateway == true ? 1 : 0
+    vpc_id = var.use_internet_gateway == true ? aws_vpc.vpc-proj.id : null
 
     tags = {
         Name = "igw-${var.proj_name}-${var.proj_region}"
@@ -236,6 +254,26 @@ resource "aws_internet_gateway" "igw-proj" {
 }
 
 resource "aws_internet_gateway_attachment" "igw-attach-proj" {
-    internet_gateway_id = aws_internet_gateway.igw-proj.id
+    #count = var.use_internet_gateway == true ? 1 : 0
+    internet_gateway_id = var.use_internet_gateway == true ? aws_internet_gateway.igw-proj.id : null
     vpc_id = aws_vpc.vpc-proj.id
+}
+
+data "aws_route_tables" "rts_igw" {
+    vpc_id = aws_vpc.vpc-proj.id
+
+    filter {
+        name = "tag:attach_igw"
+        values = ["true", "True"] 
+    }
+}
+
+
+resource "aws_route" "rt-proj-pub-igw-conn" {
+    count                     = data.aws_route_tables.rts_igw.ids == null ? length(data.aws_route_tables.rts_igw.ids) : 0
+    
+    route_table_id            = tolist(data.aws_route_tables.rts_igw.ids)[count.index]
+    destination_cidr_block    = "0.0.0.0/0"
+    gateway_id  = aws_internet_gateway.igw-proj.id
+    depends_on                = [data.aws_route_tables.rts_igw]
 }

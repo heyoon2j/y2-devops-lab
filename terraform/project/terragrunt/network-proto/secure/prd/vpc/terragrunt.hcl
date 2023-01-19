@@ -30,7 +30,7 @@ inputs = {
     #region              = include.region.region
     proj_region = local.config_vars.locals.proj_region
     proj_name = local.config_vars.locals.proj_name
-    proj_env = local.config_vars.locals.proj_env[0]
+    proj_env = local.config_vars.locals.proj_env[2]
 
 
 # VPC
@@ -42,9 +42,9 @@ inputs = {
 
 # subnet
     pub_subnet = {
-        subnet_name = ["a-pub-lb", "b-pub-lb"]
-        cidr_block = ["172.16.30.0/27", "172.16.30.32/27"]
-        availability_zone = ["ap-south-1a", "ap-south-1b"] #1b"]
+        subnet_name = ["a-pub-untrust", "b-pub-untrust", "a-pub-mgmt", "b-pub-mgmt"]
+        cidr_block = ["172.16.30.0/27", "172.16.30.32/27", "172.16.30.64/27", "172.16.30.96/27"]
+        availability_zone = ["ap-south-1a", "ap-south-1b", "ap-south-1a", "ap-south-1b"] #1b"]
         #private_dns_hostname_type_on_launch =  
         #ipv6_cidr_block =
         assign_ipv6_address_on_creation = false
@@ -52,9 +52,9 @@ inputs = {
     }
 
     pri_subnet = {
-        subnet_name = ["a-pri-lb", "b-pri-lb"]
-        cidr_block = ["172.16.30.64/27", "172.16.30.96/27"]
-        availability_zone = ["ap-south-1a", "ap-south-1b"] #1b"]
+        subnet_name = ["a-pri-trust", "b-pri-trust", "a-pri-dummy", "b-pri-dummy"] 
+        cidr_block = ["172.16.30.128/27", "172.16.30.160/27", "172.16.30.192/27", "172.16.30.224/27"]
+        availability_zone = ["ap-south-1a", "ap-south-1b", "ap-south-1a", "ap-south-1b"]
         #private_dns_hostname_type_on_launch =  
         #ipv6_cidr_block =
         assign_ipv6_address_on_creation = false
@@ -73,36 +73,29 @@ inputs = {
 # Routing Table
     pub_rt = [
         {
-            rt_name = "pri-untrust"   
+            rt_name = "pub-untrust"   
+            route = []
+        },
+        {
+            rt_name = "pub-mgmt"
             route = null
         }
     ]
-    /*
+    pri_rt = [
         {
-            rt_name = "pri-mgmt"   
+            rt_name = "pri-trust"   
             route = []
         },
         {
-            rt_name = "pri-db"
-            route = []
-        } 
-    */
-    pri_rt = null
-    /*[
-        {
-            rt_name = "pri-lb"   
-            route = []
-        },
-        {
-            rt_name = "pri-app"   
-            route = []
-        },
-        {
-            rt_name = "pri-db"
-            route = []
+            rt_name = "pri-dummy"   
+            route = null
         }
-    ]*/
+    ]
 
+
+# Internet Gateway
+    use_internet_gateway = true
+    attach_rt_names = ["pub-untrust", "pub-mgmt"]
 }
 
 ###############################################################

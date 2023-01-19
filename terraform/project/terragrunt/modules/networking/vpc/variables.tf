@@ -151,6 +151,22 @@ variable "pri_rt" {
     }))
 }
 
+## Internet Gateway
+variable "use_internet_gateway" {
+    description = "Use internet gateway"
+    type = bool 
+    validation {
+        condition = var.use_internet_gateway == true || var.use_internet_gateway == false
+        error_message = "Only true or false"
+    }
+}
+
+variable "attach_rt_names" {
+    description = "Attach Routing Table Names"
+    type = list(string)
+}
+
+
 ##################################################################
 ## Config Input
 variable "proj_region" {
