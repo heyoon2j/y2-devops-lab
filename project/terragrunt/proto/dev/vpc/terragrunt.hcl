@@ -26,25 +26,24 @@ terraform {
 }
 
 inputs = {
-    #remote_state_config = include.remote_state.remote_state
-    #region              = include.region.region
     proj_region = local.config_vars.locals.proj_region
     proj_name = local.config_vars.locals.proj_name
-    proj_env = local.config_vars.locals.proj_env[2]
-
+    proj_env = local.config_vars.locals.proj_env[0]
 
 # VPC
-    cidr_block="172.16.30.0/24"
+    cidr_block="172.16.35.0/24"
     #ipv6_cidr_block = ""
     instance_tenancy="default"
     enable_dns_support=true
     enable_dns_hostnames=true
 
+    use_azs = ["ap-south-1a", "ap-south-1b"]
+
 # subnet
     pub_subnet = {
-        subnet_name = ["a-pub-untrust", "b-pub-untrust", "a-pub-mgmt", "b-pub-mgmt"]
-        cidr_block = ["172.16.30.0/27", "172.16.30.32/27", "172.16.30.64/27", "172.16.30.96/27"]
-        availability_zone = ["ap-south-1a", "ap-south-1b", "ap-south-1a", "ap-south-1b"] #1b"]
+        subnet_name = null
+        cidr_block = []
+        availability_zone = [] #1b"]
         #private_dns_hostname_type_on_launch =  
         #ipv6_cidr_block =
         assign_ipv6_address_on_creation = false
@@ -52,50 +51,35 @@ inputs = {
     }
 
     pri_subnet = {
-        subnet_name = ["a-pri-trust", "b-pri-trust", "a-pri-dummy", "b-pri-dummy"] 
-        cidr_block = ["172.16.30.128/27", "172.16.30.160/27", "172.16.30.192/27", "172.16.30.224/27"]
-        availability_zone = ["ap-south-1a", "ap-south-1b", "ap-south-1a", "ap-south-1b"]
+        subnet_name = ["${}a-pri-lb", "b-pri-lb", "a-pri-app", "b-pri-app", "a-pri-db", "b-pri-db"]
+        cidr_block = ["172.16.35.0/27", "172.16.35.32/27", "172.16.35.64/27", "172.16.35.96/27", "172.16.35.128/27", "172.16.35.160/27"]
+        availability_zone = ["ap-south-1a", "ap-south-1b", "ap-south-1a", "ap-south-1b", "ap-south-1a", "ap-south-1b"] #1b"]
         #private_dns_hostname_type_on_launch =  
         #ipv6_cidr_block =
         assign_ipv6_address_on_creation = false
         map_public_ip_on_launch = false
     }
-/*
-    pub_subnet_name = ["sbn-proto-pub1", "sbn-proto-pub2"]
-    pub_cidr_block = ["172.16.30.0/27", "172.16.30.32/27"]
-    pub_availability_zone = ["ap-south-1a", "ap-south-1b"] #1b"]
-    #private_dns_hostname_type_on_launch =  
-    #ipv6_cidr_block =
-    pub_assign_ipv6_address_on_creation = false
-    pub_map_public_ip_on_launch = false
-*/
 
 # Routing Table
-    pub_rt = [
+    pub_rt = []
+    pri_rt = ["pri-lb", "pri-app", "pri-db"]
+        /*
         {
-            rt_name = "pub-untrust"   
+            rt_name = "pri-lb"   
             route = []
         },
         {
-            rt_name = "pub-mgmt"
-            route = null
-        }
-    ]
-    pri_rt = [
-        {
-            rt_name = "pri-trust"   
+            rt_name = "pri-app"   
             route = []
         },
         {
-            rt_name = "pri-dummy"   
-            route = null
+            rt_name = "pri-db"
+            route = []
         }
-    ]
-
+    ]*/
 
 # Internet Gateway
-    use_internet_gateway = true
-    attach_rt_names = ["pub-untrust", "pub-mgmt"]
+    use_internet_gateway = false
 }
 
 ###############################################################
