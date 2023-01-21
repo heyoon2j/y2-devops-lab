@@ -47,6 +47,11 @@ variable "enable_dns_hostnames" {
     }
 }
 
+variable "use_azs" {
+    description = "Availability Zones list using in vpc"
+    type = list(string)
+}
+
 
 ## Subnet
 /*
@@ -131,24 +136,27 @@ variable "pri_subnet" {
 
 variable "pub_rt" {
     description = "Public Subnet Dictionary Value"
+    type = list(string)
+    /*
     type = list(object({
         rt_name = string
         route = list(object({
             cidr_block = string
             target_id = string
         }))
-    }))
+    }))*/
 }
 
 variable "pri_rt" {
     description = "Private Subnet Dictionary Value"
-    type = list(object({
-        rt_name = string
-        route = list(object({
-            cidr_block = string
-            target_id = string
-        }))
-    }))
+    type = list(string)
+    /*
+    type = list(
+        object({
+            rt_name = string
+            route = list(map(string))
+        })
+    )*/
 }
 
 ## Internet Gateway
@@ -159,11 +167,6 @@ variable "use_internet_gateway" {
         condition = var.use_internet_gateway == true || var.use_internet_gateway == false
         error_message = "Only true or false"
     }
-}
-
-variable "attach_rt_names" {
-    description = "Attach Routing Table Names"
-    type = list(string)
 }
 
 

@@ -24,8 +24,9 @@
 
 ###########################################################
 locals {
-    pub_rt_cnt = length(var.pub_rt)
-    pri_rt_cnt = length(var.pri_rt)
+    pub_rt_cnt = var.pub_rt != 0 ? length(var.pub_rt) : 0
+    pri_rt_cnt = var.pri_rt != 0 ? length(var.pri_rt) : 0
+    azs_cnt = var.use_azs != null ? length(var.use_azs) : 1
 }
 
 
@@ -84,7 +85,6 @@ resource "aws_vpc" "vpc-proj" {
     }
 }
 
-
 /*
 'Subnet Resource'
 
@@ -131,7 +131,7 @@ Args:
 */
 
 resource "aws_subnet" "sbn-proj-pub" {
-    count = length(var.pub_subnet["subnet_name"])
+    count = var.pub_subnet["subnet_name"] != null ? length(var.pub_subnet["subnet_name"]) : 0
 
     vpc_id = aws_vpc.vpc-proj.id
     cidr_block = var.pub_subnet["cidr_block"][count.index]
@@ -147,7 +147,7 @@ resource "aws_subnet" "sbn-proj-pub" {
 }
 
 resource "aws_subnet" "sbn-proj-pri" {
-    count = length(var.pri_subnet["subnet_name"])
+    count = var.pri_subnet["subnet_name"] != null ? length(var.pri_subnet["subnet_name"]) : 0
 
     vpc_id = aws_vpc.vpc-proj.id
     cidr_block = var.pri_subnet["cidr_block"][count.index]
@@ -191,74 +191,76 @@ Args:
 */
 ## Association 할 때, 기본적으로 local에 대한 Routing은 자동으로 추가된다.
 resource "aws_route_table" "rt-proj-pub" {
-    count = length(var.pub_rt)
+    count = local.pub_rt_cnt
 
     vpc_id = aws_vpc.vpc-proj.id
     #route = var.pub_rt[count.index]["route"]
 
     tags = {
-        Name = "rt-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.pub_rt[count.index]["rt_name"]}"
+        Name = "rt-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.pub_rt[count.index]}"
         attach_igw = "true"
     }
-    /*
-    depends_on = [
-        aws_internet_gateway.igw
-    ]
-    */
 }
 
 resource "aws_route_table_association" "rt-assoc-proj-pub" {
-    count = length(var.pub_subnet["subnet_name"])
+    count = var.pub_subnet["subnet_name"] != null ? length(var.pub_subnet["subnet_name"]) : 0
 
     subnet_id = aws_subnet.sbn-proj-pub[count.index].id
-    route_table_id = aws_route_table.rt-proj-pub[local.pub_rt_cnt == 1 ? 0 : floor((count.index)/local.pub_rt_cnt)].id
+    route_table_id = aws_route_table.rt-proj-pub[local.pub_rt_cnt == 1 ? 0 : floor((count.index)/local.azs_cnt)].id
 }
-
-
-
 
 
 #### Private Routing Table
 resource "aws_route_table" "rt-proj-pri" {
-    count = length(var.pri_rt)
+    count = local.pri_rt_cnt
 
     vpc_id = aws_vpc.vpc-proj.id
     #route = var.pri_rt[count.index]["route"]
 
     tags = {
-        Name = "rt-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.pri_rt[count.index]["rt_name"]}"
-    }
-    /*
-    depends_on = [
-        aws_internet_gateway.igw
-    ]
-    */
+        Name = "rt-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.pri_rt[count.index]}"
+   }
 }
 
 resource "aws_route_table_association" "rt-assoc-proj-pri" {
-    count = length(var.pri_subnet["subnet_name"])
+    count = var.pri_subnet["subnet_name"] != null ? length(var.pri_subnet["subnet_name"]) : 0
+
     subnet_id = aws_subnet.sbn-proj-pri[count.index].id
-    route_table_id = aws_route_table.rt-proj-pri[local.pri_rt_cnt == 1 ? 0 : floor((count.index)/local.pri_rt_cnt)].id
+    route_table_id = aws_route_table.rt-proj-pri[local.pri_rt_cnt == 1 ? 0 : floor((count.index)/local.azs_cnt)].id
 }
+
+/*
+resource "aws_route" "r-proj-pri" {
+    route_table_id              = "rtb-4fbb3ac4"
+    destination_ipv6_cidr_block = "::/0"
+    egress_only_gateway_id      = aws_egress_only_internet_gateway.egress.id
+}
+*/
 
 
 ###################################################################
 # Internet Gateway
 resource "aws_internet_gateway" "igw-proj" {
-    #count = var.use_internet_gateway == true ? 1 : 0
-    vpc_id = var.use_internet_gateway == true ? aws_vpc.vpc-proj.id : null
+    count = var.use_internet_gateway == true ? 1 : 0
+
+    vpc_id = aws_vpc.vpc-proj.id
 
     tags = {
         Name = "igw-${var.proj_name}-${var.proj_region}"
     }
 }
 
+/*
 resource "aws_internet_gateway_attachment" "igw-attach-proj" {
-    #count = var.use_internet_gateway == true ? 1 : 0
-    internet_gateway_id = var.use_internet_gateway == true ? aws_internet_gateway.igw-proj.id : null
-    vpc_id = aws_vpc.vpc-proj.id
-}
+    count = var.use_internet_gateway == true ? 1 : 0
 
+    internet_gateway_id = aws_internet_gateway.igw-proj[0].id 
+    vpc_id = aws_vpc.vpc-proj.id
+
+    depends_on = [aws_internet_gateway.igw-proj]
+}
+*/
+/*
 data "aws_route_tables" "rts_igw" {
     vpc_id = aws_vpc.vpc-proj.id
 
@@ -267,13 +269,14 @@ data "aws_route_tables" "rts_igw" {
         values = ["true", "True"] 
     }
 }
-
+*/
 
 resource "aws_route" "rt-proj-pub-igw-conn" {
-    count                     = data.aws_route_tables.rts_igw.ids == null ? length(data.aws_route_tables.rts_igw.ids) : 0
-    
-    route_table_id            = tolist(data.aws_route_tables.rts_igw.ids)[count.index]
+    count                     = local.pub_rt_cnt
+
+    #route_table_id            = tolist(data.aws_route_tables.rts_igw.ids)[count.index]
+    route_table_id = aws_route_table.rt-proj-pub[count.index].id
     destination_cidr_block    = "0.0.0.0/0"
-    gateway_id  = aws_internet_gateway.igw-proj.id
-    depends_on                = [data.aws_route_tables.rts_igw]
+    gateway_id  = aws_internet_gateway.igw-proj[0].id
+    depends_on                = [aws_internet_gateway.igw-proj]#, aws_route_table.rt-proj-pub]
 }
