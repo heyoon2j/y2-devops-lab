@@ -74,7 +74,7 @@ def solution(genres, plays):
         playCount.append((result, musicType))
 
     # 순서 정하기
-    playCount.sort()
+    playCount.sort(reverse=True)
     for play in playCount:
         musicType = play[1]
         if len(musicDict[musicType]) == 1:

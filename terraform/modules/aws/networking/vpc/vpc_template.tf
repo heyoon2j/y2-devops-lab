@@ -74,7 +74,7 @@ resource "aws_vpc" "vpc-proj" {
     # enable_classiclink_dns_support = "false"
 
     tags = {
-        Name = var.vpc_name
+        Name = "vpc-${var.proj_name}-${var.proj_env}-${var.proj_region}"
     }
 }
 
