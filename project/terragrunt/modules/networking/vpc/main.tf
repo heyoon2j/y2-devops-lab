@@ -246,7 +246,7 @@ resource "aws_internet_gateway" "igw-proj" {
     vpc_id = aws_vpc.vpc-proj.id
 
     tags = {
-        Name = "igw-${var.proj_name}-${var.proj_region}"
+        Name = "igw-${var.proj_name}-${var.proj_env}-${var.proj_region}"
     }
 }
 

@@ -29,6 +29,7 @@ inputs = {
     proj_region = local.config_vars.locals.proj_region
     proj_name = local.config_vars.locals.proj_name
     proj_env = local.config_vars.locals.proj_env[0]
+    
 
 # VPC
     cidr_block="172.16.35.0/24"
@@ -41,9 +42,9 @@ inputs = {
 
 # subnet
     pub_subnet = {
-        subnet_name = null
-        cidr_block = []
-        availability_zone = [] #1b"]
+        subnet_name = ["a-pub-test"]
+        cidr_block = ["172.16.35.192/27"]
+        availability_zone = ["ap-south-1a"] #1b"]
         #private_dns_hostname_type_on_launch =  
         #ipv6_cidr_block =
         assign_ipv6_address_on_creation = false
@@ -51,7 +52,7 @@ inputs = {
     }
 
     pri_subnet = {
-        subnet_name = ["${}a-pri-lb", "b-pri-lb", "a-pri-app", "b-pri-app", "a-pri-db", "b-pri-db"]
+        subnet_name = ["a-pri-lb", "b-pri-lb", "a-pri-app", "b-pri-app", "a-pri-db", "b-pri-db"]
         cidr_block = ["172.16.35.0/27", "172.16.35.32/27", "172.16.35.64/27", "172.16.35.96/27", "172.16.35.128/27", "172.16.35.160/27"]
         availability_zone = ["ap-south-1a", "ap-south-1b", "ap-south-1a", "ap-south-1b", "ap-south-1a", "ap-south-1b"] #1b"]
         #private_dns_hostname_type_on_launch =  
@@ -61,7 +62,7 @@ inputs = {
     }
 
 # Routing Table
-    pub_rt = []
+    pub_rt = ["pub-test"]
     pri_rt = ["pri-lb", "pri-app", "pri-db"]
         /*
         {
@@ -77,9 +78,8 @@ inputs = {
             route = []
         }
     ]*/
-
 # Internet Gateway
-    use_internet_gateway = false
+    use_internet_gateway = true
 }
 
 ###############################################################

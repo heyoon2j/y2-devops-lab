@@ -2,7 +2,7 @@
 # Transit Gateway
 1. Transit Gateway
     1) Transit Gateway 생성
-    2) Attachement 생성 (어떤, 무엇을, 어떻게 연결을 할 것인지 등의 정보가 저장)
+    2) Attachement 생성 (어떤, 무엇을, 어떻게 연결을 할 것인지 등의 정보가 저장) / VPC, DX, VPN, TGW Peering
     3) Attachment를 Transit Gateway의 Routing Table에 Association
     4) Attachment를 Transit Gateway의 Routing Table에 Propagation
     5) Transit Gateway의 Routing Table 생성
@@ -16,6 +16,18 @@
 
 ## Outpu Value
 
+
+locals {
+    associationList = [
+
+    ]
+    propagationList = [
+
+    ]
+    staticRouteList = [
+
+    ]
+}
 
 
 
@@ -165,12 +177,14 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "tgw-attach-proj" {
     }    
 }
 
+# DX
+# vpn
 
 resource "aws_ec2_transit_gateway_peering_attachment" "example" {
+    transit_gateway_id      = aws_ec2_transit_gateway.local.id
     peer_account_id         = aws_ec2_transit_gateway.peer.owner_id
     peer_region             = data.aws_region.peer.name
     peer_transit_gateway_id = aws_ec2_transit_gateway.peer.id
-    transit_gateway_id      = aws_ec2_transit_gateway.local.id
 
     tags = {
         Name = "TGW Peering Requestor"
@@ -233,15 +247,53 @@ Args:
 */
 
 
-resource "aws_ec2_transit_gateway_route_table" "tgw-rt-proj-xxx" {
+resource "aws_ec2_transit_gateway_route_table" "tgw-rt-proj" {
+    count = length(var.tgw_rt)
+
     transit_gateway_id = aws_ec2_transit_gateway.tgw-proj.id
 
     tags = {
-        Name = ""
+        Name = "${var.tgw_rt[count.index]["name"]}"
     }    
 }
 
+data "aws_ec2_transit_gateway_attachment" "attach_vpc" {
+    count = length
+
+    filter {
+        name   = "resource-type"
+        values = ["peering"]
+    }
+}
+data "aws_ec2_transit_gateway_attachment" "attach_tgw" {
+    count = length
+
+    filter {
+        name   = "resource-type"
+        values = ["peering"]
+    }
+}
+data "aws_ec2_transit_gateway_attachment" "attach_vpn" {
+    count = length
+
+    filter {
+        name   = "resource-type"
+        values = ["peering"]
+    }
+}
+data "aws_ec2_transit_gateway_attachment" "attach_dx" {
+    count = length
+
+    filter {
+        name   = "resource-type"
+        values = ["peering"]
+    }
+}
+
+
 resource "aws_ec2_transit_gateway_route_table_association" "tgw-rt-assoc-proj" {
+    count = length(var.tgw_rt)
+
     transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
     transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-y2net-prd-an2.id
 }
@@ -251,10 +303,11 @@ resource "aws_ec2_transit_gateway_route_table_propagation" "tgw-rt-prop-proj" {
     transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-y2net-prd-an2.id
 }
 
-resource "aws_ec2_transit_gateway_route" "tgw-rt-rule-proj-01" {
+resource "aws_ec2_transit_gateway_route" "tgw-rt-rule-proj" {
     destination_cidr_block         = "0.0.0.0/0"
     transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-proj.id
     transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
+    blackhole = var.blackhole
 }
 
 resource "aws_ec2_transit_gateway_route" "tgw-rt-rule-proj-02" {

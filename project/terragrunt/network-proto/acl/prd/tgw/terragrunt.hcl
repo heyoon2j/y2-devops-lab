@@ -22,7 +22,22 @@ locals {
 
 ###############################################################
 terraform {
-    source = "${get_parent_terragrunt_dir("root")}/modules/networking/vpc"
+    source = "${get_parent_terragrunt_dir("root")}/modules/networking/tgw"
+
+    after_hook "after_hook_run_python" {
+        commands     = ["apply", "plan"]
+        execute      = ["echo", "########## End Terragrunt command for changing infra (After Hook) ##########"]
+        run_on_error = true
+    }
+
+    # after any error, with the ".*" expression.
+    error_hook "error_hook" {
+        commands  = ["apply", "plan"]
+        execute   = ["echo", "########## Error Hook executed ##########"]
+        on_errors = [
+            ".*",
+        ]
+    }
 }
 
 inputs = {
@@ -47,7 +62,48 @@ inputs = {
     # Multicast Support
     multicast_support = "disable"
 
-# 
+# Attachment
+    attachment_vpc = ["attach-acl","attach-proto"]
+    attachment_tgw = []
+    attachment_vpn = []
+    attachment_dx = []
+
+# Routing Table
+    tgw_rt = [
+        {
+            name = "acl-route"
+            associationList = ["attach-acl"]
+            propagationList = ["attach-proto"]
+            static_routes = [
+                {
+                    destination = "0.0.0.0/0"
+                    target = ""                
+                    blackhole = false                      
+                }
+            ]
+        },
+        {
+            name = "app-route"
+            associationList = ["attach-acl"]
+            propagationList = ["attach-proto"]
+            static_routes = [
+                {
+                    destination = "0.0.0.0/0"
+                    target = ""                
+                    blackhole = false                    
+                }
+            ]
+        }/*,
+        {
+            name = ""
+            associationList = ["attach-acl"]
+            propagationList = ["attach-proto"]
+            static_routes = [
+
+            ]
+        }*/
+    ]
+
 
 }
 
