@@ -162,6 +162,19 @@ resource "aws_subnet" "sbn-proj-pri" {
     }
 }
 
+data "aws_subnet" "attahment" {
+    count = length(var.attachment_subnet)
+    filter {
+        name   = "tag:Name"
+        values = ["sbn-${var.proj_name}-${var.proj_env}-${var.proj_region}-${var.attachment_subnet[count.index]}"]
+    }
+
+    depends_on = [
+        aws_subnet.sbn-proj-pub,
+        aws_subnet.sbn-proj-pri
+    ]
+}
+
 ##########################################################
 # Routing Table
 

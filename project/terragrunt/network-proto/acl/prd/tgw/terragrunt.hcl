@@ -19,10 +19,20 @@ locals {
     config_vars = read_terragrunt_config(find_in_parent_folders("config.hcl"))
 }
 
+###############################################################
+/*
+dependency "proto_vpc" {
+    config_path = "${get_parent_terragrunt_dir("root")}//proto/dev/vpc"
+}
+
+dependency "secure_vpc" {
+    config_path = "${get_parent_terragrunt_dir("root")}//network-proto/secure/prd/vpc"
+}
+*/
 
 ###############################################################
 terraform {
-    source = "${get_parent_terragrunt_dir("root")}/modules/networking/tgw"
+    source = "${get_parent_terragrunt_dir("root")}//modules/networking/tgw"
 
     after_hook "after_hook_run_python" {
         commands     = ["apply", "plan"]
@@ -63,33 +73,47 @@ inputs = {
     multicast_support = "disable"
 
 # Attachment
-    attachment_vpc = ["attach-acl","attach-proto"]
-    attachment_tgw = []
-    attachment_vpn = []
-    attachment_dx = []
+
+    attachment_vpc = [
+        {
+            name = "attachment-secure"
+            vpc_name = dependency.secure_vpc.outputs.vpc["name"]
+            vpc_id = dependency.secure_vpc.outputs.vpc["id"]
+            subnet_ids = dependency.secure_vpc.outputs.attachment_subnet
+        },
+        {
+            name = "attachment-proto"
+            vpc_name =dependency.proto_vpc.outputs.vpc["name"]
+            vpc_id = dependency.proto_vpc.outputs.vpc["id"]
+            subnet_ids = dependency.proto_vpc.outputs.attachment_subnet
+        }
+    ]
+    attachment_peering = []
+    #attachment_vpn = []
+    #attachment_dx = []
 
 # Routing Table
     tgw_rt = [
         {
             name = "acl-route"
-            associationList = ["attach-acl"]
-            propagationList = ["attach-proto"]
+            associationList = ["attachment-secure"]
+            propagationList = ["attachment-proto"]
             static_routes = [
                 {
                     destination = "0.0.0.0/0"
-                    target = ""                
+                    attachment = "attachment-secure"             
                     blackhole = false                      
                 }
             ]
         },
         {
             name = "app-route"
-            associationList = ["attach-acl"]
-            propagationList = ["attach-proto"]
+            associationList = ["attachment-acl"]
+            propagationList = ["attachment-proto"]
             static_routes = [
                 {
                     destination = "0.0.0.0/0"
-                    target = ""                
+                    attachment = "attachment-secure"                
                     blackhole = false                    
                 }
             ]

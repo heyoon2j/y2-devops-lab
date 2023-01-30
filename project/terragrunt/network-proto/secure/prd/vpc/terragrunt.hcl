@@ -22,7 +22,7 @@ locals {
 
 ###############################################################
 terraform {
-    source = "${get_parent_terragrunt_dir("root")}/modules/networking/vpc"
+    source = "${get_parent_terragrunt_dir("root")}//modules/networking/vpc"
 }
 
 inputs = {
@@ -71,6 +71,9 @@ inputs = {
 
 # Internet Gateway
     use_internet_gateway = true
+
+# TGW Attachment Subnet
+    attachment_subnet = ["a-pri-dummy", "b-pri-dummy"]
 }
 
 ###############################################################

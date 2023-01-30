@@ -17,18 +17,42 @@
 ## Outpu Value
 
 
-locals {
-    associationList = [
-
-    ]
-    propagationList = [
-
-    ]
-    staticRouteList = [
-
-    ]
+/*
+data "aws_ec2_transit_gateway_vpc_attachment" "example" {
+    count = length(var.attachment_vpc)
+    filter {
+        name   = "vpc-id"
+        values = [var.attachment_vpc[count.indxe]["vpc_id"]]
+    }
 }
+# data "aws_ec2_transit_gateway_peering_attachment" "example" {}
+# data "aws_ec2_transit_gateway_vpn_attachment" "example" {}
+# data "aws_ec2_transit_gateway_dx_gateway_attachment" "example" {}
+*/
 
+locals {
+    attachment = merge(
+        {for attach in aws_ec2_transit_gateway_vpc_attachment.tgw-attach-vpc : attach.tags_all["Name"] => attach.vpc_id}
+        ,{for attach in aws_ec2_transit_gateway_peering_attachment.tgw-attach-peering : attach.tags_all["Name"] => attach.peering_id}
+        #,{for attach in peering}
+        #,{for attach in peering}
+    )
+    router = {for rt in aws_ec2_transit_gateway_route_table.tgw-rt-proj : rt.tags_all["Name"] => rt.id}
+/*
+    association = [
+        for rt in var.tgw_rt:{
+            for assoc in rt.associationList:
+                local.router[rt.name] => local.attachment[assoc]
+        }
+    ]
+    propagation = [
+        for rt in var.tgw_rt:{
+            for propa in rt.propagationList:
+                local.router[rt.name] => local.attachment[propa]
+        }
+    ]
+*/
+}
 
 
 ############################################################
@@ -156,12 +180,13 @@ Args:
         validation { true (Default), false }
 */
 
-resource "aws_ec2_transit_gateway_vpc_attachment" "tgw-attach-proj" {
+resource "aws_ec2_transit_gateway_vpc_attachment" "tgw-attach-vpc" {
+    count = length(var.attachment_vpc)
 
     transit_gateway_id = aws_ec2_transit_gateway.tgw-proj.id 
-    vpc_id             = aws_vpc.vpc-proj.id
+    vpc_id             = var.attachment_vpc[count.index]["vpc_id"]
     # Attachment용 IP를 설정할 Subnet IDs(Multi-AZ)
-    subnet_ids         = ["${aws_subnet.sbn-y2net-prd-an2-a-pri.id}"]
+    subnet_ids         = var.attachment_vpc[count.index]["subnet_ids"]
 
     dns_support = "enable"
     ipv6_support = "disable"
@@ -173,23 +198,26 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "tgw-attach-proj" {
     transit_gateway_default_route_table_propagation = "false"
 
     tags = {
-        Name = ""
+        Name = "${var.attachment_vpc[count.index]["name"]}"
     }    
 }
 
-# DX
-# vpn
+resource "aws_ec2_transit_gateway_peering_attachment" "tgw-attach-peering" {
+    count = length(var.attachment_peering)
 
-resource "aws_ec2_transit_gateway_peering_attachment" "example" {
-    transit_gateway_id      = aws_ec2_transit_gateway.local.id
-    peer_account_id         = aws_ec2_transit_gateway.peer.owner_id
-    peer_region             = data.aws_region.peer.name
-    peer_transit_gateway_id = aws_ec2_transit_gateway.peer.id
+    transit_gateway_id      = aws_ec2_transit_gateway.tgw-proj.id
+    peer_account_id         = var.attachment_peering[count.index].peer_account_id
+    peer_region             = var.attachment_peering[count.index].peer_region
+    peer_transit_gateway_id = var.attachment_peering[count.index].peer_transit_gateway_id
 
     tags = {
-        Name = "TGW Peering Requestor"
+        Name = "${var.attachment_peering[count.index].name}"
     }
 }
+
+# VPN Attachment
+# DX Attachment
+
 
 
 ## Routing 작업
@@ -257,61 +285,40 @@ resource "aws_ec2_transit_gateway_route_table" "tgw-rt-proj" {
     }    
 }
 
-data "aws_ec2_transit_gateway_attachment" "attach_vpc" {
-    count = length
-
-    filter {
-        name   = "resource-type"
-        values = ["peering"]
-    }
-}
-data "aws_ec2_transit_gateway_attachment" "attach_tgw" {
-    count = length
-
-    filter {
-        name   = "resource-type"
-        values = ["peering"]
-    }
-}
-data "aws_ec2_transit_gateway_attachment" "attach_vpn" {
-    count = length
-
-    filter {
-        name   = "resource-type"
-        values = ["peering"]
-    }
-}
-data "aws_ec2_transit_gateway_attachment" "attach_dx" {
-    count = length
-
-    filter {
-        name   = "resource-type"
-        values = ["peering"]
-    }
-}
-
-
+/*
 resource "aws_ec2_transit_gateway_route_table_association" "tgw-rt-assoc-proj" {
-    count = length(var.tgw_rt)
+    count = length(local.association)
+    for_each = local.association
 
-    transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
-    transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-y2net-prd-an2.id
+    transit_gateway_route_table_id = local.association[count.index]. #aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
+    transit_gateway_attachment_id  = local.association[count.index] #aws_ec2_transit_gateway_vpc_attachment.tgw-attach-y2net-prd-an2.id
+
+
+    association = [
+        for rt in var.tgw_rt:{
+            for assoc in rt.associationList:
+                local.router[rt.name] => local.attachment[assoc]
+        }
+    ]
+    propagation = [
+        for rt in var.tgw_rt:{
+            for propa in rt.propagationList:
+                local.router[rt.name] => local.attachment[propa]
+        }
+    ]
 }
 
 resource "aws_ec2_transit_gateway_route_table_propagation" "tgw-rt-prop-proj" {
+    count = length(locals.propagation)
+
     transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
     transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-y2net-prd-an2.id
 }
-
+*/
+/*
 resource "aws_ec2_transit_gateway_route" "tgw-rt-rule-proj" {
     destination_cidr_block         = "0.0.0.0/0"
     transit_gateway_attachment_id  = aws_ec2_transit_gateway_vpc_attachment.tgw-attach-proj.id
     transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
     blackhole = var.blackhole
-}
-
-resource "aws_ec2_transit_gateway_route" "tgw-rt-rule-proj-02" {
-    destination_cidr_block         = "172.13.0.0/24"
-    blackhole = true
-    transit_gateway_route_table_id = aws_ec2_transit_gateway_route_table.tgw-rt-proj-xxx.id
-}
+}*/

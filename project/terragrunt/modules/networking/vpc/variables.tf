@@ -134,6 +134,7 @@ variable "pri_subnet" {
     })
 }
 
+
 variable "pub_rt" {
     description = "Public Subnet Dictionary Value"
     type = list(string)
@@ -167,6 +168,11 @@ variable "use_internet_gateway" {
         condition = var.use_internet_gateway == true || var.use_internet_gateway == false
         error_message = "Only true or false"
     }
+}
+
+variable "attachment_subnet" {
+    description = "Subnet for attaching TGW"
+    type = list(string)
 }
 
 

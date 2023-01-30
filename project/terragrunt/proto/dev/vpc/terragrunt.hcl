@@ -19,10 +19,31 @@ locals {
     config_vars = read_terragrunt_config(find_in_parent_folders("config.hcl"))
 }
 
+###############################################################
+
+/*
+dependency "vpc" {
+    config_path = "../vpc"
+}
+
+dependency "rds" {
+    config_path = "../rds"
+}
+
+dependencies {
+    paths = ["../vpc", "../rds"]
+}
+
+inputs = {
+    vpc_id = dependency.vpc.outputs.vpc_id
+    db_url = dependency.rds.outputs.db_url
+}
+*/
+
 
 ###############################################################
 terraform {
-    source = "${get_parent_terragrunt_dir("root")}/modules/networking/vpc"
+    source = "${get_parent_terragrunt_dir("root")}//modules/networking/vpc"
 }
 
 inputs = {
@@ -42,9 +63,9 @@ inputs = {
 
 # subnet
     pub_subnet = {
-        subnet_name = ["a-pub-test"]
-        cidr_block = ["172.16.35.192/27"]
-        availability_zone = ["ap-south-1a"] #1b"]
+        subnet_name = []
+        cidr_block = []
+        availability_zone = [] #1b"]
         #private_dns_hostname_type_on_launch =  
         #ipv6_cidr_block =
         assign_ipv6_address_on_creation = false
@@ -80,25 +101,7 @@ inputs = {
     ]*/
 # Internet Gateway
     use_internet_gateway = true
-}
 
-###############################################################
-
-/*
-dependency "vpc" {
-    config_path = "../vpc"
+# Attachment Subnet
+    attachment_subnet = ["a-pri-lb", "b-pri-lb"]
 }
-
-dependency "rds" {
-    config_path = "../rds"
-}
-
-dependencies {
-    paths = ["../vpc", "../rds"]
-}
-
-inputs = {
-    vpc_id = dependency.vpc.outputs.vpc_id
-    db_url = dependency.rds.outputs.db_url
-}
-*/
