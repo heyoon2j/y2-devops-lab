@@ -39,7 +39,9 @@ inputs = {
             ip_address_type = "ipv4"
 
             security_groups = []
-            
+
+            enable_deletion_protection = false
+
             # Application Option
             idle_timeout = 60
             enable_http2 = true
@@ -48,7 +50,7 @@ inputs = {
             desync_mitigation_mode = "defensive"
             enable_waf_fail_open = false
 
-            access_logs {
+            access_logs = {
                 bucket  = aws_s3_bucket.lb_logs.bucket
                 prefix  = "test-lb"
                 enabled = true
