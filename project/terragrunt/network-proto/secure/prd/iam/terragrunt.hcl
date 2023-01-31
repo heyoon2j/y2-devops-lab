@@ -39,7 +39,7 @@ inputs = {
 # Role
     role = [
         {
-            name = "role-${local.proj_name}-${local.proj_env}-ec2-readOnly",
+            name = "role-${local.proj_name}-${local.proj_env}-ec2-readOnly"
             assume_role_policy = file("${get_parent_terragrunt_dir("root")}/policy/assumeRole_ec2.json")
             // "{
             //     Version = \"2012-10-17\"

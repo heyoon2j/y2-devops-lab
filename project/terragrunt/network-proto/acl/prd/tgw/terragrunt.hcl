@@ -20,7 +20,7 @@ locals {
 }
 
 ###############################################################
-/*
+
 dependency "proto_vpc" {
     config_path = "${get_parent_terragrunt_dir("root")}//proto/dev/vpc"
 }
@@ -28,26 +28,11 @@ dependency "proto_vpc" {
 dependency "secure_vpc" {
     config_path = "${get_parent_terragrunt_dir("root")}//network-proto/secure/prd/vpc"
 }
-*/
+
 
 ###############################################################
 terraform {
     source = "${get_parent_terragrunt_dir("root")}//modules/networking/tgw"
-
-    after_hook "after_hook_run_python" {
-        commands     = ["apply", "plan"]
-        execute      = ["echo", "########## End Terragrunt command for changing infra (After Hook) ##########"]
-        run_on_error = true
-    }
-
-    # after any error, with the ".*" expression.
-    error_hook "error_hook" {
-        commands  = ["apply", "plan"]
-        execute   = ["echo", "########## Error Hook executed ##########"]
-        on_errors = [
-            ".*",
-        ]
-    }
 }
 
 inputs = {
