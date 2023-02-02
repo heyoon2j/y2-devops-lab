@@ -30,39 +30,34 @@ dependency "secure_vpc" {
 
 ###############################################################
 terraform {
-    source = "${get_parent_terragrunt_dir("root")}//modules/computing/alb"
+    source = "${get_parent_terragrunt_dir("root")}//modules/computing/nlb"
 }
 
 inputs = {
     vpc_id = dependency.secure_vpc.outputs.vpc["id"]
 
 
-# ALB
-    alb = [
+# NLB
+    nlb = [
         {
-            name = "alb-${local.proj_name}-${local.proj_env}-ec2-readOnly"
+            name = "nlb-${local.proj_name}-${local.proj_env}-ec2-readOnly"
             internal = true
-            load_balancer_type = "application"
+            load_balancer_type = "network"
             subnets = ["sbn-${local.proj_name}-${local.proj_env}-${local.proj_region}-a-pub-untrust", "sbn-${local.proj_name}-${local.proj_env}-${local.proj_region}-b-pub-untrust"]
             ip_address_type = "ipv4"
             security_groups = ["${local.proj_name}-${local.proj_env}-http-sg"]
 
             enable_deletion_protection = false
 
-            # Application Option
-            idle_timeout = 60
-            enable_http2 = true
-            drop_invalid_header_fields = false
-            preserve_host_header = false
-            desync_mitigation_mode = "defensive"
-            enable_waf_fail_open = false
+            # NLB Option
+            enable_cross_zone_load_balancing = false
 
             log_enabled = false
             log_bucket  = null
             log_prefix  = null
 
             tags = {
-                Name = "alb-${local.proj_name}-${local.proj_env}-ec2-readOnly"
+                Name = "nlb-${local.proj_name}-${local.proj_env}-ec2-readOnly"
                 Test = "test"
             }            
         }
@@ -70,37 +65,65 @@ inputs = {
 
     targetGroup = [
         {
-            name     = "tg-${local.proj_name}-${local.proj_env}-${local.proj_region}-proto-80"
+            name     = "tg-${local.proj_name}-${local.proj_env}-${local.proj_region}-proto-8080"
             target_type = "instance"    # "instance", "ip", "lambda", "alb"
-            port     = 80
-            protocol = "HTTP"           # GENEVE, HTTP, HTTPS, TCP, TCP_UDP, TLS,ㅜUDP
-            protocol_version = "HTTP1"  # HTTP1, HTTP2, GRPC
+            port     = 8080
+            protocol = "TCP"           # GENEVE, HTTP, HTTPS, TCP, TCP_UDP, TLS, UDP
             # if Type = "ip"
             ip_address_type = null
-            
-            #ALB Option
+ 
             deregistration_delay = 300
-            slow_start = 0
-            load_balancing_algorithm_type = "round_robin"   # round_robin or least_outstanding_requests
+
+            #NLB Option
+            connection_termination = true
+            preserve_client_ip = true
+            proxy_protocol_v2 = false
 
             st_enabled = false
-            st_cookie_name = null#"test-cookie"
-            st_cookie_duration = null#86400          # 1 ~ 604800
-            st_type = null#"lb_cookie"               # lb_cookie, app_cookie
+            st_type = "source_ip"                    # "source_ip"
 
             hc_enabled = true
             hc_port = "traffic-port"            # 1-65535, or traffic-port. Defaults to traffic-port.
-            hc_protocol = "HTTP"                # 
-            healthy_threshold = 5
-            unhealthy_threshold = 2
+            hc_protocol = "TCP"                # TCP, HTTP, HTTPS
+            healthy_threshold = 3
+            unhealthy_threshold = 3
             hc_interval = 30
-            hc_timeout = 5
-            hc_path = "/"
-            hc_matcher = "200"
+            hc_timeout = null
 
             tags = {
                 #Environment = "production"
                 Name = "tg-${local.proj_name}-${local.proj_env}-${local.proj_region}-proto-80"
+            }
+        },
+        {
+            name     = "tg-${local.proj_name}-${local.proj_env}-${local.proj_region}-proto-8090"
+            target_type = "ip"    # "instance", "ip", "lambda", "alb"
+            port     = 8090
+            protocol = "TCP"           # GENEVE, HTTP, HTTPS, TCP, TCP_UDP, TLS, UDP
+             # if Type = "ip"
+            ip_address_type = "ipv4"        # "ipv4", "ipv6"
+ 
+            deregistration_delay = 300
+
+            #NLB Option
+            connection_termination = true
+            preserve_client_ip = true
+            proxy_protocol_v2 = false
+
+            st_enabled = false
+            st_type = null                     # "source_ip"
+
+            hc_enabled = true
+            hc_port = "traffic-port"            # 1-65535, or traffic-port. Defaults to traffic-port.
+            hc_protocol = "TCP"                # TCP, HTTP, HTTPS
+            healthy_threshold = 3
+            unhealthy_threshold = 3
+            hc_interval = 30
+            hc_timeout = null
+
+            tags = {
+                #Environment = "production"
+                Name = "tg-${local.proj_name}-${local.proj_env}-${local.proj_region}-proto-8090"
             }
         }
     ]

@@ -1,16 +1,12 @@
-output "vpc" {
+output "alb" {
     description = "VPC Information"
     sensitive = true
 
-    value = {
-        id = aws_vpc.vpc-proj.id
-        name = "vpc-${var.proj_name}-${var.proj_env}-${var.proj_region}"
-    }
+    value = [
+        for alb in aws_lb.alb-proj:
+            {
+                "id" = alb.id
+                "name" = alb.tags_all["Name"] 
+            }
+    ]
 }
-
-output "attachment_subnet" {
-    description = "Information for TGW"
-    sensitive = true
-    value = [for s in data.aws_subnet.attahment : s.id]
-}
-

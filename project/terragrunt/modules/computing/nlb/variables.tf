@@ -7,8 +7,8 @@ variable "vpc_id" {
     # }
 }
 
-variable "alb" {
-    description = "Application Load Balancer Configuration"
+variable "nlb" {
+    description = "Network Load Balancer Configuration"
     type = list(object({
         name = string
         internal = bool
@@ -19,13 +19,8 @@ variable "alb" {
 
         enable_deletion_protection = bool   # false
 
-        # Application Option
-        idle_timeout = number
-        enable_http2 = bool
-        drop_invalid_header_fields = bool
-        preserve_host_header = bool
-        desync_mitigation_mode = string #"defensive"
-        enable_waf_fail_open = bool
+        # NLB Option
+        enable_cross_zone_load_balancing = bool
 
         log_enabled = bool
         log_bucket  = string
@@ -36,24 +31,22 @@ variable "alb" {
 }
 
 variable "targetGroup" {
-    description = "Application Load Balancer Configuration"
+    description = "Network Load Balancer Configuration"
     type = list(object({
         name     = string
         target_type = string    # "instance", "ip", "lambda", "alb"
         port     = number
         protocol = string           # GENEVE, HTTP, HTTPS, TCP, TCP_UDP, TLS,ㅜUDP
-        protocol_version = string   # HTTP1, HTTP2, GRPC
         # if Type = "ip"
         ip_address_type = string
 
-        #ALB Option
+        #NLB Option
         deregistration_delay = number
-        slow_start = number
-        load_balancing_algorithm_type = string   # round_robin or least_outstanding_requests
+        connection_termination = bool
+        preserve_client_ip = bool
+        proxy_protocol_v2 = bool
 
         st_enabled = bool
-        st_cookie_name = string                 #"test-cookie"
-        st_cookie_duration = string             #86400          # 1 ~ 604800
         st_type = string                        #"lb_cookie"               # lb_cookie, app_cookie
 
         hc_enabled = bool
@@ -63,8 +56,6 @@ variable "targetGroup" {
         unhealthy_threshold = number            #3
         hc_interval = number                    #30
         hc_timeout = number                     #5
-        hc_path = string                        #"/test/index.html"
-        hc_matcher = string                     #"200"
 
         tags = map(string)
     }))
