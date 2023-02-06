@@ -54,7 +54,7 @@ inputs = {
 
             # Lifecycle
             lifecycle_transition_to_ia = null#"AFTER_90_DAYS"
-            lifecycle_transition_to_primary_storage_class = null#"AFTER_1_ACCESS"
+            lifecycle_transition_to_primary_storage_class = "AFTER_1_ACCESS"
 
             # Backup
             use_autoBackup = "DISABLED"
@@ -77,13 +77,13 @@ inputs = {
             efs_name = "efs-${local.proj_name}-${local.proj_env}-test"
             subnet_name = "sbn-secure-prd-as1-a-pub-untrust"
             ip_address = null
-            security_groups = ["sg-0fd78d05b83903fb9"]
+            security_groups = ["sg-0da809d721d44915f"]
         },
         {
             efs_name = "efs-${local.proj_name}-${local.proj_env}-test"
             subnet_name = "sbn-secure-prd-as1-b-pub-untrust"
             ip_address = null
-            security_groups = ["sg-0fd78d05b83903fb9"]
+            security_groups = ["sg-0da809d721d44915f"]
         }
     ]
 

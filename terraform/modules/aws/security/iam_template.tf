@@ -15,8 +15,6 @@
     1) Role 생성
     2) Role Policy 설정
     3) 생성한 Role Policy Attachment
-
-
 */
 
 
