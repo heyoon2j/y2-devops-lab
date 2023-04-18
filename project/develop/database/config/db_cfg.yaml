@@ -1,0 +1,7 @@
+database:
+  postgre:
+    host : "10.20.0.200"
+    port : "5432"
+    dbname : "zabbix"
+    user : "zabbix"
+    password: ""
