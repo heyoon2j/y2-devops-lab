@@ -1,24 +1,20 @@
 # custom_perf DO
 class CustomPerfDO():
-    def __init__(self, hostName, collectDate, cpuAvg, cpuMax, cpuWeekend, memAvg, memMax, memWeekend):
+    def __init__(self, hostName, collectDate, cpuAvg, cpuMax, memAvg, memMax):
         self.__hostName = hostName
         self.__collectDate = collectDate
         self.__cpuAvg = cpuAvg
         self.__cpuMax = cpuMax
-        self.__cpuWeekend = cpuWeekend
         self.__memAvg = memAvg
         self.__memMax = memMax
-        self.__memWeekend = memWeekend
     
     def __del__(self):
-        del hostName
-        del collectDate
-        del cpuAvg
-        del cpuMax
-        del cpuWeekend
-        del memAvg
-        del memMax
-        del memWeekend
+        del self.__hostName
+        del self.__collectDate
+        del self.__cpuAvg
+        del self.__cpuMax
+        del self.__memAvg
+        del self.__memMax
     
     @property
     def hostName(self):
@@ -53,14 +49,6 @@ class CustomPerfDO():
         self.__cpuMax = cpuMax
 
     @property
-    def cpuWeekend(self):
-        return self.__cpuWeekend
-
-    @cpuWeekend.setter
-    def cpuWeekend(self, cpuWeekend):
-        self.__cpuWeekend = cpuWeekend
-
-    @property
     def memAvg(self):
         return self.__memAvg
 
@@ -75,11 +63,3 @@ class CustomPerfDO():
     @memMax.setter
     def memMax(self, memMax):
         self.__memMax = memMax
-
-    @property
-    def memWeekend(self):
-        return self.__memWeekend
-
-    @memWeekend.setter
-    def memWeekend(self, memWeekend):
-        self.__memWeekend = memWeekend

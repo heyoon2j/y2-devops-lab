@@ -1,22 +1,23 @@
-
 class CustomAssetsDO:
-    def __init__(self, hostName, ipAddress, accountName, vCpu, memory, volume, updateDate=None):
+    def __init__(self, hostName, ipAddress, account, instanceType, vCpu, memory, volume, updateDate=None):
         self.__hostName = hostName
         self.__ipAddress = ipAddress
-        self.__accountName = accountName
+        self.__account = account
+        self.__instanceType = instanceType
         self.__vCpu = vCpu
         self.__memory = memory
         self.__volume = volume
         self.__updateDate = updateDate
 
     def __del__(self):
-        del hostName
-        del ipAddress
-        del accountName
-        del vCpu
-        del memory
-        del volume
-        del updateDate 
+        del self.__hostName
+        del self.__ipAddress
+        del self.__account
+        del self.__instanceType
+        del self.__vCpu
+        del self.__memory
+        del self.__volume
+        del self.__updateDate 
 
     @property
     def hostName(self):
@@ -43,12 +44,20 @@ class CustomAssetsDO:
         self.__ipAddress = ipAddress
 
     @property
-    def accountName(self):
-        return self.__accountName
+    def account(self):
+        return self.__account
 
-    @accountName.setter
-    def accountName(self, accountName):
-        self.__accountName = accountName
+    @account.setter
+    def account(self, account):
+        self.__account = account
+
+    @property
+    def instanceType(self):
+        return self.__instanceType
+
+    @instanceType.setter
+    def instanceType(self, instanceType):
+        self.__instanceType = instanceType
 
     @property
     def vCpu(self):
