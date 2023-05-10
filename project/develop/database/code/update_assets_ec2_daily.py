@@ -46,7 +46,10 @@ def main():
             RoleArn = roleArn,
             RoleSessionName = "zabbixRole"
         )
-    
+
+        if assume_role is None:
+            continue
+
         # Assume Role 정보를 가지고 Credential 설정
         assume_role_session = boto3.session.Session(
             aws_access_key_id = assume_role['Credentials']['AccessKeyId'],
@@ -54,7 +57,6 @@ def main():
             aws_session_token = assume_role['Credentials']['SessionToken'],
             region_name = "ap-northeast-2"
         )
-
 
         service = "ec2"
         client = assume_role_session.client(service)

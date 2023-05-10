@@ -1,5 +1,4 @@
 from CustomPerfDAO import CustomPerfDAO
-from PsqlDbConnection import PsqlDbConnection
 
 def main():
     dao = CustomPerfDAO()

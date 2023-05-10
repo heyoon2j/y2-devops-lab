@@ -42,12 +42,12 @@ class CustomAssetsDAO():
                 #cur.execute("""SELECT * FROM custom_perf;""")
                 #cur.execute("""insert into custom_perf(host_name, collect_date, cpu_avg, cpu_max, mem_util_avg, mem_util_max) 
                 #values ('abc', '2023-04-16', 3.0, 4.0, 5.0, 6.0);""")
-                query = """insert into custom_assets (name, ip_address, account_name, vcpu, memory, volume, update_date)
-                values ('{}', '{}', '{}', {}, {}, {}, {}, CURRENT_DATE)
+                query = """insert into custom_assets (name, ip_address, account, instance_type, vcpu, memory, volume, update_date)
+                values ('{}', '{}', '{}', '{}', {}, {}, {}, CURRENT_DATE)
                 on conflict (name)
-                do update set ('{}', '{}', '{}', {}, {}, {}, {}, CURRENT_DATE)
+                do update set name='{}', ip_address='{}', account='{}', instance_type='{}', vcpu={}, memory={}, volume={}, update_date=CURRENT_DATE)
                 ;
-                """.format(caDo.hostName, caDo.ipAddress, caDo.accountName, caDo.vCpu,caDo.memory, caDo.volume)
+                """.format(caDo.hostName, caDo.ipAddress, caDo.account, caDo.instanceType, caDo.vCpu, caDo.memory, caDo.volume, caDo.hostName, caDo.ipAddress, caDo.account, caDo.instanceType, caDo.vCpu, caDo.memory, caDo.volume)
             cur.execute(query)
             conn.commit()
 
