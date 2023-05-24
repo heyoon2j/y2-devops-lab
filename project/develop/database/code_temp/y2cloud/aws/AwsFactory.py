@@ -1,11 +1,11 @@
 from abc import ABC, abstractmethod
-import AwsService
-import Ec2
+from . import Ec2, Sts, Organizations
 
 class AwsFactory(ABC):
-    def useService(self) -> None:
-        service = AwsService()
-        return service.create()
+    def useService(self, credentials) -> None:
+        service = self.create()
+        service.applyCredentials(credentials)
+        return service
 
     @abstractmethod
     def create(self):
@@ -15,3 +15,12 @@ class AwsFactory(ABC):
 class Ec2Factory(AwsFactory):
     def create(self):
         return Ec2()
+
+
+class StsFactory(AwsFactory):
+    def create(self):
+        return Sts()
+
+class OrganizationsFactory(AwsFactory):
+    def create(self):
+        return Organizations()

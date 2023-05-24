@@ -1,21 +1,15 @@
-import AwsService
+from .AwsService import AwsService
 import boto3
 
 class Ec2(AwsService):
     
     def __init__(self, credentials) -> None:
-        self.name = "ec2"
-        self.__credentials = credentials
-        self.__client = credentials.client('ec2')
+        self.__name = "ec2"
 
-    @property
-    def credentials(self):
-        return self.__credentials
 
-    @credentials.setter
-    def credentials(self, credentials):
-        self.__credentials = credentials
-        
+    def applyCredentials(self, credentials):
+        self.__client = credentials.self.__client(self.__name)
+
 
     def describe_volumes(self, **options):
         response = self.__client.describe_volumes(VolumeIds=options["VolumeIds"])
@@ -26,7 +20,6 @@ class Ec2(AwsService):
             volume += v["Size"]         
 
         return volume
-
 
 
     def describe_instance_types(self, **options):

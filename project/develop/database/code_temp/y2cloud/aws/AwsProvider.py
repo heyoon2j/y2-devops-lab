@@ -5,6 +5,7 @@ class AwsProvider:
     def __init__(self):
         pass
 
+    @staticmethod
     def credentials(self, profile=None, region=None, accessKeyId= None, secretAcessKey=None, sessionToken=None):
         session = None
         if profile is not None:
@@ -19,6 +20,6 @@ class AwsProvider:
             )
         else:
             session = boto3.Session()
-        
+
         return session
 
