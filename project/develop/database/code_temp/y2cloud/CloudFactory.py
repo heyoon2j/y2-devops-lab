@@ -1,3 +1,3 @@
 
 class CloudFactory():
-    
+    pass

@@ -1,50 +1,21 @@
 from .awsService import AwsService
 import boto3
 
-class Ec2(AwsService):
+class Rds(AwsService):
     
     def __init__(self) -> None:
-        self.__name = "ec2"
+        self.__name = "rds"
 
 
     def applyCredentials(self, credentials):
         self.__client = credentials.client(self.__name)
 
 
-    def describe_volumes(self, **options):
-        response = self.__client.describe_volumes(VolumeIds=options["VolumeIds"])
-
-        # Customizing
-        volume = 0
-        for v in response["Volumes"]:
-            volume += v["Size"]         
-
-        return volume
-
-
-    def describe_instance_types(self, **options):
-        instanceTypeDict : dict = {}
-        instanceTypes : list = []
-
-        response = self.__client.describe_instance_types()
-        instanceTypes = response["InstanceTypes"]
-
-        while "NextToken" in response:
-            response = self.__client.describe_instance_types(NextToken=response["NextToken"])
-            instanceTypes.extend(response["InstanceTypes"])
-
-
-        # Customizing
-        for it in instanceTypes:
-            instanceTypeDict[it["InstanceType"]] = {"vCpu": it["VCpuInfo"]["DefaultVCpus"], "mem": int(it["MemoryInfo"]["SizeInMiB"]/1024)}
-        
-        return instanceTypeDict
-        
-
-
-    def describe_instances(self, **options):
-        instances = list()
+    def describeInstances(self, **options):
         reservations = list()
+        dbInstances = list()
+
+
 
         response = self.__client.describe_instances()
         reservations = response["Reservations"]
@@ -52,6 +23,9 @@ class Ec2(AwsService):
         while "NextToken" in response:
             response = self.__client.describe_instances(NextToken=response["NextToken"])
             reservations.extend(response["Reservations"])
+
+
+
 
 
         ##################################################
@@ -81,7 +55,7 @@ class Ec2(AwsService):
                     volumeIds.append(ebs["Ebs"]["VolumeId"])
                 # volume = self.describe_volumes({"VolumeIds" : volumeIds})                 
 
-                instances.append({
+                dbInstances.append({
                     "instanceId" : instance["InstanceId"],
                     "hostName" : hostName,
                     "ipAddress" :instance["PrivateIpAddress"],
@@ -92,4 +66,6 @@ class Ec2(AwsService):
                     "volume" : self.describe_volumes(VolumeIds = volumeIds)
                 })
 
-        return instances
+        return dbInstances
+                
+
