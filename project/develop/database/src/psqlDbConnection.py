@@ -1,9 +1,9 @@
-from DbConnection import DbConnection
+from dbConnection import DbConnection
 import psycopg2
 from psycopg2 import pool
 import yaml
 
-DB_CONFIG_FILE = "/hoem/zabbix/config/db_cfg.yaml"
+DB_CONFIG_FILE = "/home/zabbix/config/db_cfg.yaml"
 
 class PsqlDbConnection(DbConnection):
     def __init__(self):
