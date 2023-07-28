@@ -41,6 +41,7 @@ def updatePef_rds(credentials, instanceTypeDict):
         dbInstanceMem = instanceTypeDict[instanceType]['mem']
 
         yesterday = date.today() - timedelta(days = 1)
+        yesterday_2 = date.today() - timedelta(days = 2)
 
         cpuUtil = cw.get_metric_statistics_daily(options=
             {
@@ -52,8 +53,8 @@ def updatePef_rds(credentials, instanceTypeDict):
                         'Value': dbInstanceName
                     }
                 ],
-                'StartTime': datetime(yesterday.year, yesterday.month, yesterday.day, hour=0, minute=0, second=0, microsecond=0),
-                'EndTime' : datetime(yesterday.year, yesterday.month, yesterday.day, hour=23, minute=59, second=59, microsecond=999),
+                'StartTime': datetime(yesterday.year, yesterday.month, yesterday.day, hour=15, minute=0, second=0, microsecond=0),
+                'EndTime' : datetime(yesterday_2.year, yesterday_2.month, yesterday_2.day, hour=14, minute=59, second=59, microsecond=999),
                 'Period' : 86400,
                 'Statistics' : [
                     'Average','Maximum', 'Minimum'
