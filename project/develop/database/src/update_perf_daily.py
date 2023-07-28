@@ -4,6 +4,7 @@ import boto3
 import json
 import yaml
 import sys
+from datetime import datetime, date, timedelta
 
 sys.path.append("/home/zabbix/lib")
 import y2cloud.aws as y2
@@ -20,20 +21,80 @@ def updatePef_ec2():
     dao.insertDiskUtilDaily()
 
 
+
 def updatePef_rds(credentials, instanceTypeDict):
     awsFactory = y2.RdsFactory()
     rds = awsFactory.useService(credentials)
 
+    performs = list()
     dbInstances = rds.describeDbInstances()
-    dao = CustomPerfDAO()
+
     
     # Get Metric Data
-    logs = credentials.client('logs')
-    
+    awsFactory = y2.CloudWatchFactory()
+    cw = awsFactory.useService(credentials)
+
+
     for dbInstance in dbInstances:
-        
-        #a = CustomPerfDO()
-        #dao.insertPerfDaily_rds(a)
+        dbInstanceName = dbInstance["dbInstanceId"]
+        instanceType = dbInstance["dbInstanceClass"].replace('db.','')
+        dbInstanceMem = instanceTypeDict[instanceType]['mem']
+
+        yesterday = date.today() - timedelta(days = 1)
+
+        cpuUtil = cw.get_metric_statistics_daily(options=
+            {
+                'Namespace': 'AWS/RDS',
+                'MetricName' : 'CPUUtilization',
+                'Dimensions' : [
+                    {
+                        'Name': 'DBInstanceIdentifier',
+                        'Value': dbInstanceName
+                    }
+                ],
+                'StartTime': datetime(yesterday.year, yesterday.month, yesterday.day, hour=0, minute=0, second=0, microsecond=0),
+                'EndTime' : datetime(yesterday.year, yesterday.month, yesterday.day, hour=23, minute=59, second=59, microsecond=999),
+                'Period' : 86400,
+                'Statistics' : [
+                    'Average','Maximum', 'Minimum'
+                ]
+            }
+        )
+
+        freeMem = cw.get_metric_statistics_daily(options= 
+            {
+                'Namespace': 'AWS/RDS',
+                'MetricName' : 'FreeableMemory',
+                'Dimensions' : [
+                    {
+                        'Name': 'DBInstanceIdentifier',
+                        'Value': dbInstanceName
+                    },
+                ],
+                'StartTime': datetime(yesterday.year, yesterday.month, yesterday.day, hour=0, minute=0, second=0, microsecond=0),
+                'EndTime' : datetime(yesterday.year, yesterday.month, yesterday.day, hour=23, minute=59, second=59, microsecond=999),
+                'Period' : 86400,
+                'Statistics' : [
+                    'Average','Maximum', 'Minimum'
+                ]
+            }
+        )
+
+        performs.append(CustomPerfDO(
+            hostName=dbInstanceName,
+            collectDate=datetime(yesterday.year, yesterday.month, yesterday.day),
+            cpuAvg=cpuUtil[0],
+            cpuMax=cpuUtil[1],
+            memAvg=round((dbInstanceMem-freeMem[0])/dbInstanceMem*100,2),
+            memMax=round((dbInstanceMem-freeMem[2])/dbInstanceMem*100,2),
+            disk_total=None,
+            disk_used=None,
+            disk_used_pct=None))
+
+    #dao = CustomPerfDAO()
+    for p in performs:
+        print(p.hostName, p.collectDate, p.cpuAvg, p.cpuMax, p.memAvg, p.memMax, p.disk_total, p.disk_used, p.disk_used_pct)
+        #dao.insertPerfDaily_rds(p)
         pass
 
 
@@ -83,6 +144,7 @@ def main():
         updatePef_rds(assumeRole_cred, instanceTypeDict)
 
     updatePef_ec2()
+    print("===================================")
 
 
 # 매일 하루 평균 성능 데이터 입력

@@ -1,0 +1,21 @@
+meta:
+  account:
+    "123" : "test-account"
+  
+  ec2_type:
+    t2.micro:
+      vcpu: 1
+      mem: 1
+    m5.large:
+      vcpu: 2
+      mem: 8
+    m5.xlarge:
+      vcpu: 4
+      mem: 16
+    m5.2xlarge:
+      vcpu: 8
+      mem: 32
+    m5.4xlarge:
+      vcpu: 16
+      mem: 64
+

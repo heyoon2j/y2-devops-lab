@@ -89,7 +89,7 @@ class CustomPerfDO():
     
     @property
     def disk_used_pct(self):
-        return self.disk_used_pct
+        return self.__disk_used_pct
 
     @disk_used_pct.setter
     def disk_used_pct(self, disk_used_pct):

@@ -141,37 +141,14 @@ class CustomPerfDAO():
         try:
             conn = self.__datasource.getConnection()
             cur = conn.cursor()
-            if query is not None:
-                cur.execute(query)
-            else:
-                #cur.execute("""SELECT * FROM custom_perf;""")
-                #cur.execute("""insert into custom_perf(host_name, collect_date, cpu_avg, cpu_max, mem_util_avg, mem_util_max) 
-                #values ('abc', '2023-04-16', 3.0, 4.0, 5.0, 6.0);""")
-                cur.execute("""
-                insert into msp_custom_perf (name, collect_date, cpu_avg, cpu_max, mem_avg, mem_max)
-                    select h.name as name,
-                        date_trunc('day', to_timestamp(t.clock)) as collect_date,
-                        avg(case when i.name = 'CPU Utilization' then t.value_avg end) as cpu_avg,
-                        min(case when i.name = 'CPU Utilization' then t.value_max end) as cpu_max,
-                        avg(case when i.name = 'Memory Utilization' then t.value_avg end) as mem_avg,
-                        min(case when i.name = 'Memory Utilization' then t.value_max end) as mem_max
-                    from hosts h
-                        inner join items i on i.hostid = h.hostid
-                        inner join trends t on t.itemid = i.itemid
-                    where h.status = 0
-                        and h.flags = 0
-                        and i.name in ('CPU Utilization', 'Memory Utilization')
-                        and t.clock >= CAST(EXTRACT(epoch FROM DATE_TRUNC('DAY', NOW() - INTERVAL '1' DAY)) AS INTEGER)
-                        and t.clock < CAST(EXTRACT(epoch FROM DATE_TRUNC('DAY', NOW())) AS INTEGER)
-                        -- and t.clock = extract(epoch from CURRENT_DATE - 1)::integer
-                        -- and t.clock >= extract(epoch from to_timestamp('2023-04-01', 'YYYY-MM-DD'))::integer
-                        -- and t.clock < extract(epoch from to_timestamp('2023-04-16', 'YYYY-MM-DD'))::integer
-                    group by h.name as name, date_trunc('day', to_timestamp(t.clock))
+            if query is None:
+                query = """insert into msp_custom_perf (name, collect_date, cpu_avg, cpu_max, mem_avg, mem_max, disk_total, disk_used, disk_used_pct)
+                values ('{}', '{}', {}, {}, {}, {}, {}, {}, {})
                 on conflict (name, collect_date)
-                do nothing
+                do update set cpu_avg=EXCLUDED.cpu_avg, cpu_max=EXCLUDED.cpu_max, mem_avg=EXCLUDED.mem_avg, mem_max=EXCLUDED.mem_max, disk_total=EXCLUDED.disk_total, disk_used=EXCLUDED.disk_used, disk_used_pct=EXCLUDED.disk_used_pct
                 ;
-                """.format())
-            
+                """.format(cpDo.hostName, cpDo.collectDate, cpDo.cpuAvg, cpDo.cpuMax, cpDo.memAvg, cpDo.memMax, cpDo.disk_total, cpDo.disk_used, cpDo.disk_used_pct)
+
             query = self.changeToNull(query)
             cur.execute(query)
             conn.commit()

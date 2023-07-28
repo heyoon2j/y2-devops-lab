@@ -25,12 +25,11 @@ def updateAsset_ec2(credentials):
         print(instance['instanceId'], instance["hostName"], instance["ipAddress"], instance["account"], ec2.name, instance["instanceType"], instance["vCpu"], instance["memory"], instance["volume"])
         assets.append(CustomAssetsDO(hostName=instance["hostName"], ipAddress=instance["ipAddress"], account=instance["account"], serviceType=ec2.name, instanceType=instance["instanceType"], vCpu=instance["vCpu"], memory=instance["memory"], volume=instance["volume"]))
     
+    dao = CustomAssetsDAO()
     for a in assets:
-        dao = CustomAssetsDAO()
         dao.insertAssetsDaily(a)
     
         
-
 def updateAsset_rds(credentials, instanceTypeDict):
     awsFactory = y2.RdsFactory()
     rds = awsFactory.useService(credentials)
@@ -51,8 +50,8 @@ def updateAsset_rds(credentials, instanceTypeDict):
          memory=instanceTypeDict[instanceType]['mem'],
          volume=dbInstance["storageSize"]))
 
+    dao = CustomAssetsDAO()
     for a in assets:
-        dao = CustomAssetsDAO()
         dao.insertAssetsDaily(a)
     
 
