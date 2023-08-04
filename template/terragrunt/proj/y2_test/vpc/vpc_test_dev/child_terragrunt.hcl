@@ -1,4 +1,61 @@
+/*
+Child Config
+- 상속 받을 내용
+- Module을 위한 내용
 
+1. 상속 받을 내용
+    - Provider 설정 (include)
+    - Backend 설정 (include)
+    - 모든 Command에 대한 옵션 값 지정 (include)
+    - 모든 Command에 대한 Hooking (include)
+2. Module을 위한 내용
+    - Module 종속성 지정
+    - Module Source 위치 
+    - Input 값 입력 or Variables 파일 지정
+    - 해당 Module에 해당하는 Command에 대한 옵션 값 지정 (Option)
+    - 해당 Module에 해당하는 Command에 대한 Hooking (Option)
+*/
+
+#####################################################
+# 구성 상속
+include "root" {
+    path   = find_in_parent_folders()
+    expose = true 
+}
+
+include "provider" {
+    path   = find_in_parent_folders("provider.hcl")
+    expose = true 
+}
+
+include "remote_state" {
+    path   = find_in_parent_folders("remote_state.hcl")
+    expose = true
+}
+
+locals {
+    proj_cfg = read_terragrunt_config(find_in_parent_folders("proj_cfg.hcl"))
+    vpc_cfg = read_terragrunt_config(find_in_parent_folders("vpc_cfg.hcl"))
+}
+
+
+#####################################################
+# 종속성
+dependency "vpc" {
+    config_path = "../vpc"
+}
+
+dependency "rds" {
+    config_path = "../rds"
+}
+
+dependencies {
+    paths = ["../vpc", "../rds"]
+}
+
+
+###############################################################
+# Terraform Setting
 terraform {
     # source = "../modules/networking/vpc"
     source = "git::git@github.com:acme/infrastructure-modules.git//networking/vpc?ref=v0.0.1"
@@ -70,66 +127,21 @@ terraform {
     }
 }
 
-generate "provider" {
-    path      = "provider.tf"
-    if_exists = "overwrite"
-    contents = <<EOF
-provider "aws" {
-  region              = "us-east-1"
-  version             = "= 2.3.1"
-  allowed_account_ids = ["1234567890"]
-}
-EOF
-}
 
-generate "backend" {
-    path      = "backend.tf"
-    if_exists = "overwrite_terragrunt"
-    contents = <<EOF
-terraform {
-    backend "s3" {
-        bucket         = "my-terraform-state"
-        key            = "${path_relative_to_include()}/terraform.tfstate"
-        region         = "us-east-1"
-        encrypt        = true
-        dynamodb_table = "my-lock-table"
-    }
-}
-EOF
-}
-
-dependency "vpc" {
-    config_path = "../vpc"
-}
-
-dependency "rds" {
-    config_path = "../rds"
-}
-
-dependencies {
-    paths = ["../vpc", "../rds"]
-}
-
+###############################################################
+# Module Input
 inputs = {
-    vpc_id = dependency.vpc.outputs.vpc_id
-    db_url = dependency.rds.outputs.db_url
-}
+    naming_rule = local.proj_cfg.test_k8s_dev["naming_rule"]
+    naming_rule_global = local.proj_cfg.test_k8s_dev["naming_rule_global"]
 
 
-#####
+# VPC
+    cidr_block="172.16.30.0/24"
+    #ipv6_cidr_block = ""
+    instance_tenancy="default"
+    enable_dns_support=true
+    enable_dns_hostnames=true
 
-include "remote_state" {
-    path   = find_in_parent_folders()
-    expose = true
-}
+    use_azs = ["ap-south-1a", "ap-south-1b"]
 
-include "region" {
-    path           = find_in_parent_folders("region.hcl")
-    expose         = true
-    merge_strategy = "no_merge"
-}
-
-inputs = {
-    remote_state_config = include.remote_state.remote_state
-    region              = include.region.region
 }

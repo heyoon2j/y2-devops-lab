@@ -1,3 +1,9 @@
+variable "vpc_name" {
+    description = "VPC Name"
+    type = string
+
+}
+
 variable "cidr_block" {
     description = "VPC IPv4 CIDR"
     type = string
@@ -46,6 +52,19 @@ variable "enable_dns_hostnames" {
         error_message = "Only true or false"
     }
 }
+
+variable "enable_network_address_usage_metrics" {
+    description = "Network Address 사용량을 CW 지표 활성화 여부"
+    type = bool
+    default = false
+
+    validation {
+        condition = var.enable_network_address_usage_metrics == true || var.enable_network_address_usage_metrics == false
+        error_message = "Only true or false"
+    }    
+}
+
+
 
 variable "use_azs" {
     description = "Availability Zones list using in vpc"
@@ -112,91 +131,66 @@ variable "pub_map_public_ip_on_launch" {
 }
 */
 
-variable "pub_subnet" {
+variable "subnet_pub" {
     description = "Public Subnet Dictionary Value"
-    type = object({
-        subnet_name = list(string)
-        cidr_block = list(string)
-        availability_zone = list(string)
+    type = map(object({
+        name = string
+        cidr_block = string
+        availability_zone = string
         assign_ipv6_address_on_creation = optional(bool, false)
         map_public_ip_on_launch = optional(bool, false)
-    })
+    }))
 }
 
-variable "pri_subnet" {
+variable "subnet_pri" {
     description = "Private Subnet Dictionary Value"
-    type = object({
-        subnet_name = list(string)
-        cidr_block = list(string)
-        availability_zone = list(string)
+    type = map(object({
+        name = string
+        cidr_block = string
+        availability_zone = string
         assign_ipv6_address_on_creation = optional(bool, false)
         map_public_ip_on_launch = optional(bool, false)
-    })
+    }))
 }
 
 
-variable "pub_rt" {
+variable "rt_pub" {
     description = "Public Subnet Dictionary Value"
-    type = list(string)
-    /*
-    type = list(object({
-        rt_name = string
-        route = list(object({
-            cidr_block = string
-            target_id = string
-        }))
-    }))*/
+    type = map(object({
+        name = string
+    }))
 }
 
-variable "pri_rt" {
+variable "rt_pri" {
     description = "Private Subnet Dictionary Value"
-    type = list(string)
-    /*
-    type = list(
-        object({
-            rt_name = string
-            route = list(map(string))
-        })
-    )*/
+    type = map(object({
+        name = string
+    }))
 }
 
+variable "rt_pub_assoc" {
+    description = "Public Subnet Association List"
+    type = map(any)
+}
+
+variable "rt_pri_assoc" {
+    description = "Private Subnet Dictionary Association List"
+    type = map(any)
+}
+
+
+
+#################################################################
 ## Internet Gateway
-variable "use_internet_gateway" {
+variable "internet_gateway" {
     description = "Use internet gateway"
-    type = bool 
-    validation {
-        condition = var.use_internet_gateway == true || var.use_internet_gateway == false
-        error_message = "Only true or false"
-    }
+    type = map(any)
 }
 
-variable "attachment_subnet" {
+#################################################################
+# TGW Attachment
+
+variable "tgw_attachment_subnet" {
     description = "Subnet for attaching TGW"
     type = list(string)
-}
-
-
-##################################################################
-## Config Input
-variable "proj_region" {
-    description = "Project Region"
-    type = string
-    validation {
-        condition = can(regex("^[a-z]{2}[1-3]{1}$", var.proj_region))
-        error_message = "Like ap2, as1 ..."
-    }
-}
-
-variable "proj_name" {
-    description = "Project Name"
-    type = string
-}
-
-variable "proj_env" {
-    description = "Project Environment"
-    type = string
-    validation { 
-        condition = contains(["dev", "stg", "prd"], var.proj_env)
-        error_message = "Only use dev, stg, prd"
-    }
 }

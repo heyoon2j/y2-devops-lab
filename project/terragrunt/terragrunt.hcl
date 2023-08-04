@@ -15,13 +15,13 @@ terraform {
     #######################################################
     # Hooking
     before_hook "before_hook_change" {
-        commands     = ["apply", "plan"]
+        commands     = ["apply"]
         execute      = ["echo", "########## Execute Terragrunt command for changing infra (Before Hook) ##########"]
         #run_on_error = true
     }
 
     after_hook "after_hook_change" {
-        commands     = ["apply", "plan"]
+        commands     = ["apply"]
         execute      = ["echo", "########## End Terragrunt command for changing infra (After Hook) ##########"]
         run_on_error = true
     }

@@ -1,20 +1,32 @@
-resource "aws_security_group" "sg-proj" {
-    count = length(var.sg)
-    
-    name        = var.sg[count.index]["name"]
-    description = var.sg[count.index]["description"]
-    vpc_id      = var.sg[count.index]["vpc_id"]
-
-    egress {
-        from_port        = 0
-        to_port          = 0
-        protocol         = "-1"
-        cidr_blocks      = ["0.0.0.0/0"]
-        ipv6_cidr_blocks = ["::/0"]
-    }
-
-    tags = {
-        Name = "${var.sg[count.index]["name"]}"
-    }
+resource "aws_security_group" "sg_main" {
+    name        = var.sg.name 
+    description = var.sg.description 
+    vpc_id      = var.sg.vpc_id
+    tags        = var.sg.tags
 }
 
+
+resource "aws_security_group_rule" "sg_main_ingress" {
+    for_each = var.ingress
+
+    security_group_id = aws_security_group.sg_main.id
+    type = "ingress"
+
+    from_port   = each.value.from_port
+    to_port     = each.value.to_port
+    protocol    = each.value.protocol
+    cidr_blocks = each.value.cidr_blocks
+}
+
+
+resource "aws_security_group_rule" "sg_main_egress" {
+    for_each = var.egress
+    
+    security_group_id = aws_security_group.sg_main.id
+    type = "egress"
+
+    from_port   = each.value.from_port
+    to_port     = each.value.to_port
+    protocol    = each.value.protocol
+    cidr_blocks = each.value.cidr_blocks
+}

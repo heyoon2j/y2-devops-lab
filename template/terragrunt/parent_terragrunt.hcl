@@ -48,13 +48,13 @@ terraform {
     #######################################################
     # Hooking
     before_hook "before_hook_change" {
-        commands     = ["apply", "plan"]
+        commands     = ["apply"]
         execute      = ["echo", "########## Execute Terragrunt command for changing infra (Before Hook) ##########"]
         #run_on_error = true
     }
 
     after_hook "after_hook_change" {
-        commands     = ["apply", "plan"]
+        commands     = ["apply"]
         execute      = ["echo", "########## End Terragrunt command for changing infra (After Hook) ##########"]
         run_on_error = true
     }
@@ -84,30 +84,3 @@ terraform {
     }
 }
 
-generate "provider" {
-    path      = "provider.tf"
-    if_exists = "overwrite"
-    contents = <<EOF
-provider "aws" {
-  region              = "us-east-1"
-  version             = "= 2.3.1"
-  allowed_account_ids = ["1234567890"]
-}
-EOF
-}
-
-generate "backend" {
-    path      = "backend.tf"
-    if_exists = "overwrite_terragrunt"
-    contents = <<EOF
-terraform {
-    backend "s3" {
-        bucket         = "my-terraform-state"
-        key            = "${path_relative_to_include()}/terraform.tfstate"
-        region         = "us-east-1"
-        encrypt        = true
-        dynamodb_table = "my-lock-table"
-    }
-}
-EOF
-}
