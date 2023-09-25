@@ -1,0 +1,67 @@
+apiVersion: v1
+kind: Config
+preferences: {}
+
+clusters:
+- cluster:
+  name: development
+- cluster:
+  name: test
+
+users:
+- name: developer
+- name: experimenter
+
+contexts:
+- context:
+  name: dev-frontend
+- context:
+  name: dev-storage
+- context:
+  name: exp-test
+
+##########################################################################
+
+apiVersion: v1
+kind: Config
+clusters:                                     # 접근할 Cluster들 설정
+- cluster:                                      # Cluster 정보 : 접근할 Cluster 주소 / 인증 정보
+    certificate-authority: fake-ca-file           # CA 인증 : 인증할 파일 위치
+    server: https://1.2.3.4                       # 접근할 Cluster 주소
+  name: development                             # Cluster 이름
+- cluster:
+    insecure-skip-tls-verify: true
+    server: https://5.6.7.8
+  name: test
+contexts:
+- context:                                    # clusters와 users 끼리 매핑
+    cluster: development
+    namespace: frontend
+    user: developer
+  name: dev-frontend
+- context:
+    cluster: development
+    namespace: storage
+    user: developer
+  name: dev-storage
+- context:
+    cluster: test
+    namespace: default
+    user: experimenter
+  name: exp-test
+current-context: ""                           # 사용할 Context
+preferences: {}                               # 
+users:                                        # 사용자 정보
+- name: developer                                 # 사용자 이름 (ID, IAM Role, IAM User etc.)
+  user:
+    client-certificate: fake-cert-file
+    client-key: fake-key-file
+- name: experimenter
+  user:
+    # 문서 참고 사항 (이 설명은 명령 출력의 일부가 아니다.)
+    # 쿠버네티스 클라이언트 구성에 암호를 저장하는 것은 위험하다.
+    # 자격 증명 플러그인을 사용하여
+    # 자격 증명을 별도로 저장하는 것이 더 나은 대안이다.
+    # 다음을 참고하자. https://kubernetes.io/docs/reference/access-authn-authz/authentication/#client-go-credential-plugins
+    password: some-password
+    username: exp

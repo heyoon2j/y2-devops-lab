@@ -1,0 +1,40 @@
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv0003
+spec:
+  capacity:                                 # 용량
+    storage: 5Gi                                # Ti, Gi, Mi
+  volumeMode: Filesystem                    # 볼륨 모드 : Filesystem, Block
+  accessModes:                              # 액세스 모드
+    - ReadWriteOnce                             # ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod
+  persistentVolumeReclaimPolicy: Recycle    # 반환 정책 : Retain(수동 반환), Recycle(재활용), Delete(자원 삭제)
+  storageClassName: ""                      # PV는 어디에 쓰이는지 모르겠음!! (Dynamic) Persistent Volume 요청을 위한 이름
+  mountOptions:
+    - hard
+    - nfsvers=4.1
+  nfs:
+    path: /tmp
+    server: 172.17.0.2
+
+#########################################
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: pv0003
+spec:
+  capacity:
+    storage: 100Mi
+  volumeMode: Block
+  accessModes:
+    - ReadWriteOnce
+  persistentVolumeReclaimPolicy: Recycle
+  storageClassName: ""
+  mountOptions:
+    - hard
+    - nfsvers=4.1
+  nfs:
+    path: /tmp
+    server: 172.17.0.2
+

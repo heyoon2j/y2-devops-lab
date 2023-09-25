@@ -10,7 +10,7 @@ spec:
     - name: http
       protocol: TCP
       port: 80            # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
-      targetPort: 80
+      targetPort: 80      # port와 동일하게 가야됨
       # Optional field
       # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
-      nodePort: 30007
+      nodePort: 30007     # Openㅏㅎㄹ Node

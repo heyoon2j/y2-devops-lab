@@ -1,0 +1,66 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:                   # Deployment metadata
+  name: nginx-deployment          # Deployment name
+  labels:                         # Deployment label
+    app: nginx
+spec:
+  replicas: 3                     # Replica numbers
+  selector:                       # Deployment가 Observing을 위한 Selector
+    matchLabels:
+      app: nginx
+  template:                     # Pod의 template
+    metadata:                     # Pod metadata
+      labels:                       # Pod label
+        app: nginx
+    spec:
+      containers:
+      - name: nginx                 # Pod name
+        image: nginx:1.14.2         # Image name
+        ports:
+        - containerPort: 80
+        volumeMounts:
+        - name: nfs-vol
+          mountPath: /audit
+      volumes:
+      - name: nfs-vol
+        persistentVolumeClaim:
+          claimName: nfs-pvc
+## Pod 배포 전략 : nodeName / nodeSelector / affinity(Node, Pod) / tolerations
+    ## Node Name
+      nodeName: test1
+    ## Node Selector - key:value
+      nodeSelector:
+        worker: test1
+    ## Node Appinity
+      affinity:
+        nodeAffinity:
+          requiredDuringSchedulingIgnoredDuringExecution:           # 유형 1 : 조건 불충분시 생성하지 않는다.
+            nodeSelectorTerms:
+            - matchExpressions:
+              - key: kubernetes.io/os
+                operator: In
+                values:
+                - linux
+          preferredDuringSchedulingIgnoredDuringExecution:          # 유형 2 : 조건을 만족하는 Node가 없더라도, 다른 Node에 생성한다.
+          - weight: 1                                                 # 해당 유형의 가중치
+            preference:
+              matchExpressions:
+              - key: label-1
+                operator: In
+                values:
+                - key-1
+          - weight: 50
+            preference:
+              matchExpressions:
+              - key: label-2
+                operator: In
+                values:
+                - key-2
+    ## Taints / Toleration
+      tolerations:
+      - key: "key1"
+        operator: "Equal"
+        value: "value1"
+        effect: "NoSchedule"
+

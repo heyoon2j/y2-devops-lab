@@ -1,0 +1,38 @@
+################################################
+# Static PV
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myclaim
+  namespace: monitoring 
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 8Gi
+  storageClassName: ""                            # (Dynamic Storage 사용하지 않을 시) - ""
+  selector:                                       # (Dynamic Storage 사용하지 않을려면 사용할 수 있음) - 원하는 PV를 선택할 수 있다.
+    matchLabels:                                      # storageClassName과 AND로 동작
+      release: "stable"
+    matchExpressions:
+      - {key: environment, operator: In, values: [dev]}
+
+################################################
+# Dynamic PV
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: myclaim
+  namespace: monitoring 
+spec:
+  accessModes:
+    - ReadWriteOnce
+  volumeMode: Filesystem
+  resources:
+    requests:
+      storage: 8Gi
+  storageClassName: slow                          # (Dynamic Storage 사용 시) Persistent Volume 요청을 위한 이름, 같은 Class에만 요청할 있다.
