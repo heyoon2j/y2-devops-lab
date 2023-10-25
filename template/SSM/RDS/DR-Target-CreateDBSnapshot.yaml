@@ -1,0 +1,72 @@
+description: |-
+  ---
+  # Automation Document
+  Create Aurora Snapshot
+
+schemaVersion: '0.3'
+assumeRole: '{{ AutomationAssumeRole }}'
+parameters:
+  AutomationAssumeRole:
+    type: String
+  DRAccount:
+    type: String
+  ManageAccount:
+    type: String
+  DBClusterIdentifier:
+    type: String
+mainSteps:
+  - name: CreateRdsSnapshot
+    action: 'aws:executeAwsApi'
+    inputs:
+      Service: rds
+      Api: CreateDBClusterSnapshot
+      DBClusterIdentifier: '{{ DBClusterIdentifier }}'
+      DBClusterSnapshotIdentifier: 'dr-snapshot-{{ DBClusterIdentifier }}'
+    outputs:
+      - Name: DBSnapshotId
+        Selector: $.DBClusterSnapshot.DBClusterSnapshotIdentifier
+        Type: String
+      - Name: DBSnapshotArn
+        Selector: $.DBClusterSnapshot.DBClusterSnapshotArn
+        Type: String
+  - name: WaitStep1
+    action: 'aws:waitForAwsResourceProperty'
+    inputs:
+      PropertySelector: '$.DBClusterSnapshots[0].Status'
+      DBClusterSnapshotIdentifier: '{{ CreateRdsSnapshot.DBSnapshotId }}'
+      DesiredValues:
+        - available
+      Service: rds
+      Api: DescribeDBClusterSnapshots
+    timeoutSeconds: 36000
+  - name: TransferRdsSnapshot_Restore
+    action: 'aws:executeAwsApi'
+    inputs:
+      Api: ModifyDBClusterSnapshotAttribute
+      Service: rds
+      AttributeName: restore
+      ValuesToAdd:
+        - '{{ DRAccount }}'
+      DBClusterSnapshotIdentifier: '{{ CreateRdsSnapshot.DBSnapshotId }}'
+    timeoutSeconds: 3600
+  - name: ExecuteAutomation_CreateDB
+    action: 'aws:executeAwsApi'
+    inputs:
+      Service: ssm
+      Api: StartAutomationExecution
+      DocumentName: 'arn:aws:ssm:{{ global:REGION }}:{{ ManageAccount }}:document/DR-Account-CreateDB'
+      Parameters:
+        DBClusterIdentifier:
+          - '{{ DBClusterIdentifier }}'
+        DBSnapshotArn:
+          - '{{ CreateRdsSnapshot.DBSnapshotArn }}'
+        AutomationAssumeRole:
+          - '{{ AutomationAssumeRole }}'
+      TargetLocations:
+        - Accounts:
+            - '{{ DRAccount }}'
+          Regions:
+            - '{{ global:REGION }}'
+          ExecutionRoleName: role-dr-account-auto
+
+
