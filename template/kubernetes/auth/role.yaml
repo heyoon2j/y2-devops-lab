@@ -4,7 +4,7 @@ metadata:
   namespace: default
   name: pod-reader
 rules:
-- apiGroups: [""] # "" indicates the core API group / piGroups : Object Spec의 속성에 있는 apiVersion에서 버전을 뺀 앞부분 (ex> "app", "rbac.authorization.k8s.io" 등)
+- apiGroups: ["app", "rbac.authorization.k8s.io"] # "" indicates the core API group / piGroups : Object Spec의 속성에 있는 apiVersion에서 버전을 뺀 앞부분 (ex> "app", "rbac.authorization.k8s.io" 등)
   resources: ["pods"]
   verbs: ["get", "watch", "list"]
 
@@ -24,11 +24,28 @@ subjects:
 - kind: User
   name: jane # "name" is case sensitive
   apiGroup: rbac.authorization.k8s.io
+# 모든 인증된 유저
+- kind: Group
+  name: system:authenticated
+  apiGroup: rbac.authorization.k8s.io
+# Service Account 
+- kind: ServiceAccount                                  
+  name:  web-dev
+  namespace: develop
+# namespace : qa인 모든 ServiceAccount
+- kind: Group
+  name: system:serviceaccounts:qa
+  apiGroup: rbac.authorization.k8s.io
+
 roleRef:
   # "roleRef" specifies the binding to a Role / ClusterRole
   kind: Role #this must be Role or ClusterRole
   name: pod-reader # this must match the name of the Role or ClusterRole you wish to bind to
-  apiGroup: rbac.authorization.k8s.io   # 추후 확장을 위해서
+  apiGroup: rbac.authorization.k8s.io   # 추후 확장을 위해서. 현재는 모두 통일
+
+
+######################################################
+
 
 
 

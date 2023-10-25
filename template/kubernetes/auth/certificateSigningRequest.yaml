@@ -10,6 +10,9 @@ spec:
   - client auth
 
 
+### reques : 
+
+
 ### 제공되어지는 K8s Signer Name : API 서버에서 클라이언트 인증서로 인증할 Signer Name
 # kubernetes.io/kube-apiserver-client : API 서버에서 클라이언트 인증서로 인정할 인증서에 서명 (자동 승인되지 않음)
 # kubernetes.io/kube-apiserver-client-kubelet : API 서버에서 클라이언트 인증서로 인정할 클라이언트 인증서에 서명 (자동 승인될 수 있음)
