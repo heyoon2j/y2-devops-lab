@@ -12,53 +12,53 @@ parameters:
     type: String
   ManageAccount:
     type: String
-  DBInstanceIdentifier:
+  DBClusterIdentifier:
     type: String
 mainSteps:
 - name: CreateRdsSnapshot
   action: 'aws:executeAwsApi'
   inputs:
     Service: rds
-    Api: CreateDBSnapshot
-    DBInstanceIdentifier: '{{ DBInstanceIdentifier }}'
-    DBSnapshotIdentifier: 'dr-snapshot-{{ DBInstanceIdentifier }}'
+    Api: CreateDBClusterSnapshot
+    DBClusterIdentifier: '{{ DBClusterIdentifier }}'
+    DBClusterSnapshotIdentifier: 'dr-snapshot-{{ DBClusterIdentifier }}'
   outputs:
   - Name: DBSnapshotId
-    Selector: $.DBSnapshot.DBSnapshotIdentifier
+    Selector: $.DBClusterSnapshot.DBClusterSnapshotIdentifier
     Type: String
   - Name: DBSnapshotArn
-    Selector: $.DBSnapshot.DBSnapshotArn
+    Selector: $.DBClusterSnapshot.DBClusterSnapshotArn
     Type: String
   timeoutSeconds: 3600
 - name: WaitStep1
   action: 'aws:waitForAwsResourceProperty'
   inputs:
-    PropertySelector: '$.DBSnapshots[0].Status'
+    PropertySelector: '$.DBClusterSnapshots[0].Status'
     DBClusterSnapshotIdentifier: '{{ CreateRdsSnapshot.DBSnapshotId }}'
     DesiredValues:
     - available
     Service: rds
-    Api: DescribeDBSnapshots
+    Api: DescribeDBClusterSnapshots
   timeoutSeconds: 36000
 - name: TransferRdsSnapshot_Restore
   action: 'aws:executeAwsApi'
   inputs:
-    Api: ModifyDBSnapshotAttribute
+    Api: ModifyDBClusterSnapshotAttribute
     Service: rds
     AttributeName: restore
     ValuesToAdd:
     - '{{ DRAccount }}'
-    DBSnapshotIdentifier: '{{ CreateRdsSnapshot.DBSnapshotId }}'
+    DBClusterSnapshotIdentifier: '{{ CreateRdsSnapshot.DBSnapshotId }}'
   timeoutSeconds: 3600
 - name: ExecuteAutomation_CreateDB
   action: 'aws:executeAwsApi'
   inputs:
     Service: ssm
     Api: StartAutomationExecution
-    DocumentName: 'arn:aws:ssm:{{ global:REGION }}:{{ ManageAccount }}:document/DR-Account-CreateDB'
+    DocumentName: 'arn:aws:ssm:{{ global:REGION }}:{{ ManageAccount }}:document/DR-Account-CreateDBCluster'
     Parameters:
-      DBInstanceIdentifier:
-      - '{{ DBInstanceIdentifier }}'
+      DBClusterIdentifier:
+      - '{{ DBClusterIdentifier }}'
       DBSnapshotArn:
       - '{{ CreateRdsSnapshot.DBSnapshotArn }}'
       AutomationAssumeRole:

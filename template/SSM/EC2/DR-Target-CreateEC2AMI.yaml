@@ -14,86 +14,86 @@ parameters:
   ManageAccount:
     type: String
   InstanceId:
-    type: String
+    type: AWS::EC2::Instance::Id
 mainSteps:
-  - name: GetIstanceName
-    action: 'aws:executeScript'
-    inputs:
-      Runtime: python3.8
-      Handler: script_handler
-      Script: |-
-        import boto3
+- name: GetIstanceName
+  action: 'aws:executeScript'
+  inputs:
+    Runtime: python3.8
+    Handler: script_handler
+    Script: |-
+      import boto3
 
-        def script_handler(events, context):
+      def script_handler(events, context):
 
-          client = boto3.client('ec2')
-          response = client.describe_instances(
-            InstanceIds=[
-                events['instanceId'],
-            ]
-          )
+        client = boto3.client('ec2')
+        response = client.describe_instances(
+          InstanceIds=[
+              events['instanceId'],
+          ]
+        )
 
-          tags = response['Reservations'][0]['Instances'][0]['Tags']
-          
-          instanceName = "noName"
-          for tag in tags:
-            if tag['Key'] == 'Name':
-              instanceName = tag['Value']
-          
-          
-          print('hello world')
-          # print(events["parameter"])
-          
-          return instanceName
-      InputPayload:
-        instanceId: '{{ InstanceId }}'
-    outputs:
-      - Selector: $.Payload
-        Name: InstanceName
-        Type: String
-  - name: CreateEc2Ami
-    action: 'aws:createImage'
-    inputs:
-      InstanceId: '{{ InstanceId }}'
-      ImageName: 'dr-ami-{{ GetIstanceName.InstanceName }}'
-    timeoutSeconds: 3600
-  - name: WaitStep1
-    action: 'aws:waitForAwsResourceProperty'
-    inputs:
-      DesiredValues:
-        - available
-      PropertySelector: '$.Images[0].State'
-      ImageIds:
-        - '{{ CreateEc2Ami.ImageId }}'
-      Service: ec2
-      Api: DescribeImages
-    timeoutSeconds: 7200
-  - name: ChangeEc2Ami_LaunchPermission
-    action: 'aws:executeAwsApi'
-    inputs:
-      Api: ModifyImageAttribute
-      Service: ec2
-      LaunchPermission:
-        Add:
-          - UserId: '{{ DRAccount }}'
-      ImageId: '{{ CreateEc2Ami.ImageId }}'
-    timeoutSeconds: 3600
-  - name: ExecuteAutomation_CreateInstance
-    action: 'aws:executeAwsApi'
-    inputs:
-      Service: ssm
-      Api: StartAutomationExecution
-      DocumentName: 'arn:aws:ssm:{{ global:REGION }}:{{ ManageAccount }}:document/DR-Account-CreateInstance'
-      Parameters:
-        InstanceName:
-          - '{{ GetIstanceName.InstanceName }}'
-        ImageId:
-          - '{{ CreateEc2Ami.ImageId }}'
-        AutomationAssumeRole:
-          - '{{ AutomationAssumeRole }}'
-      TargetLocations:
-        - Accounts:
-            - '{{ DRAccount }}'
-          Regions:
-            - '{{ global:REGION }}'
-          ExecutionRoleName: role-dr-account-auto
+        tags = response['Reservations'][0]['Instances'][0]['Tags']
+        
+        instanceName = "noName"
+        for tag in tags:
+          if tag['Key'] == 'Name':
+            instanceName = tag['Value']
+        
+        
+        print('hello world')
+        # print(events["parameter"])
+        
+        return instanceName
+    InputPayload:
+      instanceId: '{{ InstanceId }}'
+  outputs:
+  - Selector: $.Payload
+    Name: InstanceName
+    Type: String
+- name: CreateEc2Ami
+  action: 'aws:createImage'
+  inputs:
+    InstanceId: '{{ InstanceId }}'
+    ImageName: 'dr-ami-{{ GetIstanceName.InstanceName }}'
+  timeoutSeconds: 3600
+- name: WaitStep1
+  action: 'aws:waitForAwsResourceProperty'
+  inputs:
+    DesiredValues:
+    - available
+    PropertySelector: '$.Images[0].State'
+    ImageIds:
+    - '{{ CreateEc2Ami.ImageId }}'
+    Service: ec2
+    Api: DescribeImages
+  timeoutSeconds: 7200
+- name: ChangeEc2Ami_LaunchPermission
+  action: 'aws:executeAwsApi'
+  inputs:
+    Api: ModifyImageAttribute
+    Service: ec2
+    LaunchPermission:
+      Add:
+      - UserId: '{{ DRAccount }}'
+    ImageId: '{{ CreateEc2Ami.ImageId }}'
+  timeoutSeconds: 3600
+- name: ExecuteAutomation_CreateInstance
+  action: 'aws:executeAwsApi'
+  inputs:
+    Service: ssm
+    Api: StartAutomationExecution
+    DocumentName: 'arn:aws:ssm:{{ global:REGION }}:{{ ManageAccount }}:document/DR-Account-CreateInstance'
+    Parameters:
+      InstanceName:
+      - '{{ GetIstanceName.InstanceName }}'
+      ImageId:
+      - '{{ CreateEc2Ami.ImageId }}'
+      AutomationAssumeRole:
+      - '{{ AutomationAssumeRole }}'
+    TargetLocations:
+    - Accounts:
+      - '{{ DRAccount }}'
+      Regions:
+      - '{{ global:REGION }}'
+      ExecutionRoleName: role-dr-account-auto

@@ -1,0 +1,49 @@
+description: |-
+  ---
+  # Automation Document
+  Select target account for DR
+
+  * Insert or remove account information ( TargetLocations:Accounts: )
+
+schemaVersion: '0.3'
+assumeRole: 'arn:aws:iam::{{ global:ACCOUNT_ID }}:role/role-dr-manage-auto'
+parameters:
+  ResourceGroup:
+    type: String
+    default: 'rg_ssm_auto'
+  DRAccount:
+    type: String
+    default: '123412341234'
+  ManageAccount:
+    type: String
+    default: '{{ global:ACCOUNT_ID }}'
+  TargetAccounts:
+    type: StringList
+    default:
+    - '123412341234'
+mainSteps:
+- name: ExecuteAutomation_SelectTarget
+  action: 'aws:executeAwsApi'
+  inputs:
+    Service: ssm
+    Api: StartAutomationExecution
+    DocumentName: 'arn:aws:ssm:{{ global:REGION }}:{{ global:ACCOUNT_ID }}:document/DR-Target-CreateEC2AMI'
+    Parameters:
+      DRAccount:
+      - '{{ DRAccount }}'
+      ManageAccount:
+      - '{{ ManageAccount }}'
+      AutomationAssumeRole:
+      - 'arn:aws:iam::{{ global:ACCOUNT_ID }}:role/role-dr-manage-auto'
+    TargetLocations:
+    - Accounts: '{{ TargetAccounts }}'
+      Regions:
+      - '{{ global:REGION }}'
+      ExecutionRoleName: role-dr-target-auto
+    TargetParameterName: InstanceId
+    Targets:
+    - Key: ResourceGroup
+      Values:
+      - '{{ ResourceGroup }}'
+    MaxConcurrency: 100%
+    MaxErrors: 50%

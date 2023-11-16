@@ -1,0 +1,31 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "cloudformation.amazonaws.com"
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+
+{
+    "Sid": "Statement3",
+    "Effect": "Allow",
+    "Action": [
+        RDS ReadOnly
+        EC2 ReadOnly
+        KMS 접근권한
+        
+        Stack 생성
+        
+        Snapshot 생성                            
+        AMI 생성
+    ],
+    "Resource": [
+        "*"
+    ]
+}

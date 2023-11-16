@@ -1,0 +1,17 @@
+#!/bin/bash
+
+https://learn.microsoft.com/en-us/powershell/module/microsoft.powershell.management/get-service?view=powershell-7.3
+
+##################################   check list   ##############################################
+$mySvrName="AmazonCloudWatchAgent"
+Get-Service $mySvrName -ErrorVariable strError 2>$1  | Format-List | Out-Null
+
+if("$strError" -eq "") {
+  echo "true"
+} else {
+  echo "false"
+}
+
+
+
+##################################   check status   ##############################################

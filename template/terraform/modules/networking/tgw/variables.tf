@@ -1,3 +1,8 @@
+variable "tgw_name" {
+    description = "TGW Name"
+    type = string
+}
+
 variable "amazon_side_asn" {
     description = "TGW Amazon Side ASN"
     type = number
@@ -73,9 +78,9 @@ variable "multicast_support" {
 
 variable "attachment_vpc" {
     description = "Information for attachment VPC"
-    type = list(object({
+    type = map(object({
         name = string
-        vpc_name = string
+        # vpc_name = string
         vpc_id = string
         subnet_ids = list(string)
     }))
@@ -83,7 +88,7 @@ variable "attachment_vpc" {
 
 variable "attachment_peering" {
     description = "Information for attachment TGW Peering"
-    type = list(object({
+    type = map(object({
         name                    = string
         peering_id              = string
         peer_account_id         = string
@@ -94,42 +99,14 @@ variable "attachment_peering" {
 
 variable "tgw_rt" {
     description = "Information for attachment TGW Peering"
-    type = list(object({
+    type = map(object({
         name = string
-        associationList = list(string)
-        propagationList = list(string)
-        static_routes = list(object({
-            destination = string
-            attachment = string
-            blackhole = bool
-        }))
+        # associationList = list(string)
+        # propagationList = list(string)
+        # static_routes = list(object({
+        #     destination = string
+        #     attachment = string
+        #     blackhole = bool
+        # }))
     }))
-}
-
-
-
-
-##################################################################
-## Config Input
-variable "proj_region" {
-    description = "Project Region"
-    type = string
-    validation {
-        condition = can(regex("^[a-z]{2}[1-3]{1}$", var.proj_region))
-        error_message = "Like ap2, as1 ..."
-    }
-}
-
-variable "proj_name" {
-    description = "Project Name"
-    type = string
-}
-
-variable "proj_env" {
-    description = "Project Environment"
-    type = string
-    validation { 
-        condition = contains(["dev", "stg", "prd"], var.proj_env)
-        error_message = "Only use dev, stg, prd"
-    }
 }

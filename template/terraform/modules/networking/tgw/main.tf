@@ -31,13 +31,13 @@ data "aws_ec2_transit_gateway_vpc_attachment" "example" {
 */
 
 locals {
-    attachment = merge(
-        {for attach in aws_ec2_transit_gateway_vpc_attachment.tgw-attach-vpc : attach.tags_all["Name"] => attach.vpc_id}
-        ,{for attach in aws_ec2_transit_gateway_peering_attachment.tgw-attach-peering : attach.tags_all["Name"] => attach.peering_id}
-        #,{for attach in peering}
-        #,{for attach in peering}
-    )
-    router = {for rt in aws_ec2_transit_gateway_route_table.tgw-rt-proj : rt.tags_all["Name"] => rt.id}
+    # attachment = merge(
+    #     {for attach in aws_ec2_transit_gateway_vpc_attachment.tgw-attach-vpc : attach.tags_all["Name"] => attach.vpc_id}
+    #     ,{for attach in aws_ec2_transit_gateway_peering_attachment.tgw-attach-peering : attach.tags_all["Name"] => attach.peering_id}
+    #     #,{for attach in peering}
+    #     #,{for attach in peering}
+    # )
+    # router = {for rt in aws_ec2_transit_gateway_route_table.tgw-rt-proj : rt.tags_all["Name"] => rt.id}
 /*
     association = [
         for rt in var.tgw_rt:{
@@ -110,7 +110,7 @@ Args:
         validation { "enable", "disable" (Disable) }
 */
 
-resource "aws_ec2_transit_gateway" "tgw-proj" {
+resource "aws_ec2_transit_gateway" "tgw_proj" {
     description = "Transit Gateway"
 
     amazon_side_asn = var.amazon_side_asn
@@ -129,7 +129,7 @@ resource "aws_ec2_transit_gateway" "tgw-proj" {
     multicast_support = var.multicast_support
 
     tags = {
-        Name = "tgw-${var.proj_name}-${var.proj_env}-${var.proj_region}"
+        Name = "${var.tgw_name}"
     }    
 }
 
@@ -180,13 +180,14 @@ Args:
         validation { true (Default), false }
 */
 
-resource "aws_ec2_transit_gateway_vpc_attachment" "tgw-attach-vpc" {
-    count = length(var.attachment_vpc)
 
-    transit_gateway_id = aws_ec2_transit_gateway.tgw-proj.id 
-    vpc_id             = var.attachment_vpc[count.index]["vpc_id"]
+resource "aws_ec2_transit_gateway_vpc_attachment" "tgw_attach_vpc" {
+    for_each = var.attachment_vpc
+
+    transit_gateway_id = aws_ec2_transit_gateway.tgw_proj.id 
+    vpc_id             = each.value["vpc_id"]
     # Attachment용 IP를 설정할 Subnet IDs(Multi-AZ)
-    subnet_ids         = var.attachment_vpc[count.index]["subnet_ids"]
+    subnet_ids         = each.value["subnet_ids"]
 
     dns_support = "enable"
     ipv6_support = "disable"
@@ -198,21 +199,52 @@ resource "aws_ec2_transit_gateway_vpc_attachment" "tgw-attach-vpc" {
     transit_gateway_default_route_table_propagation = "false"
 
     tags = {
-        Name = "${var.attachment_vpc[count.index]["name"]}"
-    }    
+        Name = "${each.value["name"]}"
+    }        
+
+    # count = length(var.attachment_vpc)
+
+    # transit_gateway_id = aws_ec2_transit_gateway.tgw_proj.id 
+    # vpc_id             = var.attachment_vpc[count.index]["vpc_id"]
+    # # Attachment용 IP를 설정할 Subnet IDs(Multi-AZ)
+    # subnet_ids         = var.attachment_vpc[count.index]["subnet_ids"]
+
+    # dns_support = "enable"
+    # ipv6_support = "disable"
+
+    # # VPC 연결이 EC2 Transit Gateway의 기본 라우팅 테이블과 연결되어야 하는지
+    # ## Association은 Routing Table과 Attachement를 연결하기 위해 사용 (Attachment는 하나의 Routing Table에만 연결 가능)
+    # transit_gateway_default_route_table_association = "false"
+    # ## Propagation은 Routing 정보를 전파하기 위해 사용 (Attachment는 다수의 Tating Table 연결 가능)
+    # transit_gateway_default_route_table_propagation = "false"
+
+    # tags = {
+    #     Name = "${var.attachment_vpc[count.index]["name"]}"
+    # }    
 }
 
-resource "aws_ec2_transit_gateway_peering_attachment" "tgw-attach-peering" {
-    count = length(var.attachment_peering)
+resource "aws_ec2_transit_gateway_peering_attachment" "tgw_attach_peering" {
+    for_each = var.attachment_peering
 
-    transit_gateway_id      = aws_ec2_transit_gateway.tgw-proj.id
-    peer_account_id         = var.attachment_peering[count.index].peer_account_id
-    peer_region             = var.attachment_peering[count.index].peer_region
-    peer_transit_gateway_id = var.attachment_peering[count.index].peer_transit_gateway_id
+    transit_gateway_id      = aws_ec2_transit_gateway.tgw_proj.id
+    peer_account_id         = each.value["peer_account_id"]
+    peer_region             = each.value["peer_region"]
+    peer_transit_gateway_id = each.value["peer_transit_gateway_id"]
 
     tags = {
-        Name = "${var.attachment_peering[count.index].name}"
+        Name = "${each.value["name"]}"
     }
+
+    # count = length(var.attachment_peering)
+
+    # transit_gateway_id      = aws_ec2_transit_gateway.tgw_proj.id
+    # peer_account_id         = var.attachment_peering[count.index].peer_account_id
+    # peer_region             = var.attachment_peering[count.index].peer_region
+    # peer_transit_gateway_id = var.attachment_peering[count.index].peer_transit_gateway_id
+
+    # tags = {
+    #     Name = "${var.attachment_peering[count.index].name}"
+    # }
 }
 
 # VPN Attachment
@@ -275,14 +307,22 @@ Args:
 */
 
 
-resource "aws_ec2_transit_gateway_route_table" "tgw-rt-proj" {
-    count = length(var.tgw_rt)
-
-    transit_gateway_id = aws_ec2_transit_gateway.tgw-proj.id
+resource "aws_ec2_transit_gateway_route_table" "tgw_rt" {
+    for_each = var.tgw_rt
+    
+    transit_gateway_id = aws_ec2_transit_gateway.tgw_proj.id
 
     tags = {
-        Name = "${var.tgw_rt[count.index]["name"]}"
-    }    
+        Name = "${each.value["name"]}"
+    }
+
+    # count = length(var.tgw_rt)
+
+    # transit_gateway_id = aws_ec2_transit_gateway.tgw_proj.id
+
+    # tags = {
+    #     Name = "${var.tgw_rt[count.index]["name"]}"
+    # }
 }
 
 /*

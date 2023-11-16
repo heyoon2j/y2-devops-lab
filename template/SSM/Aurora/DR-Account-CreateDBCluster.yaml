@@ -6,7 +6,7 @@ description: |-
 schemaVersion: '0.3'
 assumeRole: '{{ AutomationAssumeRole }}'
 parameters:
-  DBInstanceIdentifier:
+  DBClusterIdentifier:
     type: String
   AutomationAssumeRole:
     type: String
@@ -17,32 +17,32 @@ mainSteps:
   action: 'aws:executeAwsApi'
   inputs:
     Service: rds
-    Api: CopyDBSnapshot
-    SourceDBSnapshotIdentifier: '{{ DBSnapshotArn }}'
-    TargetDBSnapshotIdentifier: 'dr-snapshot-{{ DBInstanceIdentifier }}'
+    Api: CopyDBClusterSnapshot
+    SourceDBClusterSnapshotIdentifier: '{{ DBSnapshotArn }}'
+    TargetDBClusterSnapshotIdentifier: 'dr-snapshot-{{ DBClusterIdentifier }}'
     KmsKeyId: 'ARN'
   outputs:
   - Name: DBSnapshotArn
-    Selector: $.DBSnapshot.DBSnapshotArn
+    Selector: $.DBClusterSnapshot.DBClusterSnapshotArn
     Type: String
   - Name: DBSnapshotId
-    Selector: $.DBSnapshot.DBSnapshotIdentifier
+    Selector: $.DBClusterSnapshot.DBClusterSnapshotIdentifier
     Type: String
   timeoutSeconds: 3600
 - name: WaitStep1
   action: 'aws:waitForAwsResourceProperty'
   inputs:
-    PropertySelector: '$.DBSnapshots[0].Status'
+    PropertySelector: '$.DBClusterSnapshots[0].Status'
     DBClusterSnapshotIdentifier: '{{ CopyRdsSnapshot.DBSnapshotId }}'
     DesiredValues:
     - available
     Service: rds
-    Api: DescribeDBSnapshots
+    Api: DescribeDBClusterSnapshots
   timeoutSeconds: 36000
 - name: CreateRdsStack
   action: 'aws:createStack'
   inputs:
-    StackName: 'cf-stack-{{ DBInstanceIdentifier }}'
+    StackName: 'cf-stack-{{ DBClusterIdentifier }}'
     Parameters:
     - ParameterKey: DBSnapshotArnParam
       ParameterValue: '{{ CopyRdsSnapshot.DBSnapshotArn }}'

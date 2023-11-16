@@ -1,7 +1,0 @@
-database:
-  postgresql:
-    host : ""
-    port : "5432"
-    dbname : "zabbix"
-    user : "zabbix"
-    password: ""

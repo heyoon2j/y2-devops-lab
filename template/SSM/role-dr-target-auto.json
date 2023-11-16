@@ -1,0 +1,83 @@
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "",
+            "Effect": "Allow",
+            "Principal": {
+                "Service": "ssm.amazonaws.com",
+                "AWS": [
+                    "arn:aws:iam::<ACCOUNT>:role/role-dr-manage-auto"
+                ]
+            },
+            "Action": "sts:AssumeRole"
+        }
+    ]
+}
+
+
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "Statement1",
+            "Effect": "Allow",
+            "Action": [
+                "iam:PassRole"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:role/role-dr-target-auto"
+            ]
+        },
+        {
+            "Sid": "Statement2",
+            "Effect": "Allow",
+            "Action": [
+                "sts:AssumeRole"
+            ],
+            "Resource": [
+                "arn:aws:iam::*:role/role-dr-account-auto"
+            ]
+        },
+        {
+            "Action": [
+                "kms:Encrypt",
+                "kms:Decrypt",
+                "kms:DescribeKey",
+                "kms:GenerateDataKey*",
+                "kms:ReEncrypt*"
+            ],
+            "Effect": "Allow",
+            "Resource": "*",
+            "Sid": "VolumeEncryption"
+        },
+        {
+            "Sid": "Statement3",
+            "Effect": "Allow",
+            "Action": [
+                "resource-groups:*"
+            ],
+            "Resource": "*"
+        },
+        {
+            "Sid": "Statement4",
+            "Effect": "Allow",
+            "Action": [
+                "tag:*"
+            ],
+            "Resource": "*"
+        },
+		{
+			"Sid": "Statement4",
+			"Effect": "Allow",
+			"Action": [
+				AmazonEC2FullAccess
+				AmazonRDSFullAccess
+				AmazonSSMAutomationRole
+			],
+			"Resource": [
+				"*"
+			]
+		}
+    ]
+}
