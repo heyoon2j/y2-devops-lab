@@ -10,6 +10,44 @@ terraform {
         arguments = ["-lock-timeout=20m"]
     }
 
+    extra_arguments "parallelism" {
+        commands  = get_terraform_commands_that_need_parallelism()
+        arguments = ["-parallelism=5"]
+    }
+
+    extra_arguments "init_args" {
+        commands = [
+            "init"
+        ]
+
+        arguments = [
+            "-plugin-dir=/my/terraform/plugin/dir",
+            ""
+        ]
+    }
+
+
+    extra_arguments "env_vars" {
+        commands = [
+            "init",
+            "plan",
+            "apply",
+            "refresh",
+            "import",
+            "taint",
+            "untaint"
+        ]
+        env_vars = {
+            ## CLI Config File
+            TF_CLI_CONFIG_FILE = "${find_in_parent_folders("terraformrc.tfrc")}"
+
+            ## Log Set
+            TF_LOG_PATH = "$HOME/test.txt"
+            TF_LOG = "info"
+        }
+    }
+
+
     extra_arguments "custom_vars" {
         commands = [
             "apply",

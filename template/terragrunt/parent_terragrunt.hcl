@@ -13,6 +13,27 @@ Root Config
 terraform {
     #######################################################
     # CLI Flag
+    extra_arguments "env_vars" {
+        commands = [
+            "init",
+            "plan",
+            "apply",
+            "refresh",
+            "import",
+            "taint",
+            "untaint"
+        ]
+        env_vars = {
+            ## CLI Config File
+            TF_CLI_CONFIG_FILE = "${find_in_parent_folders("terraformrc.tfrc")}"
+
+            ## Log Set
+            TF_LOG_PATH = "$HOME/test.txt"
+            TF_LOG = "info"
+        }
+    }
+
+
     extra_arguments "retry_lock" {
         commands  = get_terraform_commands_that_need_locking()
         arguments = ["-lock-timeout=20m"]
