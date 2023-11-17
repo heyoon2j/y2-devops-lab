@@ -1,3 +1,4 @@
+/*
 output "sg" {
     description = "Security Group Information"
     sensitive = true
@@ -9,3 +10,4 @@ output "sg" {
     }
 
 }
+*/
