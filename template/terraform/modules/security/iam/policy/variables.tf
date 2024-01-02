@@ -6,6 +6,7 @@ variable "policy_custom" {
         description = string
         policy = string
     }))
+    default = null
 }
 
 variable "policy_boundary" {
@@ -16,4 +17,5 @@ variable "policy_boundary" {
         description = string
         policy = string
     }))
+    default = null
 }

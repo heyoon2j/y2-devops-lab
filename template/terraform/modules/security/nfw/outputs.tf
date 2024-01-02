@@ -1,3 +1,7 @@
+output "firewall_arn" {
+    description = "Firewall Status"
+    value = aws_networkfirewall_firewall.main.arn
+}
 /*
 output "policy_custom" {
     description = "Policy - Custiom"

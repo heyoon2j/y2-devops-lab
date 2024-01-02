@@ -1,4 +1,20 @@
-resource "aws_security_group" "sg_main" {
+#############################################################################################
+/*
+# Security Group Configuration
+1. Security Group
+2. Ingress Rule
+3. Egress Rule
+*/
+#############################################################################################
+
+locals {
+}
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 1. Security Group
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+resource "aws_security_group" "main" {
     name        = var.sg.name 
     description = var.sg.description 
     vpc_id      = var.sg.vpc_id
@@ -6,10 +22,14 @@ resource "aws_security_group" "sg_main" {
 }
 
 
-resource "aws_security_group_rule" "sg_main_ingress" {
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 2. Ingress Rule
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+resource "aws_security_group_rule" "ingress" {
     for_each = var.ingress
 
-    security_group_id = aws_security_group.sg_main.id
+    security_group_id = aws_security_group.main.id
     type = "ingress"
 
     from_port   = each.value.from_port
@@ -19,10 +39,14 @@ resource "aws_security_group_rule" "sg_main_ingress" {
 }
 
 
-resource "aws_security_group_rule" "sg_main_egress" {
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 3. Egress Rule
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+resource "aws_security_group_rule" "egress" {
     for_each = var.egress
     
-    security_group_id = aws_security_group.sg_main.id
+    security_group_id = aws_security_group.main.id
     type = "egress"
 
     from_port   = each.value.from_port

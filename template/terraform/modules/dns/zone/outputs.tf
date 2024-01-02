@@ -3,7 +3,7 @@ output "zone" {
     sensitive = true
 
     value = {
-        id = aws_route53_zone.hosted_zone.zone_id
-        arn = aws_route53_zone.hosted_zone.arn
+        id = aws_route53_zone.main.zone_id
+        arn = aws_route53_zone.main.arn
     }
 }

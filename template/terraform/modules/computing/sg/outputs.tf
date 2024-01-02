@@ -3,9 +3,8 @@ output "sg" {
     sensitive = true
 
     value = {
-        "name" = aws_security_group.sg_main.name
-        "id" = aws_security_group.sg_main.id
-        "arn" = aws_security_group.sg_main.arn
+        "name" = aws_security_group.main.name
+        "id" = aws_security_group.main.id
+        "arn" = aws_security_group.main.arn
     }
-
 }

@@ -11,9 +11,7 @@ variable "comment" {
 
 variable "private_vpc" {
     description = "VPC name for creating private hosted zone"
-    type = map(object({
-        name = string
-    }))
+    type = map(string)
 }
 
 variable "force_destroy" {

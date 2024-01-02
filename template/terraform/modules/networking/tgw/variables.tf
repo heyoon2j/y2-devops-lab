@@ -1,10 +1,13 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Transit Gateway
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 variable "tgw_name" {
     description = "TGW Name"
     type = string
 }
 
 variable "amazon_side_asn" {
-    description = "TGW Amazon Side ASN"
+    description = "Amazon Side ASN for AWS"
     type = number
     default = 64512
     validation {
@@ -12,6 +15,7 @@ variable "amazon_side_asn" {
         error_message = "Range : 64512 <= ASN Number <= 65534 or 4200000000 <= ASN Number <= 4294967294"
     }
 }
+
 ## 연결된 교차 계정 연결을 자동으로 수락할지 여부
 variable "auto_accept_shared_attachments" {
     description = "Auto Accept for across account"
@@ -76,16 +80,44 @@ variable "multicast_support" {
     }
 }
 
+variable "tags" {
+    description = "TGW Tags"
+    default = null
+    type = map(any)
+}
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 2. Attachment (VPN)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 variable "attachment_vpc" {
     description = "Information for attachment VPC"
     type = map(object({
         name = string
-        # vpc_name = string
         vpc_id = string
         subnet_ids = list(string)
+        tags = optional(map(any), null)
     }))
 }
 
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 2. Attachment (VPN) / 수정 필요!!
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+variable "attachment_vpn" {
+    description = "Information for attachment VPN"
+    type = map(any)
+}
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 2. Attachment (DX) / 수정 필요!!
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+variable "attachment_dx" {
+    description = "Information for attachment DX"
+    type = map(any)
+}
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 2. Attachment (TGW Peering)
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 variable "attachment_peering" {
     description = "Information for attachment TGW Peering"
     type = map(object({
@@ -97,16 +129,14 @@ variable "attachment_peering" {
     }))
 }
 
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 3. Route Table
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 variable "tgw_rt" {
-    description = "Information for attachment TGW Peering"
+    description = "Routing Table for TGW"
     type = map(object({
         name = string
-        # associationList = list(string)
-        # propagationList = list(string)
-        # static_routes = list(object({
-        #     destination = string
-        #     attachment = string
-        #     blackhole = bool
-        # }))
+        tags = optional(map(any),null)
     }))
 }

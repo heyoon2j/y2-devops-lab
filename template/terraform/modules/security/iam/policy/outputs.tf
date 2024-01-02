@@ -1,27 +1,15 @@
-/*
-output "policy_custom" {
+output "policy_custom_arn" {
     description = "Policy - Custiom"
     sensitive = true
     value = {
-        for policy in aws_iam_policy.policy_custom:
-             = {
-                "name" = policy.name
-                "id" = policy.id
-                "arn" = policy.arn
-            }
+        for k, v in aws_iam_policy.policy_custom: k => v.arn
     }
 }
 
-output "policy_boundary" {  
+output "policy_boundary_arn" {  
     description = "Policy for boundary"
     sensitive = true
     value = {
-        for policy in aws_iam_policy.policy-user-proj:
-            {
-                "name" = policy.name
-                "id" = policy.id
-                "arn" = policy.arn
-            }
+        for k, v in aws_iam_policy.policy_boundary: k => v.arn
     }
 }
-*/

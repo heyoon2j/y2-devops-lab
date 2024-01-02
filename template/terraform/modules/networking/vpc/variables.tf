@@ -1,5 +1,17 @@
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Common
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+variable "available_zons" {
+    description = "Available zone list"
+    type = list(string)
+}
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# VPC
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 variable "vpc_name" {
-    description = "VPC Name"
+    description = "VPC name"
     type = string
 }
 
@@ -19,6 +31,7 @@ variable "ipv6_cidr_block" {
     #validation {}
 }
 */
+
 variable "instance_tenancy" {
     description = "VPC에서 생성하는 인스턴스의 테넌시 기본 설정"
     type = string
@@ -63,100 +76,96 @@ variable "enable_network_address_usage_metrics" {
     }    
 }
 
-
-
-variable "use_azs" {
-    description = "Availability Zones list using in vpc"
-    type = list(string)
+variable "tags" { 
+    description = "Tags for VPC resource"
+    type = map(string)
 }
 
 
-## Subnet
-/*
-variable "pub_subnet_name" {
-    description = "Subnet Name(s)"
-    type = list(string)
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Subnet
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+variable "sbn_common_config" {
+    description = "Subnet default config"
+    type = object({
+        naming_rule = string
+        assign_ipv6_address_on_creation = optional(bool, false)
+        map_public_ip_on_launch = optional(bool, false)
+        #private_dns_hostname_type_on_launch =  string
+        tags = optional(map(any),null)
+    })
 }
 
-variable "pub_cidr_block" {
-    description = "Subnet IPv4 CIDR"
-    type = list(string)
-    #validation { 10.0.0.0/24, 172.16.30.0/26 ... }
-    validation { 
-        condition = can([for subnet in var.pub_cidr_block : regex("^[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}\\.[0-9]{1,3}/[0-9]{1,2}$", subnet)])
-        error_message = "Like 10.0.0.0/16, 172.16.30.0/24 ..."
-    }
-}
-
-variable "pub_availability_zone" {
-    description = "Availablity Zone"
-    type = list(string)
-    #validation { ap-northeast-2a, ap-northeast-2c ... }
-    validation {
-        condition = can([for az in var.pub_availability_zone : regex("^[a-z]{2}-[a-z]{1,}-[1-3]{1}[a-c]{1}$", az)])
-        error_message = "Like ap-northeast-2a, ap-south-2b ..."
-    }
-}
-
-variable "pub_private_dns_hostname_type_on_launch" {
-    description = "Private Hostname FQDN 지정 시, 들어갈 내용 선택"
-    type = string
-    #validation { ip-name, resource-name }
-}
-
-variable "pub_ipv6_cidr" {
-    description = "Subnet IPv6 CIDR"
-    type = string
-    #validation { ... }
-}
-
-variable "pub_assign_ipv6_address_on_creation" {
-    description = "Use IPv6 address or not "
-    type = bool
-    default = false
-    validation {
-        condition = var.pub_assign_ipv6_address_on_creation == true || var.pub_assign_ipv6_address_on_creation == false
-        error_message = "Only true or false (Boolean Value)"
-    }
-}
-
-variable "pub_map_public_ip_on_launch" {
-    description = "해당 Subnet에서 인스턴스 시작 시, Public IP 할당할지 여부"
-    type = bool
-    validation { 
-        condition = var.pub_map_public_ip_on_launch == true || var.pub_map_public_ip_on_launch == false
-        error_message = "Only true or false (Boolean Value)"
-    }
-}
-*/
-
-variable "subnet_pub" {
+variable "sbn_pub" {
     description = "Public Subnet Dictionary Value"
     type = map(object({
         name = string
         cidr_block = string
+        ipv6_cidr_block = optional(string, null)
         availability_zone = string
-        assign_ipv6_address_on_creation = optional(bool, false)
-        map_public_ip_on_launch = optional(bool, false)
+        route_table = optional(string, null)
+        tags = optional(map(any), null)
     }))
 }
 
-variable "subnet_pri" {
+variable "sbn_pri" {
     description = "Private Subnet Dictionary Value"
     type = map(object({
         name = string
         cidr_block = string
+        ipv6_cidr_block = optional(string, null)
         availability_zone = string
-        assign_ipv6_address_on_creation = optional(bool, false)
-        map_public_ip_on_launch = optional(bool, false)
+        route_table = optional(string, null)
+        tags = optional(map(any), null)
     }))
 }
-
-
-#################################################################
-# TGW Attachment
 
 variable "tgw_attachment_subnet" {
     description = "Subnet for attaching TGW"
     type = list(string)
+}
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Routing Table
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+variable "rt_common_config" {
+    description = "Routing Table default config"
+    type = object({
+        naming_rule = string
+        tags = optional(map(any),null)
+    })
+}
+
+variable "rt_pub" {
+    description = "Public Routing Table"
+    type = map(object({
+        name = string
+        tags = optional(map(any),null)
+    }))
+}
+
+variable "rt_pri" {
+    description = "Private Routing Table"
+    type = map(object({
+        name = string
+        tags = optional(map(any),null)
+    }))
+}
+
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# Routing Table
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+variable "igw_name" {
+    description = "Internet Gateway Name"
+    default = null
+    type = string
+}
+
+variable "igw_tags" {
+    description = "Internet Gateway Tags"
+    default = null
+    type = map(any)
 }

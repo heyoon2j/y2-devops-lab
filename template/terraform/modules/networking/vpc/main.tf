@@ -1,173 +1,163 @@
+#############################################################################################
 /*
-# VPC
+# VPC Configuration
 1. VPC
-    1) VPC 생성
-    2) Subnet 생성
-2. Routing
-    1) Routing Table 생성
-    2) Routing Table Association
-    3) Routing Table의 Route 추가
-3. NAT Gateway
-    1) EIP 생성
-    2) NAT Gateway 생성
+2. Route Table
+3. Subnet
 4. IGW Gateway
-    1) IGW Gateway 생성
-5. TGW Attachment
-    1) Attachment에서 사용할 정보 전달
+
+5. NAT Gateway (in other module)
+6. TGW Attachment (in other module)
+7. Route (in other module)
 */
+#############################################################################################
 
-
-## Input Value
-
-
-
-## Outpu Value
-
-
-###########################################################
-/*abcd
 locals {
-    pub_rt_cnt = var.pub_rt != 0 ? length(var.pub_rt) : 0
-    pri_rt_cnt = var.pri_rt != 0 ? length(var.pri_rt) : 0
-    azs_cnt = var.use_azs != null ? length(var.use_azs) : 1
+    # all_subnets = flatten([
+    #     values({ public = aws_subnet.public }),
+    #     values({ private_sbn = aws_subnet.private }),
+    #     values({ database_sbn = aws_subnet.database })
+    # ])
 }
-abcd*/
 
 
-
-############################################################
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # 1. VPC
-/*
-'VPC Resource'
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-Args:
-    cidr_block
-        description = "VPC IPv4 CIDR"
-        type = string
-        validation { 10.0.0.0/16, 172.16.30.0/24 ... }
-
-    instance_tenancy
-        description = "VPC에서 생성하는 인스턴스의 테넌시 기본 설정"
-        type = string
-        default = "default"
-        validation { "default"(Default), "dedicated" }
-
-    enable_dns_support
-        description = "VPC에서 DNS 지원을 활성화/비활성화"
-        type = bool
-        default = true
-        validation { true (Default), false }
-    
-    enable_dns_hostnames
-        description = "Public IP Address에 Hostname을 받을지에 대한 여부"
-        type = bool
-        default = false
-        validation { true, false (Default) }
-
-*/
-
-resource "aws_vpc" "vpc_main" {
+resource "aws_vpc" "main" {
     cidr_block = var.cidr_block
-
-    instance_tenancy = var.instance_tenancy # "default"
-
     enable_dns_hostnames = var.enable_dns_hostnames # true
     enable_dns_support = var.enable_dns_support # true
+
+    instance_tenancy = var.instance_tenancy # "default"
 
     enable_network_address_usage_metrics = var.enable_network_address_usage_metrics
     # enable_classiclink = "false"
     # enable_classiclink_dns_support = "false"
 
-    tags = {
-        Name = "${var.vpc_name}"
-    }
+    tags = merge(
+        {
+            "Name" = var.vpc_name
+        },
+        var.tags
+    )
 }
 
-/*
-'Subnet Resource'
 
-Args:
-    subnet_name
-        description = "Sunbet Name"
-        type = string
-        validation
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 2. Subnet
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
-    vpc_id
-        description = "VPC ID"
-        type = string
-        validation {}
+resource "aws_subnet" "public" {
+    for_each = var.sbn_pub
 
-    cidr_block
-        description = "Subnet IPv4 CIDR"
-        type = string
-        validation { 10.0.0.0/24, 172.16.30.0/26 ... }
-
-    availability_zone
-        description = "Availablity Zone"
-        type = string
-        validation { ap-northeast-2a, ap-northeast-2c ... }
-
-    private_dns_hostname_type_on_launch
-        description = "Private Hostname FQDN 지정 시, 들어갈 내용 선택"
-        type = string
-        validation { ip-name, resource-name }
-
-    ipv6_cidr_block
-        description = "Subnet IPv6 CIDR"
-        type = string
-        validation { ... }
-
-    assign_ipv6_address_on_creation
-        description = "Use IPv6 address or not "
-        type = bool
-        validation { true, false (Default) }
-
-    map_public_ip_on_launch
-        description = "해당 Subnet에서 인스턴스 시작 시, Public IP 할당할지 여부"
-        type = bool
-        validation { true, false (Default) }
-*/
-
-resource "aws_subnet" "sbn_pub" {
-    for_each = var.subnet_pub
-
-    vpc_id = aws_vpc.vpc_main.id
+    vpc_id = aws_vpc.main.id
     cidr_block = each.value["cidr_block"]
     availability_zone = each.value["availability_zone"]
-    assign_ipv6_address_on_creation = each.value["assign_ipv6_address_on_creation"]
-    map_public_ip_on_launch = each.value["map_public_ip_on_launch"]
+    assign_ipv6_address_on_creation = var.sbn_common_config["assign_ipv6_address_on_creation"]
+    map_public_ip_on_launch = var.sbn_common_config["map_public_ip_on_launch"]
 
-    tags = {
-        Name = "${each.value.name}"
-    }
+    tags = merge(
+        {
+            "Name" = join("", [var.sbn_common_config["naming_rule"], each.value["name"]])
+        },
+        var.sbn_common_config["tags"],
+        each.value["tags"]
+    )
 }
 
-resource "aws_subnet" "sbn_pri" {
-    for_each = var.subnet_pri
+resource "aws_subnet" "private" {
+    for_each = var.sbn_pri
 
-    vpc_id = aws_vpc.vpc_main.id
+    vpc_id = aws_vpc.main.id
     cidr_block = each.value["cidr_block"]
     availability_zone = each.value["availability_zone"]
-    assign_ipv6_address_on_creation = each.value["assign_ipv6_address_on_creation"]
-    map_public_ip_on_launch = each.value["map_public_ip_on_launch"]
-
-    tags = {
-        Name = "${each.value.name}"
-    }
+    assign_ipv6_address_on_creation = var.sbn_common_config["assign_ipv6_address_on_creation"]
+    map_public_ip_on_launch = var.sbn_common_config["map_public_ip_on_launch"]
+    
+    tags = merge(
+        {
+            "Name" = join("", [var.sbn_common_config["naming_rule"], each.value["name"]])
+        },
+        var.sbn_common_config["tags"],
+        each.value["tags"]
+    )
 }
 
-
-############################################
 
 data "aws_subnet" "tgw_attahment" {
     count = length(var.tgw_attachment_subnet)
+
     filter {
         name   = "tag:Name"
-        values = [var.tgw_attachment_subnet[count.index]]
+        values = [join("", [var.sbn_common_config["naming_rule"], var.tgw_attachment_subnet[count.index]])]
     }
 
     depends_on = [
-        aws_subnet.sbn_pub,
-        aws_subnet.sbn_pri
+        aws_subnet.public,
+        aws_subnet.private
     ]
+}
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 3. Route Table
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+
+resource "aws_route_table" "public" {
+    for_each = var.rt_pub
+
+    vpc_id = aws_vpc.main.id
+    tags = merge(
+        {
+            "Name" = join("", [var.rt_common_config["naming_rule"], each.value["name"]])
+        },
+        var.rt_common_config["tags"],
+        each.value["tags"]
+    )
+}
+
+
+resource "aws_route_table_association" "public" {
+    for_each = var.sbn_pub
+
+    route_table_id = aws_route_table.public[each.value["route_table"]].id
+    subnet_id = aws_subnet.public[each.key].id
+}
+
+
+resource "aws_route_table" "private" {
+    for_each = var.rt_pri
+
+    vpc_id = aws_vpc.main.id
+    tags = merge(
+        {
+            "Name" = join("", [var.rt_common_config["naming_rule"], each.value["name"]])
+        },
+        var.rt_common_config["tags"],
+        each.value["tags"]
+    )
+}
+
+resource "aws_route_table_association" "private" {
+    for_each = var.sbn_pri
+
+    route_table_id = aws_route_table.private[each.value["route_table"]].id
+    subnet_id = aws_subnet.private[each.key].id
+}
+
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+# 4. Internet Gateway
+# # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+resource "aws_internet_gateway" "this" {
+    count = var.igw_name != null ? 1 : 0
+
+    vpc_id = aws_vpc.main.id
+
+    tags = merge(
+        {
+            "Name" = var.igw_name
+        },
+        var.igw_tags
+    )
 }

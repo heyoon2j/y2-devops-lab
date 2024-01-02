@@ -11,6 +11,7 @@ variable "sg" {
 variable "ingress" {
     description = "Security Group's Inbound"
     type = map(object({
+        description = optional(string, null)
         from_port = number
         to_port = number
         protocol = string
@@ -18,10 +19,10 @@ variable "ingress" {
     }))
 }
 
-
 variable "egress" {
     description = "Security Group's Outbound"
     type = map(object({
+        description = optional(string, null)
         from_port = number
         to_port = number
         protocol = string
