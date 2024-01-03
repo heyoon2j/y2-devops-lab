@@ -1,3 +1,4 @@
+/*
 variable "launch_temp" {
     description = "Launch Template"
     type = object({
@@ -22,3 +23,4 @@ variable "launch_temp" {
 
     })
 }
+*/
