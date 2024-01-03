@@ -1,0 +1,57 @@
+[build-system]
+requires = ["setuptools", "wheel"]
+build-backend = "setuptools.build_meta"
+
+
+[project]
+name = "python_proj"
+# version = "1.2.5"
+dynamic = ["version"]
+
+description = "Python package description"
+readme = "README.md"
+
+authors = [
+    {name = "tester", email = "tester@example.com"}
+]
+maintainers = [
+    {name = "tester", email = "tester@example.com"}
+]
+
+requires-python = ">=3.7"
+
+#keywords = ["one", "two"]
+
+license = {file = "LICENSE"}
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Programming Language :: Python :: 3",
+    "Operating System :: POSIX :: Linux"
+]
+
+dependencies = [                                    # 의존성 정의 (pip 사용하는 의존성)
+    "redshift_connector",
+    "psycopg2"
+]
+
+[project.optional-dependencies]                     ## 패키지의 특정 기능에만 의존성이 필요한 경우 (사용법 : pip install your-project-name[gui])
+pdf = ["ReportLab>=1.2", "RXP"]
+rest = ["docutils>=0.3", "pack ==1.1, ==1.3"]
+gui = ["PyQt5"]
+cli = [
+  "rich",
+  "click",
+]
+
+
+[project.urls]
+Homepage = "https://example.com"
+Documentation = "https://example.com"
+Repository = "https://github.com/me/spam.git"
+Issues = "https://github.com/me/spam/issues"
+Changelog = "https://github.com/me/spam/blob/master/CHANGELOG.md"
+
+[tool.setuptools.dynamic]
+version = {attr = "y2lib.__version__"}
+# readme = {file = ["README.rst", "USAGE.rst"]}
