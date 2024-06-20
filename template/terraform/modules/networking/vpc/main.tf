@@ -13,11 +13,7 @@
 #############################################################################################
 
 locals {
-    # all_subnets = flatten([
-    #     values({ public = aws_subnet.public }),
-    #     values({ private_sbn = aws_subnet.private }),
-    #     values({ database_sbn = aws_subnet.database })
-    # ])
+
 }
 
 
