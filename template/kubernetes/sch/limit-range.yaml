@@ -1,0 +1,55 @@
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name: example-limits
+  namespace: default
+spec:
+  limits:
+  - max:
+      cpu: 1              # 최대 CPU 사용량 1 CPU
+      memory: 512Mi       # 최대 메모리 사용량 512MiB
+    min:
+      cpu: 100m           # 최소 CPU 사용량 100m CPU
+      memory: 128Mi       # 최소 메모리 사용량 128MiB
+    default:
+      cpu: 500m           # 요청되지 않은 경우 기본값으로 사용될 CPU
+      memory: 256Mi       # 요청되지 않은 경우 기본값으로 사용될 메모리
+    defaultRequest:
+      cpu: 200m           # Pod이 요청하는 기본 CPU 값
+      memory: 200Mi       # Pod이 요청하는 기본 메모리 값
+    type: Container       # 이 한계는 컨테이너에 적용됩니다.
+
+================================
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name:
+spec:
+  limits:
+  - default:
+      cpu: 500m
+    defaultRequest:
+      cpu: 500m
+    max:
+      cpu: 1
+    min:
+      cpu: 100m
+    type: Container
+  
+
+==================================
+apiVersion: v1
+kind: LimitRange
+metadata:
+  name:
+spec:
+  limits:
+  - default:
+      memory: 1Gi
+    defaultRequest:
+      memory: 1Gi
+    max:
+      memory: 1Gi
+    min:
+      memory: 500Mi
+    type: Container

@@ -2,10 +2,15 @@ apiVersion: networking.k8s.io/v1
 kind: Ingress
 metadata:
   name: minimal-ingress                                 # Ingress Name
-  annotations:                                          # Ingress Controller 지정
+  annotations:
     nginx.ingress.kubernetes.io/rewrite-target: /
 spec:
-  ingressClassName: nginx-example
+  ingressClassName: nginx-example                       # Ingress Controller 지정
+  defaultBackend:                                       # Default 지정
+    resource:
+      apiGroup: k8s.example.com
+      kind: StorageBucket
+      name: static-assets
   rules:
   - http:
       paths:

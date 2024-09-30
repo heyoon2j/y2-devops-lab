@@ -1,0 +1,110 @@
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+  name: test-replicaset
+  namespace: default
+  labels:
+    app: myapp
+    type: front-end
+spec:
+  replicas: 3
+  selector:
+    matchLables:
+      app: test
+  template:
+    metadata:
+      name: myapp-pod
+      lables:
+        app: test
+        type: front-end
+    spec:
+      containers:
+        - name: nginx-container
+          image: nginx
+
+
+
+##################################
+apiVersion: v1
+items:
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    creationTimestamp: "2024-07-29T00:33:50Z"
+    generation: 1
+    name: new-replica-set
+    namespace: default
+    resourceVersion: "1399"
+    uid: 82223532-1139-4d2d-b058-9b8bb1d10aec
+  spec:
+    replicas: 4
+    selector:
+      matchLabels:
+        name: busybox-pod
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          name: busybox-pod
+      spec:
+        containers:
+        - command:
+          - sh
+          - -c
+          - echo Hello Kubernetes! && sleep 3600
+          image: busybox777
+          imagePullPolicy: Always
+          name: busybox-container
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    fullyLabeledReplicas: 4
+    observedGeneration: 1
+    replicas: 4
+- apiVersion: apps/v1
+  kind: ReplicaSet
+  metadata:
+    annotations:
+      kubectl.kubernetes.io/last-applied-configuration: |
+        {"apiVersion":"apps/v1","kind":"ReplicaSet","metadata":{"annotations":{},"name":"replicaset-1","namespace":"default"},"spec":{"replicas":4,"selector":{"matchLabels":{"tier":"frontend"}},"template":{"metadata":{"labels":{"tier":"frontend"}},"spec":{"containers":[{"image":"busybox","name":"busybox"}]}}}}
+    creationTimestamp: "2024-07-29T01:24:17Z"
+    generation: 2
+    name: replicaset-1
+    namespace: default
+    resourceVersion: "2648"
+    uid: cbe50836-6eb1-4ad2-bdbf-339536c178c5
+  spec:
+    replicas: 4
+    selector:
+      matchLabels:
+        tier: frontend
+    template:
+      metadata:
+        creationTimestamp: null
+        labels:
+          tier: frontend
+      spec:
+        containers:
+        - image: busybox
+          imagePullPolicy: Always
+          name: busybox
+          resources: {}
+          terminationMessagePath: /dev/termination-log
+          terminationMessagePolicy: File
+        dnsPolicy: ClusterFirst
+        restartPolicy: Always
+        schedulerName: default-scheduler
+        securityContext: {}
+        terminationGracePeriodSeconds: 30
+  status:
+    fullyLabeledReplicas: 4
+    observedGeneration: 2
+    replicas: 4
+kind: List
+metadata: {}

@@ -8,7 +8,7 @@ metadata:
   namespace: monitoring 
 spec:
   accessModes:
-    - ReadWriteOnce
+  - ReadWriteOnce
   volumeMode: Filesystem
   resources:
     requests:
@@ -19,6 +19,7 @@ spec:
       release: "stable"
     matchExpressions:
       - {key: environment, operator: In, values: [dev]}
+  volumeName: abc-pv
 
 ################################################
 # Dynamic PV

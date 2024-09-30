@@ -10,9 +10,48 @@ spec:
     - protocol: TCP
       port: 80
       targetPort: 9376
-  clusterIP: 10.0.171.239
+  clusterIP: 10.0.171.239           # Optional
   type: LoadBalancer
 status:
   loadBalancer:
     ingress:
     - ip: 192.0.2.127
+
+
+# Teampate
+apiVersion: v1
+kind: Service
+metadata:
+  name: y2_service_lb
+spec:
+  type: LoadBalancer
+  selector:
+    app: webServer_lb 
+  externalTrafficPolicy: Cluster    # Cluster(Default), Local / Cross Node : 말그대로 Node 교차 통신 가능한지 여부
+  ports:
+    - protocol: TCP
+      port: 80
+      targetPort: 9376
+status:
+  loadBalancer:
+    ingress:
+    - ip: 192.0.2.127
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: y2_service_lb
+  # namespace: nlb-sample-app
+  annotations:
+    service.beta.kubernetes.io/aws-load-balancer-type: external
+    service.beta.kubernetes.io/aws-load-balancer-nlb-target-type: instance
+    service.beta.kubernetes.io/aws-load-balancer-scheme: internal
+spec:
+  type: LoadBalancer
+  selector:
+    app: webServer_lb 
+  ports:
+    - port: 80
+      targetPort: 80
+      protocol: TCP

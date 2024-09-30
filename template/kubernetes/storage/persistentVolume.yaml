@@ -9,7 +9,11 @@ spec:
   accessModes:                              # 액세스 모드
     - ReadWriteOnce                             # ReadWriteOnce, ReadOnlyMany, ReadWriteMany, ReadWriteOncePod
   persistentVolumeReclaimPolicy: Recycle    # 반환 정책 : Retain(수동 반환), Recycle(재활용), Delete(자원 삭제)
+  # Retain : Persistent Volume이 사용 중단되더라도, 해당 스토리지가 즉시 삭제되거나 재사용되지 않고 보존
+  # Recycle(deprecated) : 사용되지 않는 PV의 데이터가 삭제되고, PV를 다른 파드가 재사용할 수 있도록 재활용 (rm -rf)
+  # Delete : PV가 더 이상 사용되지 않으면, 해당 PV와 연결된 스토리지 리소스를 삭제
   storageClassName: ""                      # PV는 어디에 쓰이는지 모르겠음!! (Dynamic) Persistent Volume 요청을 위한 이름
+  # Mount 타입에 따라서 nfs, hostPath, mountOptions 등 지정
   mountOptions:
     - hard
     - nfsvers=4.1
@@ -22,19 +26,14 @@ spec:
 apiVersion: v1
 kind: PersistentVolume
 metadata:
-  name: pv0003
+  name: pv-log
 spec:
+  persistentVolumeReclaimPolicy: Retain
+  accessModes:
+    - ReadWriteMany
   capacity:
     storage: 100Mi
-  volumeMode: Block
-  accessModes:
-    - ReadWriteOnce
-  persistentVolumeReclaimPolicy: Recycle
-  storageClassName: ""
-  mountOptions:
-    - hard
-    - nfsvers=4.1
-  nfs:
-    path: /tmp
-    server: 172.17.0.2
+  storageClassName: ""                      # PV는 어디에 쓰이는지 모르겠음!! (Dynamic) Persistent Volume 요청을 위한 이름
+  hostPath:
+    path: /pv/log
 

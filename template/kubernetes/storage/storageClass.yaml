@@ -19,13 +19,20 @@ apiVersion: storage.k8s.io/v1
 kind: StorageClass
 metadata:
   name: slow
-provisioner: kubernetes.io/aws-ebs
+# 스토리지 프로비저닝을 공급할 스토리지 제공자 지정
+## kubernetes.io/no-provisioner 인 경우, 수동으로 관리되는 스토리지를 사용하는 경우
+provisioner: kubernetes.io/aws-ebs      # 
 parameters:
   type: io1
   iopsPerGB: "10"
   fsType: ext4
-reclaimPolicy: Retain
-allowVolumeExpansion: true
+# 마운트할 때, 사용할 추가 마운트 옵션
 mountOptions:
   - debug
-volumeBindingMode: WaitForFirstConsumer # Immediate / WaitForFirstConsumer
+reclaimPolicy: Retain
+# 바인딩 된 후에도 동적으로 스토리지 크기를 화장할 수 있을지에 대한 여부
+allowVolumeExpansion: true
+# Volume Binding Mode
+# - Immediate : PVC가 생성되면 즉시 볼륨이 프로비저닝되고 바인딩 됨
+# - WaitForFirstConsumer : PVC를 사용하는 Pod가 생성되기 전까지 볼륨이 프로비저닝되지 않음
+volumeBindingMode: WaitForFirstConsumer

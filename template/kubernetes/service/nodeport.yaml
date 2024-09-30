@@ -14,3 +14,24 @@ spec:
       # Optional field
       # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
       nodePort: 30007     # Open할 Node
+
+
+
+# Template
+apiVersion: v1
+kind: Service
+metadata:
+  name: y2_service_nodePort
+spec:
+  type: NodePort
+  selector:
+    app: webServer_nodePort          # 여기서는 Deployment 이름으로 지정 
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80            # By default and for convenience, the `targetPort` is set to the same value as the `port` field.
+      targetPort: 8084      # port와 동일하게 가야됨
+      # Optional field
+      # By default and for convenience, the Kubernetes control plane will allocate a port from a range (default: 30000-32767)
+      nodePort: 30008     # Open할 Node
+

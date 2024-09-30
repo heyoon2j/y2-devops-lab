@@ -3,15 +3,53 @@ kind: Service
 metadata:
   name: my-service
 spec:
-  selector:
+  selector:                                   # Select Pod
     app.kubernetes.io/name: MyApp
-  clusterIP: 10.96.0.10                       # 정적으로 IP 할당 (없어도 됨)
+  clusterIP: 10.96.0.10                       # Static IP 할당 (optional)
   ports:
     - name: http
       protocol: TCP
-      port: 80
-      targetPort: 9376
+      port: 80                                # Container Port
+      targetPort: 9376                        # Pod Port
     - name: https
       protocol: TCP
       port: 443
       targetPort: 9377
+
+
+
+# Template
+apiVersion: v1
+kind: Service
+metadata:
+  name: y2_service_clusterIp
+spec:
+  selector:                                   # Select Pod
+    app: webServer_1_clusterIp
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80                                # Service Port
+      targetPort: 8080                        # Pod Port
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 8081
+
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: y2_service_2_clusterIp
+spec:
+  selector:                                   # Select Pod
+    app: webServer_2_clusterIp
+  ports:
+    - name: http
+      protocol: TCP
+      port: 80                                # Service Port
+      targetPort: 8082                        # Pod Port
+    - name: https
+      protocol: TCP
+      port: 443
+      targetPort: 8084

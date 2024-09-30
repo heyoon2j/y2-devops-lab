@@ -1,0 +1,21 @@
+apiVersion: apiserver.config.k8s.io/v1
+kind: EncryptionConfiguration
+resources:
+  - resources:
+      - secrets
+      - configmaps
+    # 암호화 방법을 정의
+    ## Providers의 순서에 따라 Provider가 정해진다.
+    providers:
+      # 암호화 방식 정의
+      - kms:
+          apiVersion: v2
+          name: myKmsPluginFoo
+          endpoint: unix:///tmp/socketfile-foo.sock
+          timeout: 3s
+      - aescbc:
+          keys:
+            - name: key1
+              secret: <base64-encoded-secret-key>
+      # 비암호화 방식 정의
+      - identity: {}
