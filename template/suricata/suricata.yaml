@@ -1,0 +1,36 @@
+
+# Packet acquisition
+pcap:
+  - interface: eth0
+    #buffer-size: 16777216
+    #bpf-filter: "tcp and port 25"
+    #checksum-checks: auto
+    #threads: 16
+    #promisc: no
+    #snaplen: 1518
+pfring:
+afpacket:
+nfq:
+ipfw:
+
+
+# Log Directory
+default-log-dir: /var/log/suricata/
+
+# Variables
+vars:
+  address-groups:
+    HOME_NET: "[192.168.0.0/16,10.0.0.0/8,172.16.0.0/12]"
+    EXTERNAL_NET: "!$HOME_NET"
+  
+
+  port-groups:
+    HTTP_PORTS: "80"
+    SHELLCODE_PORTS: "!80"
+
+
+# Rule
+default-rule-path: /etc/suricata/rules
+rule-files:
+ - local.rules
+ - emerging-activex.rules

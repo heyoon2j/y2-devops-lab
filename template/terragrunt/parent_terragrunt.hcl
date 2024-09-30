@@ -12,6 +12,25 @@ Root Config
 
 terraform {
     #######################################################
+    # CLI Options
+    extra_arguments "tf_config" {
+        commands = [
+            "init",
+            "plan",
+            "apply",
+            "refresh",
+            "import",
+            "taint",
+            "untaint"
+        ]
+        env_vars = {
+            TF_CLI_CONFIG_FILE = "${find_in_parent_folders("terraformrc.tfrc")}"
+            TF_LOG_PATH = "/Users/heyoon2j/test.txt"
+            TF_LOG = "debug"
+        }
+    }
+
+    #######################################################
     # CLI Flag
     extra_arguments "env_vars" {
         commands = [
@@ -65,6 +84,17 @@ terraform {
             "${get_terragrunt_dir()}/${get_env("TF_VAR_region", "us-east-1")}.tfvars"
         ]
     }
+
+    // extra_arguments "debug" {
+    //     commands = ["plan", "apply", "destroy"]
+    //     arguments = ["--terragrunt-debug"]
+    // }
+
+    // extra_arguments "log_level" {
+    //     commands = ["apply", "destroy"]
+    //     arguments = ["--terragrunt-log-level info"]
+    //     # panic / fatal / error / warn / info (this is the default) / debug / trace
+    // }
 
     #######################################################
     # Hooking
