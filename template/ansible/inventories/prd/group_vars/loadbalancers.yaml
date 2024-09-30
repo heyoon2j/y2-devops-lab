@@ -1,0 +1,2 @@
+haproxy_backend_port: 80
+haproxy_max_connections: 3000

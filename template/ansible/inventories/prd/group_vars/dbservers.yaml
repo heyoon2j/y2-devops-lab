@@ -1,0 +1,3 @@
+db_name: testDB
+tbl_name: testTBL
+db_user: dbuser

@@ -1,0 +1,39 @@
+all:
+  vars:
+    ansible_user: ansible_user
+    ansible_ssh_private_key_file: /path/to/private/key
+    ansible_become: true
+    ansible_become_method: sudo
+    ansible_become_user: root
+
+  children:
+    webservers:
+      hosts:
+        webserver1.test.com:
+          ansible_host: 192.168.1.1
+          ansible_port: 40022
+        webserver2.example.com:
+          ansible_host: 192.168.1.2
+          ansible_port: 44022
+
+    dbservers:
+      hosts:
+        batchsrv[1:5].test.com:
+        ansible_host: "192.168.2.[1:5]"
+        ansible_port: 2222
+        ansible_user: batch_user
+        ansible_ssh_private_key_file: /path/to/dbserver/key
+        ansible_connection: ssh
+        ansible_ssh_common_args: '-o ProxyCommand="ssh -W %h:%p jump_host"'       
+      vars:
+        db_name: testDB
+        tbl_name: testTBL
+        db_user: dbuser
+    
+    loadbalancers:  
+      hosts:
+        lb[1:3].test.com:
+        ansible_host: lb[1:3].test.com 
+      vars:
+        haproxy_backend_port: 80
+        haproxy_max_connections: 3000

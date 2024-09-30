@@ -1,0 +1,28 @@
+- name: 전체 서버 설정
+  hosts: all
+  become: true
+  roles:
+    - common
+
+- name: 웹 서버 설정
+  hosts: webservers
+  become: true
+  roles:
+    - role: webserver
+      tags: webserver
+    - role: security
+      tags: security
+
+- name: 데이터베이스 서버 설정
+  hosts: dbservers
+  become: true
+  roles:
+    - dbserver
+    - role: backup
+      tags: backup
+
+# 전체 호출 : $ ansible-playbook site.yaml 
+# hosts webservers에 대해서만 호출 : $ ansible-playbook site.yaml --limit webservers
+# tags security와 backup 대해서만 호출 : $ ansible-playbook site.yaml --tags security,backup
+# MIX : $ ansible-playbook site.yaml --limit webservers --tags backup
+
