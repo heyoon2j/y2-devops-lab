@@ -1,8 +1,6 @@
 module "network" {
     source = "./modules/networking"
-    providers = {
-        aws = aws.aps1
-    }
+    providers = aws.aps1
 }
 
 
