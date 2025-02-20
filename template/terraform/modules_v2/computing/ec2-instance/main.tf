@@ -10,52 +10,6 @@
 locals {
 }
 
-variable "ec2_instance" {
-    description = "EC2 Instance Variable"
-    # default = 
-    type = map(object({
-        description = optional(string, null)
-
-        instance_name   = string
-        instance_type   = string
-        image_name      = string
-        key_name        = optional(string, null)
-
-        # Network
-        subnet_name                 = string
-        sg_names                    = list(string)
-        source_dest_check           = optional(bool, true)
-        ## Static or Dynamic IP
-        private_ip_static_enabled   = optional(bool, false)
-        private_ip_static_list      = optional(list(string), null)
-        private_ip_dynamic          = optional(number, 0)
-        ## Place Group
-        placement_group         = optional(string, null)
-        placement_partition_number = optional(string, null)
-
-        # Option
-        tenancy                 = optional(string, "default")
-        disable_api_termination = optional(bool, true)
-        disable_api_stop        = optional(bool, false)
-        instance_initiated_shutdown_behavior    = optional(string, "stop")  # "stop"
-
-        # Option - Neccessary
-        ## Metadata
-        http_endpoint   = optional(string, "enabled")   # "enabled", "disabled"
-        http_tokens     = optional(string, "required")  # "required", "optional"
-        http_put_response_hop_limit = optional(number, 2)
-        instance_metadata_tags      = optional(string, "enabled")    # "disabled", "enabled"
-        ## 
-        user_data                   = optional(string, null)
-        default_tags                = optional(map(string), null)
-        tags                        = optional(map(string), null)
-    }))
-
-}
-
-
-
-
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Data Resource (Name---> ID)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
@@ -68,12 +22,10 @@ data "aws_ami" "selected" {
         values = [each.value.image_name]
     }
 
-    filter {
-        name   = "virtualization-type"
-        values = ["hvm"]
-    }
-
-    owners = ["099720109477"] # Canonical
+    # filter {
+    #     name   = "virtualization-type"
+    #     values = ["hvm"]
+    # }
 }
 
 
@@ -118,7 +70,7 @@ resource "aws_network_interface" "this" {
 
     tags              = merge(
         {
-            "Name"    = each.value.instance_name
+            "Name"    = each.value.name
         },
         each.value.default_tags
     )
@@ -133,7 +85,7 @@ resource "aws_network_interface" "this" {
 resource "ec2_instance" "this" {
     for_each        = var.ec2_instance
 
-    instance_name   = each.value.instance_name
+    instance_name   = each.value.name
 
     instance_type   = each.value.instance_type
     ami             = data.aws_ami.selected[each.key].id
@@ -165,7 +117,7 @@ resource "ec2_instance" "this" {
     tags                        = merge(
         each.value.default_tags,
         {
-            "Name"    = each.value.instance_name
+            "Name"    = each.value.name
         },
         each.value.tags
     )
