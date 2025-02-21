@@ -6,8 +6,7 @@ module "provider" {
 module "ec2_test" {
     provider = aws.apn2
     source = "./modules_v2/computing/instnace"
-
-    
+    profile = ""
 }
 
 
@@ -24,8 +23,8 @@ locals {
             #key_name        = optional(string, null)
 
             # Network
-            subnet_name                 = string
-            sg_names                    = list(string)
+            subnet_name                 = ""
+            sg_names                    = [""]
             #source_dest_check           = optional(bool, true)
             ## Static or Dynamic IP
             #private_ip_static_enabled   = optional(bool, false)
