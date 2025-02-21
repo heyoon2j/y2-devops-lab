@@ -1,9 +1,8 @@
 locals {
-    default_tags = {}
-
     sg = {
         name            = "test-sg"
         vpc_name        = ""
+        default_tags    = local.default_tags
     } 
     ingress = {
         ssh = {
@@ -26,9 +25,10 @@ locals {
 }
 
 module "sg" {
-    provider = aws.cloud-poc-apn2
-    source = "./modules_v2/computing/sg"
-    profile = aws.common-poc
+    providers = {
+        aws = aws.cloud-poc-apn2
+    }
+    source = "../modules_v2/computing/sg"
 
     sg = local.sg
     ingress = local.ingress

@@ -1,7 +1,5 @@
 locals {
     user_data = ""
-    default_tags = {}
-
 
     instances = {
         test_instance = {
@@ -40,29 +38,15 @@ locals {
             #tags                        = optional(map(string), null)
         }
     }
-
-    sg = {
-
-    }
-}
-
-module "sg_test" {
-    provider = aws.cloud-poc-apn2
-    source = "./modules_v2/computing/sg"
-    profile = aws.common-poc
-
-    for_each = local.sg
-
-
-
 }
 
 
 
 module "ec2" {
-    provider = local.provider_cfg
-    source = "./modules_v2/computing/instance"
-    profile = ""
+    providers = {
+        aws = aws.cloud-poc-apn2
+    }
+    source = "../modules_v2/computing/instance"
 
     for_each = local.instances
 
