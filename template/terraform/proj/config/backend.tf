@@ -1,3 +1,4 @@
+/*
 terraform {
     backend "s3" {
         bucket         = "${local.root_cfg.locals.backend["bucket"]}"
@@ -6,3 +7,4 @@ terraform {
         encrypt        = "${local.root_cfg.locals.backend["encrypt"]}"
     }
 }
+*/

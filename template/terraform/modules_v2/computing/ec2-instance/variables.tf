@@ -1,7 +1,7 @@
 variable "ec2_instance" {
     description = "EC2 Instance Variable"
     # default = 
-    type = map(object({
+    type = object({
         description     = optional(string, null)
 
         name            = string
@@ -37,5 +37,5 @@ variable "ec2_instance" {
         user_data                   = optional(string, null)
         default_tags                = optional(map(string), null)
         tags                        = optional(map(string), null)
-    }))
+    })
 }

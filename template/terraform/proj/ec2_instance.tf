@@ -1,15 +1,3 @@
-
-module "provider" {
-    source = "./config"
-}
-
-module "ec2_test" {
-    provider = aws.apn2
-    source = "./modules_v2/computing/instnace"
-    profile = ""
-}
-
-
 locals {
     user_data = ""
     default_tags = {}
@@ -50,22 +38,36 @@ locals {
             user_data                   = local.user_data
             default_tags                = local.default_tags
             #tags                        = optional(map(string), null)
-        },
-        test2_instance = {
-
         }
     }
+
+    sg = {
+
+    }
+}
+
+module "sg_test" {
+    provider = aws.cloud-poc-apn2
+    source = "./modules_v2/computing/sg"
+    profile = aws.common-poc
+
+    for_each = local.sg
+
+
+
 }
 
 
 
-
 module "ec2" {
-    provider = aws.cloud-poc-apn2
+    provider = local.provider_cfg
     source = "./modules_v2/computing/instance"
+    profile = ""
 
     for_each = local.instances
 
+    ec2_instnace = each.value
+/*
     description     = each.value.description
     name            = each.value.name
     instance_type   = each.value.instance_type
@@ -100,4 +102,5 @@ module "ec2" {
     user_data                   = each.value.user_data
     default_tags                = each.value.default_tags
     tags                        = each.value.tags
+*/
 }

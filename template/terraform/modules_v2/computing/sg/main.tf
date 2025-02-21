@@ -48,13 +48,7 @@ resource "aws_vpc_security_group_ingress_rule" "main" {
     prefix_list_id                  = each.value.prefix_list_id
     referenced_security_group_id    = each.value.referenced_security_group_id
 
-    tags                        = merge(
-        each.value.default_tags,
-        {
-            "Name"    = each.value.name
-        },
-        each.value.tags
-    )
+    tags                        = each.value.tags
 }
 
 
@@ -74,11 +68,5 @@ resource "aws_vpc_security_group_egress_rule" "main" {
     prefix_list_id                  = each.value.prefix_list_id
     referenced_security_group_id    = each.value.referenced_security_group_id
 
-    tags                        = merge(
-        each.value.default_tags,
-        {
-            "Name"    = each.value.name
-        },
-        each.value.tags
-    )
+    tags                        = each.value.tags
 }

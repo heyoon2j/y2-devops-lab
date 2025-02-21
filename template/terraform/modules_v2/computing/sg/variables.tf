@@ -2,7 +2,7 @@ variable "sg" {
     description = "Security Group Information"
     type = object({
         name        = string
-        description = string
+        description = optional(string, null)
         vpc_name    = string
         tags            = optional(map(any), null)
         default_tags    = optional(map(any), null)
@@ -20,7 +20,6 @@ variable "ingress" {
         prefix_list_id                  = optional(string, null)
         referenced_security_group_id    = optional(string, null)
         tags            = optional(map(any), null)
-        default_tags    = optional(map(any), null)
     }))
 }
 
@@ -35,6 +34,5 @@ variable "egress" {
         prefix_list_id                  = optional(string, null)
         referenced_security_group_id    = optional(string, null)
         tags            = optional(map(any), null)
-        default_tags    = optional(map(any), null)
     }))
 }
