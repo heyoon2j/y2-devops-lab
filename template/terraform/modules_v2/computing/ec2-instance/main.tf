@@ -14,12 +14,10 @@ locals {
 # Data Resource (Name---> ID)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 data "aws_ami" "selected" {
-    for_each    = var.ec2_instance
     most_recent = true
-
     filter {
         name   = "name"
-        values = [each.value.image_name]
+        values = [var.ec2_instance.image_name]
     }
 
     # filter {
@@ -31,21 +29,17 @@ data "aws_ami" "selected" {
 
 # subnet name
 data "aws_subnet" "selected" {
-    for_each = var.ec2_instance
-
     filter {
         name   = "tag:Name"
-        values = [each.value.subnet_name]
+        values = [var.ec2_instance.subnet_name]
     }
 }
 
 # Security Groups
 data "aws_security_groups" "selected" {
-    for_each = var.ec2_instance
-
     filter {
         name   = "group-names"
-        values = each.value.sg_names
+        values = var.ec2_instance.sg_names
     }
 }
 
@@ -55,6 +49,7 @@ data "aws_security_groups" "selected" {
 # 1. Network Interface
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
+/*
 resource "aws_network_interface" "this" {
     for_each    = var.ec2_instance
 
@@ -75,13 +70,31 @@ resource "aws_network_interface" "this" {
         each.value.default_tags
     )
 }
+*/
 
+resource "aws_network_interface" "this" {
+    subnet_id   = data.aws_subnet.selected.id
+    security_groups = data.aws_security_group.selected
 
+    private_ip_list_enabled = var.ec2_instance.private_ip_static_enabled 
 
+    private_ip_list         = var.ec2_instance.private_ip_list_enabled ? var.ec2_instance.private_ip_static_list : null
+    private_ips_count       = var.ec2_instance.private_ip_list_enabled ? null : var.ec2_instance.private_ip_dynamic
+
+    source_dest_check = var.ec2_instance.source_dest_check
+
+    tags              = merge(
+        {
+            "Name"    = var.ec2_instance.name
+        },
+        var.ec2_instance.default_tags
+    )
+}
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # 2. EC2 Instance
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+/*
 resource "ec2_instance" "this" {
     for_each        = var.ec2_instance
 
@@ -120,5 +133,44 @@ resource "ec2_instance" "this" {
             "Name"    = each.value.name
         },
         each.value.tags
+    )
+}
+*/
+
+resource "ec2_instance" "this" {
+    instance_name   = var.ec2_instance.name
+
+    instance_type   = var.ec2_instance.instance_type
+    ami             = data.aws_ami.selected.id
+    key_name        = var.ec2_instance.key_name
+
+    # Network
+    network_interface {
+        network_interface_id = aws_network_interface.this.id
+        device_index         = 0
+    }
+
+    placement_group                 = var.ec2_instance.placement_group
+    placement_partition_number      = var.ec2_instance.placement_partition_number
+
+    # Option
+    tenancy                                 = var.ec2_instance.tenancy
+    disable_api_termination                 = var.ec2_instance.disable_api_termination
+    disable_api_stop                        = var.ec2_instance.disable_api_stop
+    instance_initiated_shutdown_behavior    = var.ec2_instance.instance_initiated_shutdown_behavior
+
+    # Option - Neccessary
+    ## Metadata
+    http_endpoint               = var.ec2_instance.http_endpoint
+    http_tokens                 = var.ec2_instance.http_tokens
+    http_put_response_hop_limit = var.ec2_instance.http_put_response_hop_limit
+    instance_metadata_tags      = var.ec2_instance.instance_metadata_tags
+    user_data                   = var.ec2_instance.user_data
+    tags                        = merge(
+        each.value.default_tags,
+        {
+            "Name"    = var.ec2_instance.name
+        },
+        var.ec2_instance.tags
     )
 }
