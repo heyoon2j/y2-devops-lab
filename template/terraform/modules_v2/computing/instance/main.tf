@@ -88,8 +88,8 @@ resource "aws_network_interface" "this" {
 
     private_ip_list_enabled = var.instance.private_ip_static_enabled 
 
-    private_ip_list         = var.instance.private_ip_list_enabled ? var.instance.private_ip_static_list : null
-    private_ips_count       = var.instance.private_ip_list_enabled ? null : var.instance.private_ip_dynamic
+    private_ip_list         = var.instance.private_ip_static_enabled ? var.instance.private_ip_static_list : null
+    private_ips_count       = var.instance.private_ip_static_enabled ? null : var.instance.private_ip_dynamic
 
     source_dest_check = var.instance.source_dest_check
 
