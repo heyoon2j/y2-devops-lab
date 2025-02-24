@@ -177,7 +177,7 @@ resource "aws_instance" "this" {
     }
     user_data                   = var.instance.user_data
     tags                        = merge(
-        each.value.default_tags,
+        var.instance.default_tags,
         {
             "Name"    = var.instance.name
         },
