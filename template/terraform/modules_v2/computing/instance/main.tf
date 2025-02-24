@@ -147,9 +147,7 @@ resource "ec2_instance" "this" {
 }
 */
 
-resource "ec2_instance" "this" {
-    instance_name   = var.ec2_instance.name
-
+resource "aws_instance" "this" {
     instance_type   = var.ec2_instance.instance_type
     ami             = data.aws_ami.selected.id
     key_name        = var.ec2_instance.key_name
@@ -171,10 +169,12 @@ resource "ec2_instance" "this" {
 
     # Option - Neccessary
     ## Metadata
-    http_endpoint               = var.ec2_instance.http_endpoint
-    http_tokens                 = var.ec2_instance.http_tokens
-    http_put_response_hop_limit = var.ec2_instance.http_put_response_hop_limit
-    instance_metadata_tags      = var.ec2_instance.instance_metadata_tags
+    metadata_options {
+        http_endpoint               = var.ec2_instance.http_endpoint
+        http_tokens                 = var.ec2_instance.http_tokens
+        http_put_response_hop_limit = var.ec2_instance.http_put_response_hop_limit
+        instance_metadata_tags      = var.ec2_instance.instance_metadata_tags
+    }
     user_data                   = var.ec2_instance.user_data
     tags                        = merge(
         each.value.default_tags,
