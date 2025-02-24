@@ -11,7 +11,7 @@ terraform {
         # Terraform Alpha Version
         aws = {
             source  = "hashicorp/aws"
-            version = "~> 4.40.0"
+            version = "<= 5.7.0"
         }
     }
 }
