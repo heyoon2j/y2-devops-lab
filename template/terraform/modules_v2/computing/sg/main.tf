@@ -55,7 +55,7 @@ resource "aws_vpc_security_group_ingress_rule" "main" {
     to_port         = each.value.to_port
     ip_protocol     = each.value.protocol
 
-    cidr_ipv4                       = each.vlaue.cidr_ipv4
+    cidr_ipv4                       = each.value.cidr_ipv4
     prefix_list_id                  = each.value.prefix_list_id
     referenced_security_group_id    = each.value.referenced_security_group_id
 
@@ -75,7 +75,7 @@ resource "aws_vpc_security_group_egress_rule" "main" {
     to_port         = each.value.to_port
     ip_protocol     = each.value.protocol
 
-    cidr_ipv4                       = each.vlaue.cidr_ipv4
+    cidr_ipv4                       = each.value.cidr_ipv4
     prefix_list_id                  = each.value.prefix_list_id
     referenced_security_group_id    = each.value.referenced_security_group_id
 

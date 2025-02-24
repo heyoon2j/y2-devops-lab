@@ -27,7 +27,7 @@ data "aws_ami" "selected" {
     most_recent = true
     filter {
         name   = "name"
-        values = [var.ec2_instance.image_name]
+        values = [var.instance.image_name]
     }
 
     # filter {
@@ -41,7 +41,7 @@ data "aws_ami" "selected" {
 data "aws_subnet" "selected" {
     filter {
         name   = "tag:Name"
-        values = [var.ec2_instance.subnet_name]
+        values = [var.instance.subnet_name]
     }
 }
 
@@ -49,7 +49,7 @@ data "aws_subnet" "selected" {
 data "aws_security_groups" "selected" {
     filter {
         name   = "group-names"
-        values = var.ec2_instance.sg_names
+        values = var.instance.sg_names
     }
 }
 
@@ -84,7 +84,7 @@ resource "aws_network_interface" "this" {
 
 resource "aws_network_interface" "this" {
     subnet_id   = data.aws_subnet.selected.id
-    security_groups = data.aws_security_group.selected
+    security_groups = data.aws_security_groups.selected
 
     private_ip_list_enabled = var.ec2_instance.private_ip_static_enabled 
 
