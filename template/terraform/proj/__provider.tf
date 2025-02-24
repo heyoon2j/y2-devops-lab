@@ -1,21 +1,3 @@
-terraform {
-    required_providers {
-        # Terraform Alpha Version
-        aws = {
-            source  = "hashicorp/aws"
-            version = "~> 4.40.0"
-        }
-
-        # Terraform Beta Version
-        aws_beta = {
-            source  = "hashicorp/aws"
-            version = "~> 4.40.0"
-        }
-    }
-}
-
-
-##############################################################################################
 ##############################################################################################
 
 provider "aws" {
@@ -25,7 +7,7 @@ provider "aws" {
 }
 
 provider "aws" {
-    alias = "cloud-poc-apn2"
+    alias = "common-poc-apn2"
     region = "ap-northeast-2"
     profile = ""
 }
@@ -39,7 +21,7 @@ provider "aws" {
 
 ##############################################################################################
 ##############################################################################################
-
+/*
 provider "aws_beta" {
     alias = "cloud-poc-apn2"
     region = "ap-northeast-2"
@@ -47,3 +29,4 @@ provider "aws_beta" {
     # shared_config_files = ["/Users/tf_user/.aws/config"]
     # shared_credentials_files = ["/Users/tf_user/.aws/config"]
 }
+*/

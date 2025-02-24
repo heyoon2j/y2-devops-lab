@@ -1,4 +1,4 @@
-variable "ec2_instance" {
+variable "instance" {
     description = "EC2 Instance Variable"
     # default = 
     type = object({

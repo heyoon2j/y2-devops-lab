@@ -6,6 +6,16 @@
 3. Egress Rule
 */
 #############################################################################################
+terraform {
+    required_providers {
+        # Terraform Alpha Version
+        aws = {
+            source  = "hashicorp/aws"
+            version = "~> 4.40.0"
+        }
+    }
+}
+
 
 locals {
 }
