@@ -86,18 +86,18 @@ resource "aws_network_interface" "this" {
     subnet_id   = data.aws_subnet.selected.id
     security_groups = data.aws_security_groups.selected
 
-    private_ip_list_enabled = var.ec2_instance.private_ip_static_enabled 
+    private_ip_list_enabled = var.instance.private_ip_static_enabled 
 
-    private_ip_list         = var.ec2_instance.private_ip_list_enabled ? var.ec2_instance.private_ip_static_list : null
-    private_ips_count       = var.ec2_instance.private_ip_list_enabled ? null : var.ec2_instance.private_ip_dynamic
+    private_ip_list         = var.instance.private_ip_list_enabled ? var.instance.private_ip_static_list : null
+    private_ips_count       = var.instance.private_ip_list_enabled ? null : var.instance.private_ip_dynamic
 
-    source_dest_check = var.ec2_instance.source_dest_check
+    source_dest_check = var.instance.source_dest_check
 
     tags              = merge(
         {
-            "Name"    = var.ec2_instance.name
+            "Name"    = var.instance.name
         },
-        var.ec2_instance.default_tags
+        var.instance.default_tags
     )
 }
 
@@ -148,9 +148,9 @@ resource "ec2_instance" "this" {
 */
 
 resource "aws_instance" "this" {
-    instance_type   = var.ec2_instance.instance_type
+    instance_type   = var.instance.instance_type
     ami             = data.aws_ami.selected.id
-    key_name        = var.ec2_instance.key_name
+    key_name        = var.instance.key_name
 
     # Network
     network_interface {
@@ -158,29 +158,29 @@ resource "aws_instance" "this" {
         device_index         = 0
     }
 
-    placement_group                 = var.ec2_instance.placement_group
-    placement_partition_number      = var.ec2_instance.placement_partition_number
+    placement_group                 = var.instance.placement_group
+    placement_partition_number      = var.instance.placement_partition_number
 
     # Option
-    tenancy                                 = var.ec2_instance.tenancy
-    disable_api_termination                 = var.ec2_instance.disable_api_termination
-    disable_api_stop                        = var.ec2_instance.disable_api_stop
-    instance_initiated_shutdown_behavior    = var.ec2_instance.instance_initiated_shutdown_behavior
+    tenancy                                 = var.instance.tenancy
+    disable_api_termination                 = var.instance.disable_api_termination
+    disable_api_stop                        = var.instance.disable_api_stop
+    instance_initiated_shutdown_behavior    = var.instance.instance_initiated_shutdown_behavior
 
     # Option - Neccessary
     ## Metadata
     metadata_options {
-        http_endpoint               = var.ec2_instance.http_endpoint
-        http_tokens                 = var.ec2_instance.http_tokens
-        http_put_response_hop_limit = var.ec2_instance.http_put_response_hop_limit
-        instance_metadata_tags      = var.ec2_instance.instance_metadata_tags
+        http_endpoint               = var.instance.http_endpoint
+        http_tokens                 = var.instance.http_tokens
+        http_put_response_hop_limit = var.instance.http_put_response_hop_limit
+        instance_metadata_tags      = var.instance.instance_metadata_tags
     }
-    user_data                   = var.ec2_instance.user_data
+    user_data                   = var.instance.user_data
     tags                        = merge(
         each.value.default_tags,
         {
-            "Name"    = var.ec2_instance.name
+            "Name"    = var.instance.name
         },
-        var.ec2_instance.tags
+        var.instance.tags
     )
 }
