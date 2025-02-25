@@ -38,7 +38,13 @@ resource "aws_security_group" "main" {
     name        = var.sg.name 
     description = var.sg.description 
     vpc_id      = data.aws_vpc.selected.id
-    tags        = var.sg.tags
+    tags        = merge(
+        var.sg.default_tags,
+        {
+            "Name"  = var.sg.name
+        },
+        var.sg.tags
+    )
 }
 
 

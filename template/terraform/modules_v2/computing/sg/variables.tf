@@ -13,8 +13,8 @@ variable "ingress" {
     description = "Security Group's Inbound"
     type = map(object({
         description     = optional(string, null)
-        from_port       = number
-        to_port         = number
+        from_port       = optional(number, null)
+        to_port         = optional(number, null)
         protocol        = string
         cidr_ipv4                       = optional(string, null)
         prefix_list_id                  = optional(string, null)
@@ -27,8 +27,8 @@ variable "egress" {
     description = "Security Group's Outbound"
     type = map(object({
         description     = optional(string, null)
-        from_port       = number
-        to_port         = number
+        from_port       = optional(number, null)
+        to_port         = optional(number, null)
         protocol        = string
         cidr_ipv4                       = optional(string, null)
         prefix_list_id                  = optional(string, null)

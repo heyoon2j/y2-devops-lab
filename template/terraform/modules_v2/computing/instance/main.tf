@@ -84,7 +84,7 @@ resource "aws_network_interface" "this" {
 
 resource "aws_network_interface" "this" {
     subnet_id   = data.aws_subnet.selected.id
-    security_groups = data.aws_security_groups.selected
+    security_groups = data.aws_security_groups.selected.ids
 
     private_ip_list_enabled = var.instance.private_ip_static_enabled 
 
