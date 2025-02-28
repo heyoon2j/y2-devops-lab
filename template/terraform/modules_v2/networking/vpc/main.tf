@@ -13,7 +13,17 @@
 #############################################################################################
 
 locals {
+    source = "test"
+}
 
+terraform {
+    required_providers {
+        # Terraform Alpha Version
+        aws = {
+            source  = local.source
+            version = local.source
+        }
+    }
 }
 
 
@@ -111,9 +121,8 @@ resource "aws_route_table" "private" {
     vpc_id = aws_vpc.main.id
     tags = merge(
         {
-            "Name" = join("", [var.rt_common_config["naming_rule"], each.value["name"]])
+            "Name" = each.value.name #join("", [var.rt_common_config["naming_rule"], each.value["name"]])
         },
-        var.rt_common_config["tags"],
         each.value["tags"]
     )
 }

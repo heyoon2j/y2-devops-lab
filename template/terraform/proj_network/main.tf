@@ -3,7 +3,7 @@ module "vpc" {
     providers = {
         aws = aws.common-poc-apn2
     }
-    source = "../modules_v2/networking/instance"
+    source = "../modules_v2/networking/vpc"
 
     for_each = local.vpcs
     
