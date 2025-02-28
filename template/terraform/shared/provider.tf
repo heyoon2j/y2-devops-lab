@@ -10,6 +10,10 @@ provider "aws" {
     alias = "common-poc-apn2"
     region = "ap-northeast-2"
     profile = ""
+    assume_role {
+        role_arn = ""
+        session_name = ""
+    }
 }
 
 provider "aws" {

@@ -36,8 +36,12 @@ locals {
             #instance_metadata_tags      = optional(string, "enabled")    # "disabled", "enabled"
             ## 
             user_data                   = local.user_data
-            default_tags                = local.common_config.default_tags
-            #tags                        = optional(map(string), null)
+            tags                        = merge(
+                local.common_config.default_tags,
+                {
+                    test = "test"
+                }
+            )
         }
     }
 }

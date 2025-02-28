@@ -37,7 +37,6 @@ variable "instance" {
         instance_metadata_tags      = optional(string, "enabled")    # "disabled", "enabled"
         ## Default Options
         user_data                   = optional(string, null)
-        default_tags                = optional(map(string), null)
         tags                        = optional(map(string), null)
     })
 }

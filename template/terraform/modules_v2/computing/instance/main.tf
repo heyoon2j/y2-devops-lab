@@ -97,7 +97,7 @@ resource "aws_network_interface" "this" {
         {
             "Name"    = var.instance.name
         },
-        var.instance.default_tags
+        var.instance.tags
     )
 }
 
@@ -178,7 +178,6 @@ resource "aws_instance" "this" {
     }
     user_data                   = var.instance.user_data
     tags                        = merge(
-        var.instance.default_tags,
         {
             "Name"    = var.instance.name
         },
