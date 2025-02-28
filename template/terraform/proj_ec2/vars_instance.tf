@@ -4,7 +4,7 @@ locals {
     instances = {
         test_instance = {
             name            = "test_instance"
-            instance_type   = "t2-small"
+            instance_type   = "t2.small"
             image_name      = ""
             #key_name        = optional(string, null)
 
@@ -16,6 +16,8 @@ locals {
             #private_ip_static_enabled   = optional(bool, false)
             #private_ip_static_list      = optional(list(string), null)
             private_ip_dynamic          = 1
+            ## Public IP
+            associate_public_ip_address = false
             ## Place Group
             #placement_group         = optional(string, null)
             #placement_partition_number = optional(string, null)

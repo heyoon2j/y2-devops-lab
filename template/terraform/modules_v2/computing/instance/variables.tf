@@ -17,6 +17,8 @@ variable "instance" {
         private_ip_static_enabled   = optional(bool, false)
         private_ip_static_list      = optional(list(string), null)
         private_ip_dynamic          = optional(number, 0)
+        ## Pbulic
+        associate_public_ip_address = optional(bool, false)
         ## Place Group
         placement_group             = optional(string, null)
         placement_partition_number  = optional(string, null)

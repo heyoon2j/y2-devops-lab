@@ -24,11 +24,11 @@ locals {
 # Data Resource (Name---> ID)
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 data "aws_ami" "selected" {
-    most_recent = true
-    filter {
+    /*filter {
         name   = "name"
         values = [var.instance.image_name]
-    }
+    }*/
+    id = var.instance.image_name
 
     # filter {
     #     name   = "virtualization-type"
@@ -48,7 +48,7 @@ data "aws_subnet" "selected" {
 # Security Groups
 data "aws_security_groups" "selected" {
     filter {
-        name   = "group-names"
+        name   = "group-name"
         values = var.instance.sg_names
     }
 }
@@ -120,7 +120,7 @@ resource "ec2_instance" "this" {
         device_index         = 0
     }
 
-
+    
     placement_group                 = each.value.placement_group
     placement_partition_number      = each.value.placement_partition_number
 
@@ -158,6 +158,7 @@ resource "aws_instance" "this" {
         device_index         = 0
     }
 
+    associate_public_ip_address     = var.instance.associate_public_ip_address
     placement_group                 = var.instance.placement_group
     placement_partition_number      = var.instance.placement_partition_number
 

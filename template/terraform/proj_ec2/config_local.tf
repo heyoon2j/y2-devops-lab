@@ -1,0 +1,5 @@
+locals {
+    local_config = {
+
+    }
+}

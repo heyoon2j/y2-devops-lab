@@ -1,7 +1,7 @@
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # VPC
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-variable "vpc_name" {
+variable "name" {
     description = "VPC name"
     type = string
 }
@@ -48,7 +48,7 @@ variable "enable_dns_support" {
 variable "enable_dns_hostnames" {
     description = "Public IP Address에 Hostname을 받을지에 대한 여부"
     type = bool
-    default = false
+    default = true
     #validation { true, false (Default) }
     validation {
         condition = var.enable_dns_hostnames == true || var.enable_dns_hostnames == false
@@ -77,16 +77,16 @@ variable "tags" {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Subnet
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
-variable "sbn_common_config" {
-    description = "Subnet default config"
-    type = object({
-        naming_rule = string
-        assign_ipv6_address_on_creation = optional(bool, false)
-        map_public_ip_on_launch = optional(bool, false)
-        #private_dns_hostname_type_on_launch =  string
-        tags = optional(map(any),null)
-    })
-}
+# variable "sbn_common_config" {
+#     description = "Subnet default config"
+#     type = object({
+#         naming_rule = string
+#         assign_ipv6_address_on_creation = optional(bool, false)
+#         map_public_ip_on_launch = optional(bool, false)
+#         #private_dns_hostname_type_on_launch =  string
+#         tags = optional(map(any),null)
+#     })
+# }
 
 variable "sbn_pub" {
     description = "Public Subnet Dictionary Value"
@@ -140,6 +140,14 @@ variable "rt_pri" {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # Routing Table
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
+variable "igw" {
+    description = "Internet Gateway"
+    type = object({
+        name = string
+        tags = optional(map(any), null)
+    })
+}
+/*
 variable "igw_name" {
     description = "Internet Gateway Name"
     default = null
@@ -151,3 +159,4 @@ variable "igw_tags" {
     default = null
     type = map(any)
 }
+*/
