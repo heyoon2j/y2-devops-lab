@@ -13,25 +13,24 @@
 #############################################################################################
 
 locals {
-    source = "test"
 }
 
 terraform {
     required_providers {
         # Terraform Alpha Version
         aws = {
-            source  = local.source
-            version = local.source
+            source  = "hashicorp/aws"
+            version = "<= 5.7.0"
         }
     }
 }
-
 
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 # 1. VPC
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 
 resource "aws_vpc" "main" {
+
     cidr_block = var.cidr_block
     enable_dns_hostnames = var.enable_dns_hostnames # true
     enable_dns_support = var.enable_dns_support # true

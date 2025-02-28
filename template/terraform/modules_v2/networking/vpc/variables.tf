@@ -90,6 +90,7 @@ variable "tags" {
 
 variable "sbn_pub" {
     description = "Public Subnet Dictionary Value"
+    default = null
     type = map(object({
         name = string
         cidr_block = string
@@ -122,6 +123,7 @@ variable "sbn_pri" {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 variable "rt_pub" {
     description = "Public Routing Table"
+    default = null
     type = map(object({
         name = string
         tags = optional(map(any),null)
@@ -142,8 +144,9 @@ variable "rt_pri" {
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 variable "igw" {
     description = "Internet Gateway"
+    default = null
     type = object({
-        name = string
+        name = optional(string, null)
         tags = optional(map(any), null)
     })
 }

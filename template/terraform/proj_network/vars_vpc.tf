@@ -1,20 +1,15 @@
 locals {
     vpcs = {
         dmz_vpc = {
-            name            = "vpc-dmz-crawling"
+            name                = "vpc-dmz-crawling"
             cidr_block          = "172.16.0.0/16"
-            # instance_tenancy      = 
-            # enable_dns_support    =
-            # enable_dns_hostnames    =
-            # enable_network_address_usage_metrics = 
+            instance_tenancy    = "default"
+            enable_dns_support    = true
+            enable_dns_hostnames  = true
+            enable_network_address_usage_metrics = false
             tags            = {}
 
             igw = {}
-            # {
-            #     name = "igw-dmz-crawling"
-            #     tags = {}
-            # }
-
             rt_pub = {
                 rt_pub_untrut = {
                     name    = "rt-pub-untrust"
