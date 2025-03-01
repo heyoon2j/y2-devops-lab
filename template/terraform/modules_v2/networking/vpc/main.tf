@@ -138,7 +138,7 @@ resource "aws_route_table_association" "private" {
 # 4. Internet Gateway
 # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # # #
 resource "aws_internet_gateway" "this" {
-    count = var.igw!= null ? 1 : 0
+    count = var.igw.name != null ? 1 : 0
 
     vpc_id = aws_vpc.main.id
 
@@ -150,11 +150,9 @@ resource "aws_internet_gateway" "this" {
     )
 }
  
-/*
 resource "aws_route" "igw" {
     for_each = aws_route_table.public
 
     route_table_id  = each.value.id
     gateway_id      = aws_internet_gateway.this
 }
-*/

@@ -15,8 +15,8 @@ locals {
 
     egress  = {
         all ={ 
-            # from_port       = 0
-            # to_port         = 0
+            from_port       = null
+            to_port         = null
             protocol        = "-1"
             cidr_ipv4       = "0.0.0.0/0"
         }
