@@ -1,5 +1,5 @@
 locals {
-    user_data = ""
+    user_data = file("${path.module}/../data/user_data/linux_init.sh")
 
     instances = {
         test_instance = {
@@ -9,6 +9,7 @@ locals {
             #key_name        = optional(string, null)
 
             # Network
+            availability_zone           = "ap-northeast-2a"
             subnet_name                 = ""
             sg_names                    = [""]
             #source_dest_check           = optional(bool, true)
@@ -21,6 +22,26 @@ locals {
             ## Place Group
             #placement_group         = optional(string, null)
             #placement_partition_number = optional(string, null)
+
+            root_volume                 = {
+                #delete_on_termination       = optional(bool, true)
+                #encrypted                   = optional(bool, false)
+                #kms_key_id                  = optional(string, null)
+                volume_type                 = "gp3"
+                volume_size                 = 10
+                #iops                        = optional(number, null)
+                #throughput                  = optional(number, null)
+            }
+
+            add_volume                  = {
+                name                        = "/dev/sdb"
+                type                        = "gp3"
+                size                        = 10
+                #iops                        = optional(number, null)
+                #throughput                  = optional(number, null)
+            }
+
+
 
             # Option
             #tenancy                 = optional(string, "default")

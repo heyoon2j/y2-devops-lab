@@ -162,6 +162,25 @@ resource "aws_instance" "this" {
     placement_group                 = var.instance.placement_group
     placement_partition_number      = var.instance.placement_partition_number
 
+
+    # Volume
+    root_block_device {
+        delete_on_termination       = var.instance.root_volume.delete_on_termination
+        encrypted                   = var.instance.root_volume.encrypted
+        kms_key_id                  = var.instance.root_volume.kms_key_id
+        volume_type                 = var.instance.root_volume.volume_type
+        volume_size                 = var.instance.root_volume.volume_size
+        iops                        = var.instance.root_volume.iops
+        throughput                  = var.instance.root_volume.throughput
+        tags                        = merge(
+            {
+                "Name"    = var.instance.name
+            },
+            var.instance.tags
+        )
+    }
+
+
     # Option
     tenancy                                 = var.instance.tenancy
     disable_api_termination                 = var.instance.disable_api_termination
@@ -183,4 +202,30 @@ resource "aws_instance" "this" {
         },
         var.instance.tags
     )
+}
+
+resource "aws_ebs_volume" "add" {
+    availability_zone           = var.instance.availability_zone
+    
+    encrypted                   = var.instance.root_volume.encrypted
+    kms_key_id                  = var.instance.root_volume.kms_key_id
+    
+    type                        = var.instance.add_volume.volume_type
+    size                        = var.instance.add_volume.size
+
+    iops                        = var.instance.add_volume.iops
+    throughput                  = var.instance.add_volume.throughput
+
+    tags                        = merge(
+        {
+            "Name"    = var.instance.name
+        },
+        var.instance.tags
+    )
+}
+
+resource "aws_volume_attachment" "ebs_att" {
+    device_name = var.instnace.add_volume.name
+    volume_id   = aws_ebs_volume.add.id
+    instance_id = aws_instance.this.id
 }

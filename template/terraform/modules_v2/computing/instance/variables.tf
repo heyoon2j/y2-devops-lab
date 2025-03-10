@@ -10,6 +10,7 @@ variable "instance" {
         key_name        = optional(string, null)
 
         # Network
+        availability_zone           = string
         subnet_name                 = string
         sg_names                    = list(string)
         source_dest_check           = optional(bool, true)
@@ -22,6 +23,25 @@ variable "instance" {
         ## Place Group
         placement_group             = optional(string, null)
         placement_partition_number  = optional(string, null)
+
+
+        root_volume             = object({
+            delete_on_termination       = optional(bool, true)
+            encrypted                   = optional(bool, false)
+            kms_key_id                  = optional(string, null)
+            volume_type                 = optional(string, "gp3")
+            volume_size                 = number
+            iops                        = optional(number, null)
+            throughput                  = optional(number, null)
+        })
+
+        add_volume              = optional(object({
+            name                        = string
+            type                        = optional(string, "gp3")
+            size                        = number
+            iops                        = optional(number, null)
+            throughput                  = optional(number, null)
+        }),null)
 
         # Option
         tenancy                 = optional(string, "default")
