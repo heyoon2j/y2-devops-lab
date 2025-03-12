@@ -158,7 +158,7 @@ resource "aws_instance" "this" {
         device_index         = 0
     }
 
-    associate_public_ip_address     = var.instance.associate_public_ip_address
+    #associate_public_ip_address     = var.instance.associate_public_ip_address
     placement_group                 = var.instance.placement_group
     placement_partition_number      = var.instance.placement_partition_number
 
@@ -210,7 +210,7 @@ resource "aws_ebs_volume" "add" {
     encrypted                   = var.instance.root_volume.encrypted
     kms_key_id                  = var.instance.root_volume.kms_key_id
     
-    type                        = var.instance.add_volume.volume_type
+    type                        = var.instance.add_volume.type
     size                        = var.instance.add_volume.size
 
     iops                        = var.instance.add_volume.iops
@@ -224,8 +224,8 @@ resource "aws_ebs_volume" "add" {
     )
 }
 
-resource "aws_volume_attachment" "ebs_att" {
-    device_name = var.instnace.add_volume.name
+resource "aws_volume_attachment" "add" {
+    device_name = var.instance.add_volume.name
     volume_id   = aws_ebs_volume.add.id
     instance_id = aws_instance.this.id
 }

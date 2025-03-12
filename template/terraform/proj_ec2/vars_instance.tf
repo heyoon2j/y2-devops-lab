@@ -18,7 +18,7 @@ locals {
             #private_ip_static_list      = optional(list(string), null)
             private_ip_dynamic          = 1
             ## Public IP
-            associate_public_ip_address = false
+            #associate_public_ip_address = false
             ## Place Group
             #placement_group         = optional(string, null)
             #placement_partition_number = optional(string, null)
