@@ -1,5 +1,7 @@
 locals {
-    local_config = {
+    aws_account = ""
+
+    local_tags = {
 
     }
 }

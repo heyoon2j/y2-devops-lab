@@ -48,6 +48,7 @@ locals {
             #disable_api_termination = optional(bool, true)
             #disable_api_stop        = optional(bool, false)
             #instance_initiated_shutdown_behavior    = optional(string, "stop")  # "stop"
+            #iam_instance_profile        = ""
 
             # Option - Neccessary
             ## Metadata

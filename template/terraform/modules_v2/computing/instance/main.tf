@@ -186,6 +186,7 @@ resource "aws_instance" "this" {
     disable_api_termination                 = var.instance.disable_api_termination
     disable_api_stop                        = var.instance.disable_api_stop
     instance_initiated_shutdown_behavior    = var.instance.instance_initiated_shutdown_behavior
+    iam_instance_profile                    = var.instance.iam_instance_profile
 
     # Option - Neccessary
     ## Metadata

@@ -1,4 +1,14 @@
 ##############################################################################################
+provider "aws" {
+    region = local.aws_region
+    profile = local.aws_profile
+
+    assume_role {
+        role_arn        = 
+        session_name    = 
+    }
+}
+
 
 provider "aws" {
     alias = "common-prd-apn2"
