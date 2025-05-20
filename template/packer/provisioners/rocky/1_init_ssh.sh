@@ -26,10 +26,10 @@ echo "[INFO] Updating Cloud config file: $CLOUD_CFG"
 
 # ssh_pwauth 값 변경
 if grep -q "^ssh_pwauth:" "$CLOUD_CFG"; then
-    sed -i 's/^ssh_pwauth:.*/ssh_pwauth:   1/' "$CLOUD_CFG"
+    sed -i 's/^ssh_pwauth:.*/ssh_pwauth:   ture/' "$CLOUD_CFG"
     
 else
-    echo -e "\nssh_pwauth:   1" >> "$CLOUD_CFG"
+    echo -e "\nssh_pwauth:   true" >> "$CLOUD_CFG"
 fi
 
 echo "[완료] $CLOUD_CFG 내 ssh_pwauth 설정이 완료되었습니다."
