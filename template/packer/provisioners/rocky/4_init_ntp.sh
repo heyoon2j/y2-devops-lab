@@ -8,13 +8,13 @@ else
 fi
 
 # 백업
-cp $CHRONY_CONF ${CHRONY_CONF}.bak.$(date +%F-%H%M%S)
+cp "$CHRONY_CONF" "${CHRONY_CONF}.bak.$(date +%F-%H%M%S)"
 
-# 기존 서버 라인 삭제
-sed -i '/^server /d' $CHRONY_CONF
+# 기존 server 또는 pool 라인을 주석 처리
+sed -i -E '/^[[:space:]]*(server|pool)[[:space:]]+/ s/^/#/' "$CHRONY_CONF"
 
-# 서버 설정 추가
-cat <<EOF >> $CHRONY_CONF
+# 서버 설정 추가 (중복 방지를 위해 이미 추가된 경우에는 생략할 수도 있음)
+cat <<EOF >> "$CHRONY_CONF"
 
 # Custom NTP servers
 server test-ntp01.test.com iburst prefer maxpoll 8
@@ -37,4 +37,4 @@ fi
 
 # 상태 확인
 echo "✅ NTP 동기화 상태:"
-chronyc sources -v
+chronyc sources || echo "chronyc 명령어를 사용할 수 없습니다."

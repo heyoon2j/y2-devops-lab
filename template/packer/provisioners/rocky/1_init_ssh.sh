@@ -1,4 +1,6 @@
 #!/bin/bash
+# Rocky9
+# Rocky8
 set -e
 
 SSHD_CONFIG="/etc/ssh/sshd_config"
@@ -22,15 +24,15 @@ echo "[완료] /etc/ssh/sshd_config 내 PasswordAuthentication 설정이 완료�
 
 
 
-echo "[INFO] Updating Cloud config file: $CLOUD_CFG"
+echo "[INFO] Updating Cloud config file: $CLOUD_CONFIG"
 
 # ssh_pwauth 값 변경
-if grep -q "^ssh_pwauth:" "$CLOUD_CFG"; then
-    sed -i 's/^ssh_pwauth:.*/ssh_pwauth:   ture/' "$CLOUD_CFG"
+if grep -q "^ssh_pwauth:" "$CLOUD_CONFIG"; then
+    sed -i 's/^ssh_pwauth:.*/ssh_pwauth:   true/' "$CLOUD_CONFIG"
     
 else
-    echo -e "\nssh_pwauth:   true" >> "$CLOUD_CFG"
+    echo -e "\nssh_pwauth:   true" >> "$CLOUD_CONFIG"
 fi
 
-echo "[완료] $CLOUD_CFG 내 ssh_pwauth 설정이 완료되었습니다."
+echo "[완료] $CLOUD_CONFIG 내 ssh_pwauth 설정이 완료되었습니다."
 

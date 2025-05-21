@@ -1,4 +1,7 @@
 #!/bin/bash
+# Rocky9
+# Rocky8
+
 set -e
 
 echo "[INFO] SELinux 상태 확인 중..."

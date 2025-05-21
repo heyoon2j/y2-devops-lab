@@ -12,6 +12,7 @@ DNS_IP="10.44.100.100"
 echo "[1/5] systemd-resolved 활성화 및 resolv.conf 연결"
 sudo systemctl enable systemd-resolved
 sudo systemctl start systemd-resolved
+sudo cp /etc/resolv.conf /etc/resolv.conf.bak
 sudo ln -sf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
 
 
