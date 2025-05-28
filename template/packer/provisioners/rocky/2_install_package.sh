@@ -3,7 +3,7 @@
 OS_ID=$1
 
 # 기본 패키지 목록
-UBUNTU_DEFAULT_PACKAGES="curl vim net-tools wget git"
+UBUNTU_DEFAULT_PACKAGES="chrony python3.12 net-tools" # curl vim net-tools wget git"
 ROCKY_DEFAULT_PACKAGES="git wget bc bind-utils systemd-resolved chrony python3.12"
 
 if [ -z "$OS_ID" ]; then

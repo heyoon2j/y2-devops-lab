@@ -3,6 +3,7 @@
 # Rocky8
 set -e
 
+############### Variables ###############
 # 입력 인자: OS, REPO_CONTENT, REPO_FILE
 OS_ID=$1
 REPO_CONTENT=$2
@@ -11,6 +12,11 @@ REPO_FILE=$3
 # 기본 경로 및 패키지
 UBUNTU_DEFAULT_PACKAGES="curl vim net-tools wget git"
 
+UBUNTU_DEFAULT_REPO_PATH="/etc/apt/sources.list"
+UBUNTU2X_DEFAULT_REPO_PATH="./ubuntu-source.list"
+
+
+##### Rocky #####
 ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-yum.repo"
 ROCKY_RHEL_REPO_PATH="/etc/yum.repos.d/rhel-kpay-se.repo"
 ROCKY_DEFAULT_PACKAGES="git wget bc bind utils systemd-resolved"
@@ -52,7 +58,7 @@ if [[ "$OS_ID" == "ubuntu" ]]; then
   echo "🔁 Ubuntu 저장소 초기화 중"
   cp /etc/apt/sources.list /etc/apt/sources.list.bak.$(date +%F-%H%M%S)
   rm -f /etc/apt/sources.list.d/*.list
-  echo "$REPO_CONTENT" > /etc/apt/sources.list
+  apply_repo_file "$UBUNTU2X_DEFAULT_REPO_PATH" "$UBUNTU_DEFAULT_REPO_PATH"
   # apt update -y
 
 #####################################################

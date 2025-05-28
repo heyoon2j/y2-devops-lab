@@ -4,24 +4,56 @@
 
 set -e
 
-echo "[INFO] SELinux 상태 확인 중..."
-CURRENT_STATE=$(getenforce)
+####################################################
+# Variables
+OS_ID=$1
 
-if [[ "$CURRENT_STATE" == "Disabled" ]]; then
-  echo "[OK] 이미 SELinux는 비활성화 상태입니다."
-  exit 0
-fi
 
-echo "[INFO] SELinux를 일시적으로 Permissive 모드로 설정합니다."
-sudo setenforce 0 || echo "[경고] setenforce 실패 (이미 Permissive이거나 Disabled일 수 있음)"
-
-echo "[INFO] /etc/selinux/config 파일 수정 중..."
-if [ -f /etc/selinux/config ]; then
-  sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
-  echo "[OK] 영구 설정 변경 완료 (/etc/selinux/config)"
-else
-  echo "[ERROR] /etc/selinux/config 파일이 존재하지 않습니다."
+# 사용법 안내
+if [ -z "$OS_ID" ]; then
+  echo "❗ 사용법: $0 <os: ubuntu|rocky8|rocky9>"
   exit 1
 fi
 
-echo "[완료] SELinux가 비활성화 되었습니다. 재부팅 후 적용됩니다."
+echo "======== SELinux Setting Start ========"
+
+#####################################################
+# ---- Ubuntu 처리 ----
+if [[ "$OS_ID" == "ubuntu" ]]; then
+  echo "[Info] Ubuntu - Check SELinux state"
+  echo "[OK] Ununtu - Not use SELinux"
+  exit 0
+
+#####################################################
+# ---- Rocky 처리 ----
+elif [[ "$OS_ID" == "rocky8" || "$OS_ID" == "rocky9" ]]; then
+  echo "[INFO] Rokcky - SELinux 상태 확인 중..."
+
+  CURRENT_STATE=$(getenforce)
+  if [[ "$CURRENT_STATE" == "Disabled" ]]; then
+    echo "[OK] 이미 SELinux는 비활성화 상태입니다."
+    exit 0
+  fi
+
+  echo "[INFO] SELinux를 일시적으로 Permissive 모드로 설정합니다."
+  sudo setenforce 0 || echo "[Warning] Fail to setenforce (이미 Permissive이거나 Disabled일 수 있음)"
+
+
+  echo "[INFO] /etc/selinux/config 파일 수정 중..."
+  if [ -f /etc/selinux/config ]; then
+    sudo sed -i 's/^SELINUX=.*/SELINUX=disabled/' /etc/selinux/config
+    echo "[OK] 영구 설정 변경 완료 (/etc/selinux/config)"
+  else
+    echo "[ERROR] /etc/selinux/config 파일이 존재하지 않습니다."
+    exit 1
+  fi
+
+#####################################################
+# ---- 예외 처리 ----
+else
+  echo "[Info] ❌ 지원되지 않는 OS: $OS_ID"
+  exit 2
+fi
+
+
+echo "[OK] SELinux가 비활성화 되었습니다. 재부팅 후 적용됩니다."
