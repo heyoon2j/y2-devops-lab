@@ -187,7 +187,7 @@ config_dns_ubuntu() {
   sudo tee "$NETPLAN_FILE" > /dev/null <<EOF
 network:
   version: 2
-  renderer: systemd-networkd
+  renderer: networkd
   ethernets:
     $INTERFACE:
       dhcp4: true
@@ -199,7 +199,7 @@ network:
 EOF
 
   sudo systemctl enable systemd-networkd
-  sudo systemctl start systemd-networkd
+  sudo systemctl restart systemd-networkd
   sudo netplan apply
 }
 
