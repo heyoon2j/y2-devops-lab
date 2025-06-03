@@ -11,7 +11,7 @@ OS_ID=$1
 #####               Function - Main               #####
 #######################################################
 main() {
-  echo "========== Deploying Setting Start =========="
+  echo "========== Monitoring Setting Start =========="
 
 }
 

@@ -1,27 +1,13 @@
 ##############################################################################################
-
 provider "aws" {
-    alias = "common-prd-apn2"
-    region = "ap-northeast-2"
-    profile = ""
-}
-
-provider "aws" {
-    alias = "common-poc-apn2"
-    region = "ap-northeast-2"
-    profile = ""
+    region      = local.aws_region
+    profile     = local.aws_profile
+  
     assume_role {
-        role_arn = ""
-        session_name = ""
+        role_arn        = "arn:aws:iam::${local.aws_account_id}:role/${local.assume_role_name}"
+        session_name    = local.aws_profile
     }
 }
-
-provider "aws" {
-    alias = "common-prd-apn1"
-    region = "ap-northeast-1"
-    profile = ""
-}
-
 
 ##############################################################################################
 ##############################################################################################
