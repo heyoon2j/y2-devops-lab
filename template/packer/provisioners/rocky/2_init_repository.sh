@@ -15,14 +15,16 @@ REPO_FILE=$3
 ##### Ubuntu #####
 # Default
 UBUNTU_DEFAULT_REPO_PATH="/etc/apt/sources.list"
+UBUNTU_EXTRA_REPO_PATH="/etc/apt/sources.list.d/ubuntu-TEST-se.list"
+
 # Ubuntu20_22
 UBUNTU2X_DEFAULT_REPO_PATH="./ubuntu-source.list"
-
+UBUNTU2X_EXTRA_REPO_PATH="./ubuntu-extra.list"
 
 ##### Rocky #####
 # Default
 ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-yum.repo"
-ROCKY_RHEL_REPO_PATH="/etc/yum.repos.d/rhel-kpay-se.repo"
+ROCKY_RHEL_REPO_PATH="/etc/yum.repos.d/rhel-TEST-se.repo"
 # Rocky8
 ROCKY8_DEFAULT_REPO_SOURCE="./infra-rocky8.repo"
 ROCKY8_RHEL_REPO_SOURCE="./rhel-rocky8.repo"
@@ -63,6 +65,7 @@ main() {
     cp /etc/apt/sources.list /etc/apt/sources.list.bak.$(date +%F-%H%M%S)
     rm -f /etc/apt/sources.list.d/*.list
     apply_repo_file "$UBUNTU2X_DEFAULT_REPO_PATH" "$UBUNTU_DEFAULT_REPO_PATH"
+    apply_repo_file "$UBUNTU2X_EXTRA_REPO_PATH" "$UBUNTU_EXTRA_REPO_PATH"
     # apt update -y
 
   #####################################################
