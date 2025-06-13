@@ -1,0 +1,127 @@
+name: Terraform Plan & Apply with Summary (Self-hosted macOS)
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [preview]
+  pull_request_target:
+    types: [closed]
+    branches: [preview]
+
+# Plan과 Apply를 분리하되 PR 병합 이벤트에 따라 Apply 수행
+# Plan은 PR 생성 시, Apply는 master push 시 동작
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  TF_VERSION: 1.6.6
+
+jobs:
+  plan:
+    name: Terraform Plan & Summary (on PR creation)
+    if: github.event_name == 'pull_request' && github.event.pull_request.merged == false
+    runs-on: local # [self-hosted, macOS]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+
+      - name: Merge preview branch (check conflict)
+        run: |
+          git fetch origin preview
+          git merge --no-edit origin/preview || {
+            echo "::error ::❌ Merge conflict with preview branch. Please rebase your branch."
+            exit 1
+          }
+
+      - name: Install GitHub CLI
+        run: brew install gh
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Plan
+        run: |
+          export PLAN_FILE=plan_output_$(date +%Y%m%d_%H%M%S)_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c8).txt
+          terraform plan -no-color > $PLAN_FILE
+          echo "PLAN_FILE=$PLAN_FILE" >> $GITHUB_ENV
+
+      - name: Commit Plan Output to PR branch
+        run: |
+          git add $PLAN_FILE
+          git commit -m "chore: add terraform plan output"
+          git push origin HEAD:${{ github.head_ref }}
+
+      - name: Comment Plan Summary on PR
+        run: |
+          echo "### 📝 Terraform Plan Summary" > plan_summary.txt
+          echo '\`\`\`hcl' >> plan_summary.txt
+          grep -E '^(  #|Plan:|  [~+\-])' $PLAN_FILE >> plan_summary.txt
+          echo '\`\`\`' >> plan_summary.txt
+
+          gh auth setup-git
+          gh pr comment ${{ github.event.pull_request.number }} --body-file plan_summary.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  apply:
+    name: Terraform Apply (on preview PR merge)
+    if: github.event.pull_request.merged == true
+    runs-on: local # [self-hosted, macOS]
+    environment:
+      name: production
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Install GitHub CLI
+        run: brew install gh
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Terraform Init
+        run: terraform init
+
+      - name: Terraform Apply
+        run: |
+          export APPLY_FILE=apply_output_$(date +%Y%m%d_%H%M%S)_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c8).txt
+          terraform apply -auto-approve -no-color > $APPLY_FILE
+          echo "APPLY_FILE=$APPLY_FILE" >> $GITHUB_ENV
+
+      - name: Commit Apply Output to preview branch
+        run: |
+          git add $APPLY_FILE
+          git commit -m "chore: add terraform apply result"
+          git push origin HEAD:${{ github.head_ref }}
+
+      - name: Comment Apply Summary on Last PR (Optional)
+        run: |
+          echo "### 🚀 Terraform Apply Summary" > apply_summary.txt
+          echo '\`\`\`hcl' >> apply_summary.txt
+          grep -E '^(  #|Apply complete!|  [~+\-])' $APPLY_FILE >> apply_summary.txt
+          echo '\`\`\`' >> apply_summary.txt
+
+          gh auth setup-git
+          # Optional: leave comment on last merged PR (can be extended)
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
