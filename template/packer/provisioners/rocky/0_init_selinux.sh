@@ -1,6 +1,4 @@
 #!/bin/bash
-# Rocky9
-# Rocky8
 
 set -e
 
