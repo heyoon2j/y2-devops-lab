@@ -51,3 +51,27 @@ packer/
 → variables/common.pkrvars.hcl 로 변수 주입
 → modules/<os>/install.sh 실행
 → 빌드 완료 후 AMI 또는 GCP 이미지 생성
+
+
+```
+packer/
+├── aws/
+│   └── template.pkr.hcl
+├── gcp/
+│   └── template.pkr.hcl
+├── templates/
+│   ├── shared/
+│   │   └── build_common.pkr.hcl
+│   └── local/
+│       ├── aws.pkr.hcl
+│       └── gcp.pkr.hcl
+├── modules/
+│   ├── rocky9/
+│   │   └── install.sh
+│   └── ubuntu22/
+│       └── install.sh
+├── variables/
+│   └── common.pkrvars.hcl
+└── scripts/
+    └── entrypoint.sh
+```

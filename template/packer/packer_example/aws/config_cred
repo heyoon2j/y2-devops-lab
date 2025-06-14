@@ -1,0 +1,12 @@
+[profile packer-org-source]  # 계정 A의 기본 인증
+region = ap-northeast-2
+output = json
+
+[profile packer-service-target]  # 계정 B의 Role을 Assume
+role_arn = arn:aws:iam::<계정B-ID>:role/PackerBuildRole
+source_profile = packer-org-source
+region = ap-northeast-2
+
+[packer-org-source]
+aws_access_key_id = AKIAxxx
+aws_secret_access_key = xxxx
