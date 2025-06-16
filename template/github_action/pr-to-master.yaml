@@ -41,7 +41,7 @@ jobs:
       - name: Extract Working Directory
         id: extract
         run: |
-          PR_NUMBER=${{ github.event.pull_request.number }}
+          PR_NUMBER=${{ github.event.issue.number }}
           BODY=$(gh pr view $PR_NUMBER --json body -q .body)
           BRANCH_NAME=$(echo "$BODY" | tail -n 1)
           WORKDIR=$(cat .github/terraform/.terraform_workdir.${BRANCH_NAME})
