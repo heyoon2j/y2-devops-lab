@@ -1,11 +1,11 @@
 name: Terraform Plan on Preview PR
 
 on:
-  # pull_request:
-  #   types: [opened, synchronize, reopened]
-  #   branches: [preview]
-  issue_comment:
-    types: [created]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [preview]
+  # issue_comment:
+  #   types: [created]
 
 permissions:
   contents: write
@@ -23,7 +23,7 @@ jobs:
     name: Terraform Plan & Summary (on PR creation) 
     #if: github.base_ref == env.PR_BRANCH && github.event_name == 'pull_request' && github.event.pull_request.merged == false
     #if: github.event_name == 'pull_request' && github.event.pull_request.merged == false
-    if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform plan')
+    #if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform plan')
     runs-on: local # [self-hosted, macOS]
 
     steps:

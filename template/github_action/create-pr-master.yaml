@@ -1,0 +1,38 @@
+name: Create PR from Preview to Master
+
+on:
+  pull_request:
+    types: [closed]
+    branches: [preview]
+
+jobs:
+  create-pr:
+    if: github.event.pull_request.merged == true
+    runs-on: local #[self-hosted, macOS]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # - name: Install GitHub CLI
+      #   run: brew install gh
+
+      - name: Create PR from preview to master
+        run: |
+          gh auth setup-git
+          gh pr create \
+  --base master \
+  --head preview \
+  --title "PR: preview → master (Auto-created after Plan)" \
+  --body "✅ Auto-created after merging [#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }}) into \`preview\`.
+
+Please review the Apply step by commenting:
+
+\`\`\`
+terraform apply <working_dir>
+\`\`\`"
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          # gh 명령어 사용응 위해 GITHUB_TOKEN 필요
+          # GITHUB_TOKEN은 GitHub Actions에서 자동으로 제공됨

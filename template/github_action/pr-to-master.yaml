@@ -1,9 +1,8 @@
 name: Terraform Apply on Master PR
 
 on:
-  pull_request:
-    types: [closed]
-    branches: [preview]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -15,10 +14,19 @@ env:
 jobs:
   apply:
     name: Terraform Apply (on PR to preview merged)
-    if: github.event.pull_request.merged == true
-    runs-on: [self-hosted, macOS]
-    environment:
-      name: production
+    # if: github.event.pull_request.merged == true
+    if: >
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, 'terraform apply') &&
+      github.event.issue.pull_request.base.ref == 'master'
+    # 1) PR에 대한 Commnet 작성 시
+    # 2) Comment 안에 terraform apply 내용 필요
+    # 3) Target PR이 master 브랜치인 경우에 샐행
+    #     - Head: preview
+    #     - Base: master
+    runs-on: local #[self-hosted, macOS]
+    # environment:
+    #   name: production
 
     steps:
       - name: Checkout
@@ -26,36 +34,37 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Install GitHub CLI
-        run: brew install gh
+      # - name: Install GitHub CLI
+      #   run: brew install gh
 
-      - name: Setup Terraform
-        uses: hashicorp/setup-terraform@v3
-        with:
-          terraform_version: ${{ env.TF_VERSION }}
+      # - name: Setup Terraform
+      #   uses: hashicorp/setup-terraform@v3
+      #   with:
+      #     terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Read Working Directory from file
-        id: workdir
+      - name: Extract Working Directory from Comment
+        id: extract
         run: |
-          BRANCH_NAME=${GITHUB_HEAD_REF:-$(git rev-parse --abbrev-ref HEAD)}
-          export WORKDIR=$(cat .github/terraform/.terraform_workdir.${BRANCH_NAME})
-          echo "WORKDIR=$WORKDIR" >> $GITHUB_ENV
+          echo "Comment: ${{ github.event.comment.body }}"
+          WORKDIR=$(echo "${{ github.event.comment.body }}" | awk '{print $3}')
+          echo "workdir=$WORKDIR" >> $GITHUB_OUTPUT
 
       - name: Terraform Init
         run: |
-          cd "$WORKDIR"
+          cd "${{ steps.extract.outputs.workdir }}"
           terraform init
 
       - name: Terraform Apply
+        id: applyfile
         run: |
-          cd "$WORKDIR"
-          export APPLY_FILE=apply_output_$(date +%Y%m%d_%H%M%S)_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c8).txt
+          cd "${{ steps.extract.outputs.workdir }}"
+          APPLY_FILE=apply_output_$(date +%Y%m%d_%H%M%S)_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c8).txt
           terraform apply -auto-approve -no-color > $APPLY_FILE
-          echo "APPLY_FILE=$APPLY_FILE" >> $GITHUB_ENV
+          echo "apply_file=$APPLY_FILE" >> $GITHUB_OUTPUT
 
       - name: Commit Apply Output to branch
         run: |
-          git add $WORKDIR/$APPLY_FILE
+          git add "${{ steps.extract.outputs.workdir }}/${{ steps.applyfile.outputs.apply_file }}"
           git commit -m "chore: add terraform apply result"
           git push origin HEAD:${{ github.head_ref }}
 
@@ -63,7 +72,7 @@ jobs:
         run: |
           echo "### 🚀 Terraform Apply Summary" > apply_summary.txt
           echo '```hcl' >> apply_summary.txt
-          grep -E '^(  #|Apply complete!|  [~+\-])' $WORKDIR/$APPLY_FILE >> apply_summary.txt
+          grep -E '^(  #|Apply complete!|  [~+\-])' "${{ steps.extract.outputs.workdir }}/${{ steps.applyfile.outputs.apply_file }}" >> apply_summary.txt
           echo '```' >> apply_summary.txt
 
           gh auth setup-git
