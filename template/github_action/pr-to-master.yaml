@@ -17,13 +17,9 @@ jobs:
     # if: github.event.pull_request.merged == true
     if: >
       github.event.issue.pull_request &&
-      contains(github.event.comment.body, 'terraform apply') &&
-      github.event.issue.pull_request.base.ref == 'master'
+      github.event.comment.body == '/apply'
     # 1) PR에 대한 Commnet 작성 시
     # 2) Comment 안에 terraform apply 내용 필요
-    # 3) Target PR이 master 브랜치인 경우에 샐행
-    #     - Head: preview
-    #     - Base: master
     runs-on: local #[self-hosted, macOS]
     # environment:
     #   name: production
@@ -42,11 +38,17 @@ jobs:
       #   with:
       #     terraform_version: ${{ env.TF_VERSION }}
 
-      - name: Extract Working Directory from Comment
+      - name: Extract Working Directory
         id: extract
         run: |
-          echo "Comment: ${{ github.event.comment.body }}"
-          WORKDIR=$(echo "${{ github.event.comment.body }}" | awk '{print $3}')
+          PR_NUMBER=${{ github.event.pull_request.number }}
+          BODY=$(gh pr view $PR_NUMBER --json body -q .body)
+          BRANCH_NAME=$(echo "$BODY" | tail -n 1)
+          WORKDIR=$(cat .github/terraform/.terraform_workdir.${BRANCH_NAME})
+          if [ ! -d "$WORKDIR" ]; then
+            echo "::error ::❌ Directory $WORKDIR does not exist."
+            exit 1
+          fi
           echo "workdir=$WORKDIR" >> $GITHUB_OUTPUT
 
       - name: Terraform Init

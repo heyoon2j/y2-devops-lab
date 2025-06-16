@@ -22,16 +22,18 @@ jobs:
         run: |
           gh auth setup-git
           gh pr create \
-  --base master \
-  --head preview \
-  --title "PR: preview → master (Auto-created after Plan)" \
-  --body "✅ Auto-created after merging [#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }}) into \`preview\`.
+            --base master \
+            --head preview \
+            --title "PR: preview → master (Auto-created after Plan)" \
+            --body "✅ Auto-created after merging [#${{ github.event.pull_request.number }}](${{ github.event.pull_request.html_url }}) into \`preview\`.
 
-Please review the Apply step by commenting:
+          Please review the Apply step by commenting:
 
-\`\`\`
-terraform apply <working_dir>
-\`\`\`"
+          \`\`\`
+          terraform apply <working_dir>
+          \`\`\`
+          
+          ${{ github.event.pull_request.head.ref }}"
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           # gh 명령어 사용응 위해 GITHUB_TOKEN 필요
