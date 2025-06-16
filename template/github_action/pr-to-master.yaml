@@ -78,6 +78,6 @@ jobs:
           echo '```' >> apply_summary.txt
 
           gh auth setup-git
-          gh pr comment ${{ github.event.pull_request.number }} --body-file apply_summary.txt
+          gh pr comment ${{ github.event.issue.number }} --body-file apply_summary.txt
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
