@@ -1,0 +1,106 @@
+name: Terraform Plan on Preview PR
+
+on:
+  # pull_request:
+  #   types: [opened, synchronize, reopened]
+  #   branches: [preview]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  TF_VERSION: 1.6.6
+  GIT_USER_NAME: github-actions[bot]
+  GIT_USER_EMAIL: github-actions[bot]@users.noreply.github.com
+  PR_BRANCH: preview
+
+
+jobs:
+  plan:
+    name: Terraform Plan & Summary (on PR creation) 
+    #if: github.base_ref == env.PR_BRANCH && github.event_name == 'pull_request' && github.event.pull_request.merged == false
+    #if: github.event_name == 'pull_request' && github.event.pull_request.merged == false
+    if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform plan')
+    runs-on: local # [self-hosted, macOS]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4               # runner에서 해당 PR의 코드를 checkout(다운로드)하는 공식 액션
+        with:
+          fetch-depth: 0
+
+      - name: Configure Git
+        run: |
+          git config --global user.name "${GIT_USER_NAME}"
+          git config --global user.email "${GIT_USER_EMAIL}"
+
+      - name: Merge preview branch (check conflict)
+        run: |
+          git fetch origin ${PR_BRANCH}
+          git merge --no-edit origin/${PR_BRANCH} || {
+            echo "::error ::❌ Merge conflict with ${PR_BRANCH} branch. Please rebase your branch."
+            exit 1
+          }
+
+#      - name: Install GitHub CLI
+#        run: brew install gh
+
+      # - name: Setup Terraform
+      #   uses: hashicorp/setup-terraform@v3
+      #   with:
+      #     terraform_version: ${{ env.TF_VERSION }}
+
+      - name: Set Terraform Workdir
+        id: tfworkdir
+        run: |
+          BRANCH_NAME=${GITHUB_HEAD_REF:-$(git rev-parse --abbrev-ref HEAD)}
+          WORKDIR=$(cat .github/terraform/.terraform_workdir.${BRANCH_NAME})
+          echo "workdir=$WORKDIR" >> $GITHUB_OUTPUT
+
+      - name: Terraform Init (dynamic working directory)
+      # .github/terraform/.terraform_workdir.${BRANCH_NAME} 파일에서 작업 디렉토리 경로를 읽어와서 해당 디렉토리로 이동
+        run: |
+          cd "${{ steps.tfworkdir.outputs.workdir }}"
+          
+          terraform init
+
+      - name: Terraform Plan
+        id: planfile
+        run: |
+          cd "${{ steps.tfworkdir.outputs.workdir }}"
+          
+          export PLAN_FILE=plan_output_$(date +%Y%m%d_%H%M%S)_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c8).txt
+          terraform plan -no-color > $PLAN_FILE
+          echo "plan_file=$PLAN_FILE" >> $GITHUB_OUTPUT
+        # GITHUB_OUTPUT: step 간에 값을 안전하게 전달하는 용도
+        # 직접 파일로 값을 넘기는 방식이 아니라, GitHub Actions가 내부적으로 관리하는 방식입니다.
+
+
+      - name: Commit Plan Output to PR branch
+        run: |
+          git add ${{ steps.planfile.outputs.plan_file }}
+          git commit -m "chore: add terraform plan output"
+          git push origin HEAD:${{ github.head_ref }}
+
+      - name: Comment Plan Summary on PR
+        run: |
+          echo "### 📝 Terraform Plan Summary" > plan_summary.txt
+          echo '```hcl' >> plan_summary.txt
+          grep -E '^(  #|Plan:|  [~+\-])' ${{ steps.planfile.outputs.plan_file }} >> plan_summary.txt
+          echo '```' >> plan_summary.txt
+
+          gh auth setup-git
+          gh pr comment ${{ github.event.pull_request.number }} --body-file plan_summary.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+
+#######################################################################################################################
+
+
+
+
