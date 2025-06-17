@@ -30,7 +30,7 @@ jobs:
           Please review the Apply step by commenting:
 
           \`\`\`
-          terraform apply <working_dir>
+          /apply
           \`\`\`
           
           ${{ github.event.pull_request.head.ref }}"

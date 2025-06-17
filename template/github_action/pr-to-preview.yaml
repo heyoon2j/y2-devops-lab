@@ -1,11 +1,9 @@
 name: Terraform Plan on Preview PR
 
 on:
-  # pull_request:
-  #   types: [opened, synchronize, reopened]
-  #   branches: [preview]
-  issue_comment:
-    types: [created]
+  pull_request:
+    types: [opened, synchronize, reopened]
+    branches: [preview]
 
 permissions:
   contents: write
@@ -21,9 +19,7 @@ env:
 jobs:
   plan:
     name: Terraform Plan & Summary (on PR creation) 
-    #if: github.base_ref == env.PR_BRANCH && github.event_name == 'pull_request' && github.event.pull_request.merged == false
-    #if: github.event_name == 'pull_request' && github.event.pull_request.merged == false
-    if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform plan')
+    #if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform plan')
     runs-on: local # [self-hosted, macOS]
 
     steps:
@@ -31,11 +27,12 @@ jobs:
         uses: actions/checkout@v4               # runner에서 해당 PR의 코드를 checkout(다운로드)하는 공식 액션
         with:
           fetch-depth: 0
-
+      
+      # 서버 자체에 등록하기
       - name: Configure Git
         run: |
-          git config --global user.name "${GIT_USER_NAME}"
-          git config --global user.email "${GIT_USER_EMAIL}"
+          git config user.name "${GIT_USER_NAME}"
+          git config user.email "${GIT_USER_EMAIL}"
 
       - name: Merge preview branch (check conflict)
         run: |
@@ -64,14 +61,13 @@ jobs:
       # .github/terraform/.terraform_workdir.${BRANCH_NAME} 파일에서 작업 디렉토리 경로를 읽어와서 해당 디렉토리로 이동
         run: |
           cd "${{ steps.tfworkdir.outputs.workdir }}"
-          
           terraform init
 
       - name: Terraform Plan
         id: planfile
         run: |
           cd "${{ steps.tfworkdir.outputs.workdir }}"
-          export PLAN_FILE=plan_output_$(date +%Y%m%d_%H%M%S)_$(openssl rand -base64 20 | tr -dc '=+/' | head -c8).txt
+          export PLAN_FILE=plan_output_$(date +%Y%m%d_%H%M%S)_$(openssl rand -base64 20 | tr -d '=+/' | head -c8).txt
           terraform plan -no-color > $PLAN_FILE
           echo "plan_file=$PLAN_FILE" >> $GITHUB_OUTPUT
         # GITHUB_OUTPUT: step 간에 값을 안전하게 전달하는 용도
@@ -81,6 +77,7 @@ jobs:
 
       - name: Commit Plan Output to PR branch
         run: |
+          cd "${{ steps.tfworkdir.outputs.workdir }}"
           git add ${{ steps.planfile.outputs.plan_file }}
           git commit -m "chore: add terraform plan output"
           git push origin HEAD:${{ github.head_ref }}

@@ -10,6 +10,7 @@ permissions:
 
 env:
   TF_VERSION: 1.6.6
+  HEAD_BRANCH: preview
 
 jobs:
   apply:
@@ -18,11 +19,8 @@ jobs:
     if: >
       github.event.issue.pull_request &&
       github.event.comment.body == '/apply'
-    # 1) PR에 대한 Commnet 작성 시
-    # 2) Comment 안에 terraform apply 내용 필요
+    # 1) PR에 대한 Commnet 작성 시, apply 수행 --> 승인 절차 개념
     runs-on: local #[self-hosted, macOS]
-    # environment:
-    #   name: production
 
     steps:
       - name: Checkout
@@ -60,7 +58,7 @@ jobs:
         id: applyfile
         run: |
           cd "${{ steps.extract.outputs.workdir }}"
-          APPLY_FILE=apply_output_$(date +%Y%m%d_%H%M%S)_$(openssl rand -base64 20 | tr -dc '=+/' | head -c8).txt
+          APPLY_FILE=apply_output_$(date +%Y%m%d_%H%M%S)_$(openssl rand -base64 20 | tr -d '=+/' | head -c8).txt
           terraform apply -auto-approve -no-color > $APPLY_FILE
           echo "apply_file=$APPLY_FILE" >> $GITHUB_OUTPUT
 
@@ -68,7 +66,7 @@ jobs:
         run: |
           git add "${{ steps.extract.outputs.workdir }}/${{ steps.applyfile.outputs.apply_file }}"
           git commit -m "chore: add terraform apply result"
-          git push origin HEAD:${{ github.head_ref }}
+          git push origin HEAD:${{ env.HEAD_BRANCH }}
 
       - name: Comment Apply Summary on PR
         run: |
