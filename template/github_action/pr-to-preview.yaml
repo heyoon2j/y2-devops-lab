@@ -1,11 +1,11 @@
 name: Terraform Plan on Preview PR
 
 on:
-  pull_request:
-    types: [opened, synchronize, reopened]
-    branches: [preview]
-  # issue_comment:
-  #   types: [created]
+  # pull_request:
+  #   types: [opened, synchronize, reopened]
+  #   branches: [preview]
+  issue_comment:
+    types: [created]
 
 permissions:
   contents: write
@@ -23,7 +23,7 @@ jobs:
     name: Terraform Plan & Summary (on PR creation) 
     #if: github.base_ref == env.PR_BRANCH && github.event_name == 'pull_request' && github.event.pull_request.merged == false
     #if: github.event_name == 'pull_request' && github.event.pull_request.merged == false
-    #if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform plan')
+    if: github.event.issue.pull_request && contains(github.event.comment.body, 'terraform plan')
     runs-on: local # [self-hosted, macOS]
 
     steps:
@@ -71,13 +71,13 @@ jobs:
         id: planfile
         run: |
           cd "${{ steps.tfworkdir.outputs.workdir }}"
-          
-          export PLAN_FILE=plan_output_$(date +%Y%m%d_%H%M%S)_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c8).txt
+          export PLAN_FILE=plan_output_$(date +%Y%m%d_%H%M%S)_$(openssl rand -base64 20 | tr -dc '=+/' | head -c8).txt
           terraform plan -no-color > $PLAN_FILE
           echo "plan_file=$PLAN_FILE" >> $GITHUB_OUTPUT
         # GITHUB_OUTPUT: step 간에 값을 안전하게 전달하는 용도
         # 직접 파일로 값을 넘기는 방식이 아니라, GitHub Actions가 내부적으로 관리하는 방식입니다.
-
+        # export PLAN_FILE=plan_output_$(date +%Y%m%d_%H%M%S)_$(head /dev/urandom | tr -dc A-Za-z0-9 | head -c8).txt
+         
 
       - name: Commit Plan Output to PR branch
         run: |
