@@ -86,7 +86,11 @@ jobs:
         run: |
           echo "### 📝 Terraform Plan Summary" > plan_summary.txt
           echo '```hcl' >> plan_summary.txt
-          grep -E '^(  #|Plan:|  [~+\-])' ${{ steps.planfile.outputs.plan_file }} >> plan_summary.txt
+          if grep -E '^(  #|Plan:|  [~+\-])' ${{ steps.planfile.outputs.plan_file }} > plan_grep.txt; then
+            cat plan_grep.txt >> plan_summary.txt
+          else
+            echo "No changes detected." >> plan_summary.txt
+          fi
           echo '```' >> plan_summary.txt
 
           gh auth setup-git

@@ -19,8 +19,11 @@ jobs:
     if: >
       github.event.issue.pull_request &&
       github.event.comment.body == '/apply'
-    # 1) PR에 대한 Commnet 작성 시, apply 수행 --> 승인 절차 개념
+    # 1) PR에 대한 Commnet 작성 시
+    # 2) Comment 안에 terraform apply 내용 필요
     runs-on: local #[self-hosted, macOS]
+    # environment:
+    #   name: production
 
     steps:
       - name: Checkout
@@ -48,18 +51,21 @@ jobs:
             exit 1
           fi
           echo "workdir=$WORKDIR" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Terraform Init
-        run: |
-          cd "${{ steps.extract.outputs.workdir }}"
-          terraform init
+      # - name: Terraform Init
+      #   run: |
+      #     cd "${{ steps.extract.outputs.workdir }}"
+      #     terraform init
 
       - name: Terraform Apply
         id: applyfile
         run: |
           cd "${{ steps.extract.outputs.workdir }}"
           APPLY_FILE=apply_output_$(date +%Y%m%d_%H%M%S)_$(openssl rand -base64 20 | tr -d '=+/' | head -c8).txt
-          terraform apply -auto-approve -no-color > $APPLY_FILE
+          # 항상 로그 파일을 남기고, 실패해도 exit code는 0으로 처리
+          terraform apply -auto-approve -no-color > $APPLY_FILE 2>&1 || true
           echo "apply_file=$APPLY_FILE" >> $GITHUB_OUTPUT
 
       - name: Commit Apply Output to branch
@@ -72,7 +78,11 @@ jobs:
         run: |
           echo "### 🚀 Terraform Apply Summary" > apply_summary.txt
           echo '```hcl' >> apply_summary.txt
-          grep -E '^(  #|Apply complete!|  [~+\-])' "${{ steps.extract.outputs.workdir }}/${{ steps.applyfile.outputs.apply_file }}" >> apply_summary.txt
+          if grep -E '^(  #|Apply complete!|  [~+\-])' "${{ steps.extract.outputs.workdir }}/${{ steps.applyfile.outputs.apply_file }}" > apply_grep.txt; then
+            cat apply_grep.txt >> apply_summary.txt
+          else
+            echo "No changes detected or apply failed." >> apply_summary.txt
+          fi
           echo '```' >> apply_summary.txt
 
           gh auth setup-git
