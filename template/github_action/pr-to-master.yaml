@@ -64,13 +64,13 @@ jobs:
         run: |
           cd "${{ steps.extract.outputs.workdir }}"
           APPLY_FILE=apply_output_$(date +%Y%m%d_%H%M%S)_$(openssl rand -base64 20 | tr -d '=+/' | head -c8).txt
-          # 항상 로그 파일을 남기고, 실패해도 exit code는 0으로 처리
-          terraform apply -auto-approve -no-color > $APPLY_FILE 2>&1 || true
+          terraform apply -auto-approve -no-color > $APPLY_FILE 
           echo "apply_file=$APPLY_FILE" >> $GITHUB_OUTPUT
 
       - name: Commit Apply Output to branch
         run: |
-          git add "${{ steps.extract.outputs.workdir }}/${{ steps.applyfile.outputs.apply_file }}"
+          cd "${{ steps.extract.outputs.workdir }}"
+          git add "${{ steps.applyfile.outputs.apply_file }}"
           git commit -m "chore: add terraform apply result"
           git push origin HEAD:${{ env.HEAD_BRANCH }}
 
