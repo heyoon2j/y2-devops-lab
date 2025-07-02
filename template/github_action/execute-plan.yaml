@@ -1,0 +1,84 @@
+name: Terraform Plan on Master PR Comment
+
+on:
+  pull_request:
+    branches: [master]
+    types: [opened, synchronize]
+
+
+permissions:
+  contents: write
+  pull-requests: write
+
+env:
+  TF_VERSION: 1.6.6
+  GIT_USER_NAME: github-actions[bot]
+  GIT_USER_EMAIL: github-actions[bot]@users.noreply.github.com
+  PR_BRANCH: master
+
+
+jobs:
+  plan:
+    name: Terraform Plan & Summary (on PR comment)
+    if: startsWith(github.head_ref, 'feature/')
+    runs-on: local # [self-hosted, macOS]
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4       # runner에서 해당 PR의 코드를 checkout(다운로드)하는 공식 액션
+        with:
+          fetch-depth: 0
+      
+      # 서버 자체에 등록하기 (===== 추후에 서버에 직접 등록 필요!! =====)
+      - name: Configure Git
+        run: |
+          git config user.name "${GIT_USER_NAME}"
+          git config user.email "${GIT_USER_EMAIL}"
+
+      - name: Extract Working Directory
+        id: extract
+        run: |
+          PR_NUMBER=${{ github.event.issue.number }}
+          BODY=$(gh pr view $PR_NUMBER --json body -q .body)
+          BRANCH_NAME=$(echo "$BODY" | tail -n 1)
+          WORKDIR=$(cat .github/terraform/.terraform_workdir.${BRANCH_NAME})
+          echo "workdir=$WORKDIR" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Terraform Init
+        run: |
+          cd "${{ steps.extract.outputs.workdir }}"
+          terraform init
+
+      - name: Terraform Plan
+        id: planfile
+        run: |
+          cd "${{ steps.extract.outputs.workdir }}"
+          PLAN_FILE=plan_output_$(date +%Y%m%d_%H%M%S)_$(openssl rand -base64 20 | tr -d '=+/' | head -c8).txt
+          terraform plan -no-color > $PLAN_FILE
+          echo "plan_file=$PLAN_FILE" >> $GITHUB_OUTPUT
+
+      - name: Comment Plan Summary on PR
+        run: |
+          echo "### 📝 Terraform Plan Summary" > plan_summary.txt
+          echo '```hcl' >> plan_summary.txt
+          if grep -E '^(  #|Plan:|  [~+\-])' "${{ steps.extract.outputs.workdir }}/${{ steps.planfile.outputs.plan_file }}" > plan_grep.txt; then
+            cat plan_grep.txt >> plan_summary.txt
+          else
+            echo "No changes detected." >> plan_summary.txt
+          fi
+          echo '```' >> plan_summary.txt
+
+          gh auth setup-git
+          gh pr comment ${{ github.event.issue.number }} --body-file plan_summary.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+
+#######################################################################################################################
+
+
+
+

@@ -54,10 +54,10 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-      # - name: Terraform Init
-      #   run: |
-      #     cd "${{ steps.extract.outputs.workdir }}"
-      #     terraform init
+      - name: Terraform Init
+        run: |
+          cd "${{ steps.extract.outputs.workdir }}"
+          terraform init
 
       - name: Terraform Apply
         id: applyfile

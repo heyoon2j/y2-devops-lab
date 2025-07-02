@@ -1,0 +1,106 @@
+name: Terraform Apply on Comment After Merge
+
+on:
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  apply:
+    name: Terraform Apply on Comment (After Merge)
+    if: >
+      github.event.issue.pull_request &&
+      contains(github.event.comment.body, '/apply')
+    runs-on: local # [self-hosted, macOS]
+
+    steps:
+      # ==========  Reviewer 승인 및 Merge 상태 확인 (=> Plan에 대한 검토가 완료된 상태 판단) ========= #
+      - name: Get PR info
+        id: pr
+        run: |
+          gh pr view ${{ github.event.issue.number }} --json merged --jq ".merged" > merged_status.txt
+          echo "PR_MERGED=$(cat merged_status.txt)" >> $GITHUB_ENV
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Exit if PR not merged
+        if: env.PR_MERGED != 'true'
+        run: |
+          echo "PR is not merged. Skipping apply."
+          exit 0
+
+      # ==========  Apply 적용 및 결과 Comment 추가 ========= #
+      # 1) 환경 구성
+      - name: Checkout PR branch (already merged)
+        uses: actions/checkout@v4
+        with:
+          ref: master
+          fetch-depth: 0
+
+      - name: Extract Working Directory
+        id: extract
+        run: |
+          BRANCH_NAME=$(gh pr view ${{ github.event.issue.number }} --json headRefName -q .headRefName)
+          echo "Branch: $BRANCH_NAME"
+          WORKDIR=$(cat .github/terraform/workdir/$BRANCH_NAME)
+
+          if [ ! -d "$WORKDIR" ]; then
+            echo "::error ::❌ Directory $WORKDIR does not exist."
+            exit 1
+          fi
+          echo "workdir=$WORKDIR" >> $GITHUB_OUTPUT
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Terraform Init
+        run: |
+          cd "${{ steps.extract.outputs.workdir }}"
+          terraform init
+
+      - name: Terraform Apply
+        id: applyfile
+        run: |
+          cd "${{ steps.extract.outputs.workdir }}"
+          terraform apply -auto-approve -no-color > $APPLY_FILE 
+          echo "apply_file=$APPLY_FILE" >> $GITHUB_OUTPUT
+
+
+      - name: Comment Apply Summary on PR
+        run: |
+          cd "${{ steps.extract.outputs.workdir }}"
+          echo "### 🚀 Terraform Apply Summary" > apply_summary.txt
+          echo '```hcl' >> apply_summary.txt
+          if grep -E '^(  #|Apply complete!|  [~+\-])' "${{ steps.applyfile.outputs.apply_file }}" > apply_grep.txt; then
+            cat apply_grep.txt >> apply_summary.txt
+          else
+            echo "No changes detected or apply failed." >> apply_summary.txt
+          fi
+          echo '```' >> apply_summary.txt
+
+          gh auth setup-git
+          gh pr comment ${{ github.event.issue.number }} --body-file apply_summary.txt
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+
+      - name: Comment Full Apply Output on PR
+        run: |
+          cd "${{ steps.extract.outputs.workdir }}"
+
+          echo "### 📄 Full Terraform Apply Output" > apply_full_prefix.txt
+          echo '```hcl' >> apply_full_prefix.txt
+          echo '```' > apply_full_suffix.txt
+
+          split -b 60000 "${{ steps.applyfile.outputs.apply_file }}" chunk_
+
+          for f in chunk_*; do
+            cat apply_full_prefix.txt $f apply_full_suffix.txt > full_comment.txt
+            gh pr comment ${{ github.event.issue.number }} --body-file full_comment.txt
+          done
+          
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
