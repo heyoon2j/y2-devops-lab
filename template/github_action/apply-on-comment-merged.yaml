@@ -21,13 +21,16 @@ jobs:
       - name: Get PR info
         id: pr
         run: |
-          gh pr view ${{ github.event.issue.number }} --json merged --jq ".merged" > merged_status.txt
-          echo "PR_MERGED=$(cat merged_status.txt)" >> $GITHUB_ENV
+          gh pr view ${{ github.event.issue.number }} --json state,headRefName -q '.state + " " + .headRefName' > pr_info.txt
+          PR_STATE=$(cut -d' ' -f1 pr_info.txt)
+          BRANCH_NAME=$(cut -d' ' -f2- pr_info.txt)
+          echo "PR_STATE=$PR_STATE" >> $GITHUB_ENV
+          echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Exit if PR not merged
-        if: env.PR_MERGED != 'true'
+        if: env.PR_STATE != 'MERGED'
         run: |
           echo "PR is not merged. Skipping apply."
           exit 0
