@@ -68,6 +68,7 @@ jobs:
         id: applyfile
         run: |
           cd "${{ steps.extract.outputs.workdir }}"
+          APPLY_FILE=apply_output_$(date +%Y%m%d_%H%M%S)_$(openssl rand -base64 20 | tr -d '=+/' | head -c8).txt
           terraform apply -auto-approve -no-color > $APPLY_FILE 
           echo "apply_file=$APPLY_FILE" >> $GITHUB_OUTPUT
 
