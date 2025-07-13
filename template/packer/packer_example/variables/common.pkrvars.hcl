@@ -1,5 +1,0 @@
-os_name = "rocky9"
-region = "ap-northeast-2"
-instance_type = "t3.micro"
-project_id = "your-gcp-project"
-zone = "asia-northeast3-a"

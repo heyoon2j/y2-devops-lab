@@ -56,22 +56,35 @@ packer/
 ```
 packer/
 ├── aws/
-│   └── template.pkr.hcl
+│   ├── template.pkr.hcl
+│   └── variables/
+│       ├── rocky8.pkrvars.hcl
+│       ├── rocky9.pkrvars.hcl
+│       └── ubuntu22.pkrvars.hcl
+│
 ├── gcp/
-│   └── template.pkr.hcl
-├── templates/
-│   ├── shared/
-│   │   └── build_common.pkr.hcl
-│   └── local/
-│       ├── aws.pkr.hcl
-│       └── gcp.pkr.hcl
-├── modules/
-│   ├── rocky9/
-│   │   └── install.sh
-│   └── ubuntu22/
-│       └── install.sh
-├── variables/
-│   └── common.pkrvars.hcl
-└── scripts/
-    └── entrypoint.sh
+│   ├── template.pkr.hcl
+│   └── variables/
+│       ├── ubuntu20.pkrvars.hcl
+│       └── ubuntu22.pkrvars.hcl
+│
+├── module/
+│   ├── aws.pkr.hcl
+│   └── gcp.pkr.hcl
+│
+├── provisioners/
+│   ├── common/
+│   │   └── install_common_tools.sh
+│   ├── aws/
+│   │   └── install_aws_specific.sh
+│   └── gcp/
+│       └── install_gcp_specific.sh
+│
+├── script/
+│   └── entrypoint.sh
+
 ```
+* aws/, gcp/: 프로젝트 개념. module 호출 및 변수 입력
+* module: build, source block & variable block
+* provisioners: OS 내부에서 실행될 스크립트
+* script: Packer를 실행하기기 위한 실행파일

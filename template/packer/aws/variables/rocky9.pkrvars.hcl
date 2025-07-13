@@ -1,0 +1,7 @@
+aws_profile        = "packer-admin"
+aws_region = "ap-northeast-2"
+os_name    = "rocky9"
+ami_name   = "custom-rocky9-{{timestamp}}"
+ami_filter_name  = "Rocky-9-*-x86_64-*"
+ami_filter_owner = "679593333241"
+ssh_username     = "ec2-user"

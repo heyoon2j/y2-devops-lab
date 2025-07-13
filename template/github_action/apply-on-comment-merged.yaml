@@ -18,16 +18,25 @@ jobs:
 
     steps:
       # ==========  Reviewer 승인 및 Merge 상태 확인 (=> Plan에 대한 검토가 완료된 상태 판단) ========= #
+      - name: Setup GitHub CLI Authentication
+        run: |
+          echo "=== GitHu CLI Authentication ==="
+          gh auth setup-git
+          gh auth status
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       - name: Get PR info
         id: pr
         run: |
+          echo "=== Get PR Info ==="
           gh pr view ${{ github.event.issue.number }} --json state,headRefName -q '.state + " " + .headRefName' > pr_info.txt
           PR_STATE=$(cut -d' ' -f1 pr_info.txt)
           BRANCH_NAME=$(cut -d' ' -f2- pr_info.txt)
           echo "PR_STATE=$PR_STATE" >> $GITHUB_ENV
           echo "BRANCH_NAME=$BRANCH_NAME" >> $GITHUB_ENV
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        #env:
+        #  GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Exit if PR not merged
         if: env.PR_STATE != 'MERGED'

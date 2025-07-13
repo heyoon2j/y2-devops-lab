@@ -1,0 +1,7 @@
+aws_profile        = "packer-admin"
+aws_region = "ap-northeast-2"
+os_name    = "ubuntu22"
+ami_name   = "custom-ubuntu22-{{timestamp}}"
+ami_filter_name  = "ubuntu/images/hvm-ssd/ubuntu-jammy-22.04-amd64-server-*"
+ami_filter_owner = "099720109477"
+ssh_username     = "ubuntu"
