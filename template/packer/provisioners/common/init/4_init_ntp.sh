@@ -49,6 +49,8 @@ EOF
     systemctl start chronyd || systemctl start chrony
   fi
 
+  systemctl enable chronyd || systemctl enable chrony
+
   # 상태 확인
   echo "✅ NTP 동기화 상태:"
   chronyc sources || echo "chronyc 명령어를 사용할 수 없습니다."
