@@ -60,6 +60,7 @@ EOF
     sudo mv /etc/NetworkManager/conf.d/99-cloud-init.conf /etc/NetworkManager/conf.d/99-cloud-init.conf.bak
   fi
 
+  sudo systemctl enable NetworkManager
   sudo systemctl restart NetworkManager
 }
 
