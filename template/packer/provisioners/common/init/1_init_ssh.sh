@@ -36,6 +36,10 @@ main() {
     echo "[OK] Disable cloud-init - SSHD config"
   fi
 
+  if [ -f /etc/ssh/sshd_config.d/50-cloud-init.conf ]; then
+    sudo mv /etc/ssh/sshd_config.d/50-cloud-init.conf /etc/ssh/sshd_config.d/50-cloud-init.conf.bak
+    echo "[OK] Disable cloud-init - SSHD config"
+  fi
 
   ########################################################
   # PasswordAuthentication 설정 변경
