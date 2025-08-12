@@ -65,3 +65,4 @@ if [ -z "$OS_ID" ]; then
 fi
 
 main
+sudo timedatectl set-timezone Asia/Seoul
