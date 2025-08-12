@@ -46,6 +46,21 @@ main() {
       echo "PasswordAuthentication yes" >> "$SSHD_CONFIG"
   fi
 
+  # PermitRootLogin 설정 변경
+  if grep -q "^#*PermitRootLogin" "$SSHD_CONFIG"; then
+      sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' "$SSHD_CONFIG"
+  else
+      echo "PermitRootLogin yes" >> "$SSHD_CONFIG"
+  fi
+
+  # PubkeyAuthentication 설정 변경
+  if grep -q "^#*PubkeyAuthentication" "$SSHD_CONFIG"; then
+      sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' "$SSHD_CONFIG"
+  else
+      echo "PubkeyAuthentication yes" >> "$SSHD_CONFIG"
+  fi
+
+
   # SSH 서비스 재시작
   systemctl restart sshd
   echo "[OK] Restarting sshd service"
