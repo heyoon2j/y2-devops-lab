@@ -52,8 +52,12 @@ EOF
   systemctl enable chronyd || systemctl enable chrony
 
   # 상태 확인
-  echo "✅ NTP 동기화 상태:"
+  echo "✅ [Success] NTP Synchronization Setting."
   chronyc sources || echo "chronyc 명령어를 사용할 수 없습니다."
+
+  # Timezone 설정
+  timedatectl set-timezone Asia/Seoul
+  echo "✅ [Success] Timezone set to Asia/Seoul."  
 }
 
 #######################################################
@@ -65,4 +69,4 @@ if [ -z "$OS_ID" ]; then
 fi
 
 main
-sudo timedatectl set-timezone Asia/Seoul
+sudo 

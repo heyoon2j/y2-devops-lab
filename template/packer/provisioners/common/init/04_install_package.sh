@@ -8,13 +8,11 @@ set -e
 OS_ID=$1
 
 # 기본 패키지 목록
-UBUNTU_DEFAULT_PACKAGES="jq git chrony python3.12 net-tools build-essential libssl-dev pkg-config" # curl vim net-tools wget git"
-ROCKY_DEFAULT_PACKAGES="jq git wget bc bind-utils systemd-resolved chrony python3.12"
+UBUNTU_DEFAULT_PACKAGES="jq git chrony python3.12 net-tools nmap build-essential libssl-dev pkg-config" # curl vim net-tools wget git"
+ROCKY_DEFAULT_PACKAGES="jq git wget bc bind-utils chrony python3.12 net-tools nc"
 
 # 설치되지 않은 패키지 목록을 담을 변수
 NEED_PACKAGES=""
-
-
 
 
 #######################################################
@@ -38,7 +36,7 @@ main() {
       echo "📥 설치할 패키지: $NEED_PACKAGES"
       apt install -y $NEED_PACKAGES
     else
-      echo "✅ 모든 패키지가 이미 설치되어 있습니다."
+      echo "✅ [Success] Installed all packages."
     fi
 
   #####################################################
@@ -57,7 +55,7 @@ main() {
       echo "📥 설치할 패키지: $NEED_PACKAGES"
       yum install -y $NEED_PACKAGES
     else
-      echo "✅ 모든 패키지가 이미 설치되어 있습니다."
+      echo "✅ [Success] Installed all packages."
     fi
 
   #####################################################

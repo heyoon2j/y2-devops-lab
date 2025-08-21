@@ -10,7 +10,7 @@ OS_ID=$1
 REPO_CONTENT=$2
 REPO_FILE=$3
 
-# 기본 경로 및 패키지
+# 기본 경로
 ##### Ubuntu #####
 # Default
 UBUNTU_DEFAULT_REPO_PATH="/etc/apt/sources.list"
