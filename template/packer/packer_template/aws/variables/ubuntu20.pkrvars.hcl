@@ -1,0 +1,8 @@
+aws_region = "ap-northeast-2"
+aws_profile = "packer-admin"
+os_name = "ubuntu20"
+ami_name = "custom-ubuntu20-{{timestamp}}"
+ami_filter_name = "ubuntu/images/hvm-ssd/ubuntu-focal-20.04-amd64-server-*"
+ami_filter_owner = "099720109477"
+ssh_username = "ubuntu"
+cloud = "aws"
