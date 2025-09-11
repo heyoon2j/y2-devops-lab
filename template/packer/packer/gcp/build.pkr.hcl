@@ -12,16 +12,12 @@ source "googlecompute" "base" {
 build {
   sources = ["source.googlecompute.base"]
 
+  ##############################################
+  # 📂 Copy CSP & Common Scripts
+  ##############################################
   provisioner "file" {
     source      = "./provisioners/gcp/init_csp_setting.sh"
     destination = "/tmp/init_csp_setting.sh"
-  }
-
-  provisioner "shell" {
-    inline = [
-      "chmod +x /tmp/init_csp_setting.sh",
-      "/tmp/init_csp_setting.sh"
-    ]
   }
 
   provisioner "file" {
@@ -29,13 +25,31 @@ build {
     destination = "/tmp/install_common_tools.sh"
   }
 
+  ##############################################
+  # 🛠 Run Init CSP Script + Cleanup
+  ##############################################
   provisioner "shell" {
     inline = [
-      "chmod +x /tmp/install_common_tools.sh",
-      "/tmp/install_common_tools.sh"
+      "chmod +x /tmp/init_csp_setting.sh",
+      "/tmp/init_csp_setting.sh",
+      "rm -f /tmp/init_csp_setting.sh"
     ]
   }
 
+  ##############################################
+  # 🛠 Run Common Tool Installer + Cleanup
+  ##############################################
+  provisioner "shell" {
+    inline = [
+      "chmod +x /tmp/install_common_tools.sh",
+      "/tmp/install_common_tools.sh",
+      "rm -f /tmp/install_common_tools.sh"
+    ]
+  }
+
+  ##############################################
+  # ✅ Notify Completion
+  ##############################################
   
 post-processor "shell-local" {
   inline = [
