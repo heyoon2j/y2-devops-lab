@@ -10,26 +10,28 @@ OS_ID=$1
 REPO_CONTENT=$2
 REPO_FILE=$3
 
+CONF_DIR="/tmp/conf"
+
 # 기본 경로
 ##### Ubuntu #####
 # Default
 UBUNTU_DEFAULT_REPO_PATH="/etc/apt/sources.list"
-UBUNTU_EXTRA_REPO_PATH="/etc/apt/sources.list.d/ubuntu-TEST-se.list"
+UBUNTU_EXTRA_REPO_PATH="/etc/apt/sources.list.d/ubuntu-extra.list"
 
 # Ubuntu20_22
-UBUNTU2X_DEFAULT_REPO_PATH="./ubuntu-source.list"
-UBUNTU2X_EXTRA_REPO_PATH="./ubuntu-extra.list"
+UBUNTU2X_DEFAULT_REPO_PATH="${CONF_DIR}/ubuntu/ubuntu-sources.list"
+UBUNTU2X_EXTRA_REPO_PATH="${CONF_DIR}/ubuntu/ubuntu-extra.list"
 
 ##### Rocky #####
 # Default
-ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-yum.repo"
-ROCKY_RHEL_REPO_PATH="/etc/yum.repos.d/rhel-TEST-se.repo"
+ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-default.repo"
+ROCKY_RHEL_REPO_PATH="/etc/yum.repos.d/infra-rhel.repo"
 # Rocky8
-ROCKY8_DEFAULT_REPO_SOURCE="./infra-rocky8.repo"
-ROCKY8_RHEL_REPO_SOURCE="./rhel-rocky8.repo"
+ROCKY8_DEFAULT_REPO_SOURCE="${CONF_DIR}/rocky/infra-rocky8.repo"
+ROCKY8_RHEL_REPO_SOURCE="${CONF_DIR}/rocky/infra-rhel.repo"
 # Rocky9
-ROCKY9_DEFAULT_REPO_SOURCE="./infra-rocky9.repo"
-ROCKY9_RHEL_REPO_SOURCE="./rhel-rocky9.repo"
+ROCKY9_DEFAULT_REPO_SOURCE="${CONF_DIR}/rocky/infra-rocky9.repo"
+ROCKY9_RHEL_REPO_SOURCE="${CONF_DIR}/rocky/infra-rhel.repo"
 
 
 #######################################################

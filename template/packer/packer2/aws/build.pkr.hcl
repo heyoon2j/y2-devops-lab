@@ -5,30 +5,27 @@ build {
   ##############################################
   # 📂 Copy CSP & Common Scripts
   ##############################################
-  provisioner "file" {
-    source      = "../provisioners/aws/init_csp_setting.sh"
-    destination = "/tmp/init_csp_setting.sh"
-  }
-
-  provisioner "file" {
-    source      = "../provisioners/common/init/"
-    destination = "/tmp/init_script"
-  }
-
-  provisioner "file" {
-    source      = "../provisioners/common/install_common_tools.sh"
-    destination = "/tmp/install_common_tools.sh"
-  }
-
-  ##############################################
-  # 🛠 Run Init CSP Script + Cleanup
-  ##############################################
   provisioner "shell" {
     inline = [
-      "chmod +x /tmp/init_csp_setting.sh",
-      "/tmp/init_csp_setting.sh",
-      "rm -f /tmp/init_csp_setting.sh"
+      "mkdir -p /tmp/config",
+      "mkdir -p /tmp/common",
+      "mkdir -p /tmp/${var.cloud}"
     ]
+  }
+
+  provisioner "file" {
+    source      = "../provisioners/config/"
+    destination = "/tmp/config"
+  }
+
+  provisioner "file" {
+    source      = "../provisioners/common/"
+    destination = "/tmp/common"
+  }
+
+  provisioner "file" {
+    source      = "../provisioners/${cloud}/"
+    destination = "/tmp/cloud"
   }
 
   ##############################################
@@ -36,23 +33,31 @@ build {
   ##############################################
   provisioner "shell" {
     inline = [
-      "chmod +x /tmp/init_script/*",
-      "/tmp/init_csp_setting.sh",
-      
-
-
-      "rm -rf /tmp/init_script"
+      "chmod +x /tmp/common/init/*",
+      "/tmp/common/init/00_init_cloud_cfg.sh",
+      "/tmp/common/init/01_init_ssh.sh",
+      "/tmp/common/init/02_init_selinux.sh",
+      "/tmp/common/init/03_init_dns_resolve.sh",
+      "/tmp/common/init/04_init_repository.sh",
+      "/tmp/common/init/05_install_package.sh",
+      "/tmp/common/init/06_init_ntp.sh",
+      "/tmp/common/init/07_set_sudoeors.sh",
+      "/tmp/common/init/08_set_git.sh",
+      "/tmp/common/init/09_sysctl.sh",
+      "/tmp/common/init/10_rsyslog.sh",
+      "/tmp/common/init/99_last.sh",
+      "rm -rf /tmp/common/init"
     ]
   }
 
   ##############################################
-  # 🛠 Run Common Tool Installer + Cleanup
+  # 🛠 Run Init CSP Script + Cleanup
   ##############################################
   provisioner "shell" {
     inline = [
-      "chmod +x /tmp/install_common_tools.sh",
-      "/tmp/install_common_tools.sh",
-      "rm -f /tmp/install_common_tools.sh"
+      "chmod +x /tmp/cloud/*",
+      "/tmp/cloud/init_csp_setting.sh",
+      "rm -f /tmp/cloud"
     ]
   }
 
@@ -62,7 +67,7 @@ build {
   post-processor "shell-local" {
     inline = [
       "echo '✅ Build complete for ${var.os_name} on ${var.cloud}'",
-      "curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ Packer build complete for ${var.os_name} on ${var.cloud}."}' https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
+      # "curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ Packer build complete for ${var.os_name} on ${var.cloud}."}' https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
     ]
   }
 }

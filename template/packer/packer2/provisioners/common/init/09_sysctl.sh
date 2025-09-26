@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # 사용자가 만든 설정 파일 경로
-SRC_SYSCTL_FILE="/tmp/my_sysctl.conf"
+SRC_SYSCTL_FILE="/tmp/conf/infra-sysctl.conf"
 DST_SYSCTL_FILE="/etc/sysctl.d/99-sysctl.conf"
 
 # 설정 파일 존재 여부 확인
