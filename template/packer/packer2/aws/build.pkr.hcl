@@ -24,7 +24,7 @@ build {
   }
 
   provisioner "file" {
-    source      = "../provisioners/${cloud}/"
+    source      = "../provisioners/${var.cloud}/"
     destination = "/tmp/cloud"
   }
 

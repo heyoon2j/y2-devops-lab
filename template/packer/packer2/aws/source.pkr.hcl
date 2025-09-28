@@ -16,10 +16,6 @@ variable "cloud" {
   type    = string
   default = "aws"
 }
-variable "ami_name" {
-  type    = string
-  default = "testaws-os-${var.os_name}-base-${timestamp()}"
-}
 variable "instance_type" {
   type    = string
   default = "t3.medium"
@@ -39,7 +35,7 @@ variable "os_name" {
   type    = string
 }
 variable "ami_filter_name" {
-  teyp    = string
+  type    = string
 }
 variable "ami_filter_owner" {
   type    = string
@@ -61,7 +57,7 @@ source "amazon-ebs" "base" {
   ssh_username = var.ssh_username
   instance_type = var.instance_type
 
-  ami_name     = var.ami_name
+  ami_name     = "testaws-os-${var.os_name}-base-${formatdate("YYMMDD", timestamp())}"
   source_ami_filter {
     filters = {
       name                = var.ami_filter_name

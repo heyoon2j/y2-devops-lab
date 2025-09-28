@@ -16,7 +16,7 @@ echo "📄 $SRC_SYSCTL_FILE 내용을 $DST_SYSCTL_FILE 에 추가합니다..."
 sudo cat "$SRC_SYSCTL_FILE" | sudo tee -a "$DST_SYSCTL_FILE" > /dev/null
 
 ## 권한 설정
-#sudo chmod 644 "$DST_SYSCTL_FILE"
+sudo chmod 644 "$DST_SYSCTL_FILE"
 
 echo "✅ 설정 파일 복사 완료. sysctl 설정을 영구 적용합니다..."
 sudo sysctl --system

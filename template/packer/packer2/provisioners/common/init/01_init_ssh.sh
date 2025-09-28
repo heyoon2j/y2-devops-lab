@@ -21,11 +21,10 @@ main() {
   echo "[INFO] Updating Cloud config file: $CLOUD_CONFIG"
 
   if grep -q "^ssh_pwauth:" "$CLOUD_CONFIG"; then
-      #sed -i 's/^ssh_pwauth:.*/ssh_pwauth:   true/' "$CLOUD_CONFIG"
-      sed -i 's/ssh_pwauth:\s*0\s*/ssh_pwauth: 1/' "$CLOUD_CONFIG"
-      sed -i 's/ssh_pwauth:\s*false\s*/ssh_pwauth: true/' "$CLOUD_CONFIG"
+    sudo sed -i 's/ssh_pwauth:\s*0\s*/ssh_pwauth: 1/' "$CLOUD_CONFIG"
+    sudo sed -i 's/ssh_pwauth:\s*false\s*/ssh_pwauth: true/' "$CLOUD_CONFIG"
   #else
-  #    echo -e "\nssh_pwauth:   true" >> "$CLOUD_CONFIG"
+  #    echo -e "\nssh_pwauth:   true" | sudo tee -a "$CLOUD_CONFIG"
   fi
   echo "[OK] $CLOUD_CONFIG 내 ssh_pwauth 설정이 완료되었습니다."
 
@@ -45,35 +44,34 @@ main() {
   # PasswordAuthentication 설정 변경
   echo "[INFO] Updating SSHD config: $SSHD_CONFIG"
   if grep -q "^#*PasswordAuthentication" "$SSHD_CONFIG"; then
-      sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' "$SSHD_CONFIG"
+      sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' "$SSHD_CONFIG"
   else
-      echo "PasswordAuthentication yes" >> "$SSHD_CONFIG"
+      echo "PasswordAuthentication yes" | sudo tee -a "$SSHD_CONFIG" > /dev/null
   fi
   echo "[OK] PasswordAuthentication Setting"
 
   # PublicKeyAuthentication 설정 변경
   if grep -q "^#*PubkeyAuthentication" "$SSHD_CONFIG"; then
-      sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' "$SSHD_CONFIG"
+      sudo sed -i 's/^#*PubkeyAuthentication.*/PubkeyAuthentication yes/' "$SSHD_CONFIG"
   else
-      echo "PubkeyAuthentication yes" >> "$SSHD_CONFIG"
+      echo "PubkeyAuthentication yes" | sudo tee -a "$SSHD_CONFIG" > /dev/null
   fi
   echo "[OK] PubkeyAuthentication Setting"
 
   # PermitRootLogin 설정 변경
   if grep -q "^#*PermitRootLogin" "$SSHD_CONFIG"; then
-      sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' "$SSHD_CONFIG"
+      sudo sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' "$SSHD_CONFIG"
   else
-      echo "PermitRootLogin yes" >> "$SSHD_CONFIG"
+      echo "PermitRootLogin yes" | sudo tee -a "$SSHD_CONFIG" > /dev/null
   fi
   echo "[OK] PermitRootLogin Setting"
 
   ########################################################
   # SSH 서비스 재시작
-  systemctl restart sshd
+  sudo systemctl restart sshd
   echo "[OK] Restarting sshd service"
 
   echo "[OK] /etc/ssh/sshd_config 내 PasswordAuthentication 설정이 완료되었습니다."
-
 }
 
 #######################################################

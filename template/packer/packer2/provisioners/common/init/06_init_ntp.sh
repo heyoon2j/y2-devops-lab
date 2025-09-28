@@ -7,7 +7,6 @@ set -e
 #######################################################
 OS_ID=$1
 
-
 #######################################################
 #####               Function - Main               #####
 #######################################################
@@ -20,13 +19,13 @@ main() {
   fi
 
   # 백업
-  cp "$CHRONY_CONF" "${CHRONY_CONF}.bak.$(date +%F-%H%M%S)"
+  sudo cp "$CHRONY_CONF" "${CHRONY_CONF}.bak.$(date +%F-%H%M%S)"
 
   # 기존 server 또는 pool 라인을 주석 처리
-  sed -i -E '/^[[:space:]]*(server|pool)[[:space:]]+/ s/^/#/' "$CHRONY_CONF"
+  sudo sed -i -E '/^[[:space:]]*(server|pool)[[:space:]]+/ s/^/#/' "$CHRONY_CONF"
 
-  # 서버 설정 추가 (중복 방지를 위해 이미 추가된 경우에는 생략할 수도 있음)
-  cat <<EOF >> "$CHRONY_CONF"
+  # 서버 설정 추가
+  sudo tee -a "$CHRONY_CONF" > /dev/null <<EOF
 
 # Custom NTP servers
 server test-ntp01.test.com iburst prefer maxpoll 8
@@ -37,26 +36,26 @@ EOF
   # systemd-timesyncd 비활성화 (Ubuntu 대응)
   if [[ "$OS_ID" == "ubuntu" ]]; then
     if systemctl is-active --quiet systemd-timesyncd; then
-      systemctl stop systemd-timesyncd
-      systemctl disable systemd-timesyncd
+      sudo systemctl stop systemd-timesyncd
+      sudo systemctl disable systemd-timesyncd
     fi
   fi
 
-  # chronyd 재시작
+  # chronyd 재시작 (서비스 존재 여부에 따라 처리)
   if systemctl is-active --quiet chronyd || systemctl is-active --quiet chrony; then
-    systemctl restart chronyd || systemctl restart chrony
+    sudo systemctl restart chronyd || sudo systemctl restart chrony
   else
-    systemctl start chronyd || systemctl start chrony
+    sudo systemctl start chronyd || sudo systemctl start chrony
   fi
 
-  systemctl enable chronyd || systemctl enable chrony
+  sudo systemctl enable chronyd || sudo systemctl enable chrony
 
   # 상태 확인
   echo "✅ [Success] NTP Synchronization Setting."
   chronyc sources || echo "chronyc 명령어를 사용할 수 없습니다."
 
   # Timezone 설정
-  timedatectl set-timezone Asia/Seoul
+  sudo timedatectl set-timezone Asia/Seoul
   echo "✅ [Success] Timezone set to Asia/Seoul."  
 }
 
@@ -69,4 +68,3 @@ if [ -z "$OS_ID" ]; then
 fi
 
 main
-sudo 
