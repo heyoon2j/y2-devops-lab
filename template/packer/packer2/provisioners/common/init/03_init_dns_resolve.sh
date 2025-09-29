@@ -10,6 +10,7 @@ set -Eeuo pipefail
 ########################################
 DNS_IP="10.44.100.100"
 DOMAINS="svc.cluster.local cluster.local"
+OS_ID=$1
 
 ########################################
 #           Pre-flight checks          #
@@ -17,30 +18,6 @@ DOMAINS="svc.cluster.local cluster.local"
 if [[ $EUID -ne 0 ]]; then
   echo "[ERROR] Run as root." >&2
   exit 1
-fi
-
-if [[ ! -f /etc/os-release ]]; then
-  echo "[ERROR] /etc/os-release not found; unsupported system." >&2
-  exit 2
-fi
-. /etc/os-release
-
-os_family=""
-case "${ID,,} ${ID_LIKE,,}" in
-  *ubuntu* ) os_family="ubuntu" ;;
-  *rocky*|*rhel*|*centos*|*fedora*|*almalinux* ) os_family="rocky" ;;
-  * )
-    if command -v nmcli >/dev/null 2>&1 && [[ -f /etc/redhat-release ]]; then
-      os_family="rocky"
-    elif systemctl list-unit-files | grep -q '^systemd-resolved.service'; then
-      os_family="ubuntu"
-    fi
-    ;;
-esac
-
-if [[ -z "$os_family" ]]; then
-  echo "[ERROR] Unsupported distribution (ID=${ID:-unknown}, ID_LIKE=${ID_LIKE:-unknown})." >&2
-  exit 3
 fi
 
 ########################################
@@ -145,10 +122,12 @@ EOF
   echo "[SUCCESS] Ubuntu DNS setup completed (systemd-resolved)."
 }
 
-########################################
-#                Run                   #
-########################################
-case "$os_family" in
-  rocky)  apply_rocky ;;
-  ubuntu) apply_ubuntu ;;
+#######################################################
+#####                  Execute                    #####
+#######################################################
+case "$OS_ID" in
+  rocky8)  apply_rocky ;;
+  rocky9)  apply_rocky ;;
+  ubuntu20) apply_ubuntu ;;
+  ubuntu22) apply_ubuntu ;;
 esac

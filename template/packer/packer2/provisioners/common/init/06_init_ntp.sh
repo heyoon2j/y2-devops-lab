@@ -34,7 +34,7 @@ server test-ntp03.test.com iburst maxpoll 8
 EOF
 
   # systemd-timesyncd 비활성화 (Ubuntu 대응)
-  if [[ "$OS_ID" == "ubuntu" ]]; then
+  if [[ "$OS_ID" == "ubuntu" || "$OS_ID" == "ubuntu20" || "$OS_ID" == "ubuntu22"  ]]; then
     if systemctl is-active --quiet systemd-timesyncd; then
       sudo systemctl stop systemd-timesyncd
       sudo systemctl disable systemd-timesyncd

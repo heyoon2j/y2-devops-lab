@@ -6,8 +6,8 @@ set -e
 #####                Local Variable               #####
 #######################################################
 OS_ID=$1
-REPO_CONTENT=$2
-REPO_FILE=$3
+# REPO_CONTENT=$2
+# REPO_FILE=$3
 
 CONF_DIR="/tmp/conf"
 
@@ -56,7 +56,7 @@ apply_repo_file() {
 #######################################################
 main() {
   # ---- Ubuntu 처리 ----
-  if [[ "$OS_ID" == "ubuntu" ]]; then
+  if [[ "$OS_ID" == "ubuntu" || "$OS_ID" == "ubuntu20" || "$OS_ID" == "ubuntu22"  ]]; then
     echo "🔁 Ubuntu 저장소 초기화 중"
     sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak.$(date +%F-%H%M%S)
     sudo rm -f /etc/apt/sources.list.d/*.list

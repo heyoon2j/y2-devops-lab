@@ -16,7 +16,7 @@ main() {
 
   ## SELinux 설정
   ## ---------- Ubuntu 처리 ----------
-  if [[ "$OS_ID" == "ubuntu" ]]; then
+  if [[ "$OS_ID" == "ubuntu"|| "$OS_ID" == "ubuntu20" || "$OS_ID" == "ubuntu22"  ]]; then
     echo "[INFO] Ubuntu - Check SELinux state"
     echo "[OK] Not use SELinux."
     exit 0
@@ -57,7 +57,7 @@ main() {
 #####                                             #####
 #######################################################
 if [ -z "$OS_ID" ]; then
-  echo "❗ 사용법: $0 <os: ubuntu|rocky8|rocky9>"
+  echo "❗ 사용법: $0 <os: ubuntu20|ubuntu22|rocky8|rocky9>"
   exit 1
 fi
 

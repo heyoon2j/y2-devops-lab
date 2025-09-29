@@ -20,7 +20,7 @@ NEED_PACKAGES=""
 main() {
   #####################################################
   # ---- Ubuntu 처리 ----
-  if [[ "$OS_ID" == "ubuntu" ]]; then
+  if [[ "$OS_ID" == "ubuntu" || "$OS_ID" == "ubuntu20" || "$OS_ID" == "ubuntu22"  ]]; then
     sudo apt update -y
 
     echo "🔍 설치되지 않은 패키지 확인 중..."
