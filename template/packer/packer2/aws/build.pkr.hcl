@@ -33,6 +33,7 @@ build {
   ##############################################
   provisioner "shell" {
     inline = [
+      "chmod +x /tmp/common/check_os.sh",
       "chmod +x /tmp/common/init/*",
       "OS_ID=$(/tmp/common/check_os.sh)",
       "/tmp/common/init/00_init_cloud_cfg.sh",
