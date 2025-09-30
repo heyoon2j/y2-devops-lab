@@ -4,9 +4,9 @@ set -e
 #######################################################
 # Configurable File Paths (변경 가능한 파일 경로)
 #####################k##################################
-REPO_DIR="/tmp/conf"                     # repo 파일들이 있는 디렉토리
-ROCKY_REPO_FILE="rsyslog-rhel.repo"   # Rocky Linux용 repo 파일
-UBUNTU20_LIST_FILE="rsyslog-ut20.list"   # Ubuntu 20.04용 list 파일
+REPO_DIR="/tmp/config/repo"                     # repo 파일들이 있는 디렉토리
+ROCKY_REPO_FILE="infra-rhel.repo"   # Rocky Linux용 repo 파일
+UBUNTU20_LIST_FILE="ubuntu20-rsyslog-ut20.list"   # Ubuntu 20.04용 list 파일
 UBUNTU22_LIST_FILE="rsyslog-ut22.list"   # Ubuntu 22.04용 list 파일
 
 #######################################################
