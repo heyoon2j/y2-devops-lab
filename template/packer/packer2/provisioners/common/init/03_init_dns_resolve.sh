@@ -3,7 +3,8 @@
 # - Rocky: NetworkManager + static /etc/resolv.conf (systemd-resolved 비활성)
 # - Ubuntu: systemd-resolved 활성 + /etc/systemd/resolved.conf(DNS, Domains) 설정
 
-set -Eeuo pipefail
+# set -Eeuo pipefail
+set -e
 
 ########################################
 #            Config (edit here)        #
@@ -15,10 +16,10 @@ OS_ID=$1
 ########################################
 #           Pre-flight checks          #
 ########################################
-if [[ $EUID -ne 0 ]]; then
-  echo "[ERROR] Run as root." >&2
-  exit 1
-fi
+# if [[ $EUID -ne 0 ]]; then
+#   echo "[ERROR] Run as root." >&2
+#   exit 1
+# fi
 
 ########################################
 #           Common helpers             #
