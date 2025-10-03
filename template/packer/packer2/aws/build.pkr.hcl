@@ -7,25 +7,31 @@ build {
   ##############################################
   provisioner "shell" {
     inline = [
-      "mkdir -p /tmp/config",
-      "mkdir -p /tmp/common",
-      "mkdir -p /tmp/${var.cloud}"
+      "mkdir -p /tmp/packer/config",
+      "mkdir -p /tmp/packer/common",
+      "mkdir -p /tmp/packer/cloud",
+      "mkdir -p /tmp/packer/os"
     ]
   }
 
   provisioner "file" {
     source      = "../provisioners/config/"
-    destination = "/tmp/config"
+    destination = "/tmp/packer/config"
   }
 
   provisioner "file" {
     source      = "../provisioners/common/"
-    destination = "/tmp/common"
+    destination = "/tmp/packer/common"
   }
 
   provisioner "file" {
-    source      = "../provisioners/${var.cloud}/"
-    destination = "/tmp/cloud"
+    source      = "../provisioners/cloud/${var.cloud}/"
+    destination = "/tmp/packer/cloud"
+  }
+
+  provisioner "file" {
+    source      = "../provisioners/os/${var.os_name}/"
+    destination = "/tmp/packer/os"
   }
 
   ##############################################
@@ -33,33 +39,54 @@ build {
   ##############################################
   provisioner "shell" {
     inline = [
-      "chmod +x /tmp/common/check_os.sh",
-      "chmod +x /tmp/common/init/*",
-      # "OS_ID=$(/tmp/common/check_os.sh)",
-      "/tmp/common/init/00_init_cloud_cfg.sh",
-      "/tmp/common/init/01_init_ssh.sh",
-      "/tmp/common/init/02_init_selinux.sh $OS_ID",
-      "/tmp/common/init/03_init_dns_resolve.sh $OS_ID",
-      "/tmp/common/init/04_init_repository.sh $OS_ID $ARCH",
-      "/tmp/common/init/05_install_package.sh $OS_ID",
-      "/tmp/common/init/06_init_ntp.sh $OS_ID",
-      "/tmp/common/init/07_set_sudoeors.sh",
-      "/tmp/common/init/08_set_git.sh",
-      "/tmp/common/init/09_sysctl.sh",
-      "/tmp/common/init/10_rsyslog.sh",
-      "/tmp/common/init/99_last.sh",
-      "rm -rf /tmp/common/init"
+      "chmod +x /tmp/packer/common/init/*",
+      "chmod +x /tmp/packer/common/check_os.sh",
+      "chmod +x /tmp/packer/common/check_arch.sh",
+      "OS_ID=$(/tmp/packer/common/check_os.sh)",
+      "ARCH=$(/tmp/packer/common/check_arch.sh)",
+      "/tmp/packer/common/init/00_init_cloud_cfg.sh",
+      "/tmp/packer/common/init/01_init_ssh.sh",
+      "/tmp/packer/common/init/02_init_selinux.sh $OS_ID",
+      "/tmp/packer/common/init/03_init_dns_resolve.sh $OS_ID",
+      "/tmp/packer/common/init/04_init_repository.sh $OS_ID $ARCH",
+      "/tmp/packer/common/init/05_install_package.sh $OS_ID",
+      "/tmp/packer/common/init/06_init_ntp.sh $OS_ID",
+      "/tmp/packer/common/init/07_set_sudoeors.sh",
+      "/tmp/packer/common/init/08_set_git_python.sh",
+      "/tmp/packer/common/init/09_sysctl.sh",
+      "/tmp/packer/common/init/10_rsyslog.sh",
+      "/tmp/packer/common/init/99_last.sh",
     ]
   }
+
+
+  ##############################################
+  # 🛠 Run Init OS (each) + Cleanup
+  ##############################################
+  provisioner "shell" {
+    inline = [
+      "chmod +x /tmp/packer/os/*",
+      "/tmp/packer/os/init_os_setting.sh",
+    ]
+  }
+
 
   ##############################################
   # 🛠 Run Init CSP Script + Cleanup
   ##############################################
   provisioner "shell" {
     inline = [
-      "chmod +x /tmp/cloud/*",
-      "/tmp/cloud/init_csp_setting.sh",
-      "rm -f /tmp/cloud"
+      "chmod +x /tmp/packer/cloud/*",
+      "/tmp/packer/cloud/init_csp_setting.sh",
+    ]
+  }
+
+  ##############################################
+  # 🛠 Cleanup
+  ##############################################
+  provisioner "shell" {
+    inline = [
+      "rm -rf /tmp/packer"
     ]
   }
 

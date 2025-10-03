@@ -8,20 +8,19 @@ set -e
 OS_ID=$1
 
 # 기본 패키지 목록
-UBUNTU_DEFAULT_PACKAGES="jq git chrony python3.12 net-tools nmap build-essential libssl-dev pkg-config"
-ROCKY_DEFAULT_PACKAGES="jq git wget bc bind-utils chrony python3.12 net-tools nc"
+UBUNTU_DEFAULT_PACKAGES="jq git chrony net-tools nmap build-essential libssl-dev pkg-config bind-utils"
+ROCKY_DEFAULT_PACKAGES="jq git wget bc bind-utils chrony net-tools nc bind-utils"
 
 # 설치되지 않은 패키지 목록을 담을 변수
 NEED_PACKAGES=""
 
-#######################################################
-#####               Function - Main               #####
-#######################################################
-main() {
-  #####################################################
-  # ---- Ubuntu 처리 ----
-  if [[ "$OS_ID" == "ubuntu" || "$OS_ID" == "ubuntu20" || "$OS_ID" == "ubuntu22"  ]]; then
-    sudo apt update -y
+########################################
+#           Ubuntu (Debian系)          #
+########################################
+apply_ubuntu() {
+    sudo apt-get update -y
+    sudo apt-get upgrade -y --fix-missing --fix-broken
+    export DEBIAN_FRONTEND=noninteractive
 
     echo "🔍 설치되지 않은 패키지 확인 중..."
     for pkg in $UBUNTU_DEFAULT_PACKAGES; do
@@ -32,14 +31,16 @@ main() {
 
     if [ -n "$NEED_PACKAGES" ]; then
       echo "📥 설치할 패키지: $NEED_PACKAGES"
-      sudo apt install -y $NEED_PACKAGES
+      sudo apt-get install -y $NEED_PACKAGES
     else
       echo "✅ [Success] Installed all packages."
     fi
+}
 
-  #####################################################
-  # ---- Rocky 8 & 9 공통 처리 ----
-  elif [[ "$OS_ID" == "rocky8" || "$OS_ID" == "rocky9" ]]; then
+########################################
+#         Rocky Linux (RHEL系)         #
+########################################
+apply_rocky() {
     sudo yum update -y
 
     echo "🔍 설치되지 않은 패키지 확인 중..."
@@ -55,23 +56,18 @@ main() {
     else
       echo "✅ [Success] Installed all packages."
     fi
-
-  #####################################################
-  # ---- 예외 처리 ----
-  else
-    echo "❌ 지원되지 않는 OS: $OS_ID"
-    exit 2
-  fi
-
-  echo "✅ [$OS_ID] 패키지 설치 작업 완료"
 }
 
-#######################################################
-#####                                             #####
-#######################################################
-if [ -z "$OS_ID" ]; then
-  echo "❗ 사용법: $0 <os: ubuntu|rocky8|rocky9>"
-  exit 1
-fi
 
-main
+#######################################################
+#####                  Execute                    #####
+#######################################################
+case "$OS_ID" in
+  rocky8)  apply_rocky ;;
+  rocky9)  apply_rocky ;;
+  ubuntu20) apply_ubuntu ;;
+  ubuntu22) apply_ubuntu ;;
+  *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; exit 2 ;;
+esac
+
+exit 0 

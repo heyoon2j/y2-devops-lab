@@ -8,26 +8,25 @@ set -e
 OS_ID=$1
 SELINUX_CONFIG="/etc/selinux/config"
 
-#######################################################
-#####               Function - Main               #####
-#######################################################
-main() {
-  echo "========== SELinux Setting Start =========="
 
-  ## SELinux 설정
-  ## ---------- Ubuntu 처리 ----------
-  if [[ "$OS_ID" == "ubuntu"|| "$OS_ID" == "ubuntu20" || "$OS_ID" == "ubuntu22"  ]]; then
+########################################
+#           Ubuntu (Debian系)          #
+########################################
+apply_ubuntu() {
     echo "[INFO] Ubuntu - Check SELinux state"
     echo "[OK] Not use SELinux."
-    exit 0
+    return 0
+}
 
-  ## ---------- Rocky 처리 ----------
-  elif [[ "$OS_ID" == "rocky" || "$OS_ID" == "rocky8" || "$OS_ID" == "rocky9" ]]; then
+########################################
+#           Ubuntu (Debian系)          #
+########################################
+apply_ubuntu() {
     echo "[INFO] Rocky - Check SELinux state"
     CURRENT_STATE=$(sudo getenforce)
     if [[ "$CURRENT_STATE" == "Disabled" ]]; then
       echo "[OK] Already SELinux is disabled."
-      exit 0
+      return 0
     fi
 
     echo "[INFO] SELinux를 일시적으로 Permissive 모드로 설정합니다."
@@ -40,25 +39,25 @@ main() {
       echo "[OK] 영구 설정 변경 완료 ($SELINUX_CONFIG)"
     else
       echo "[ERROR] $SELINUX_CONFIG 파일이 존재하지 않습니다."
-      exit 1
+      return 1
     fi
-
-  ## ---------- 예외 처리 ----------
-  else
-    echo "[Info] ❌ 지원되지 않는 OS: $OS_ID"
-    exit 2
-  fi
-
-  echo "[OK] SELinux가 비활성화 되었습니다. 재부팅 후 적용됩니다."
+    return 0
 }
 
 
 #######################################################
-#####                                             #####
+#####                  Execute                    #####
 #######################################################
-if [ -z "$OS_ID" ]; then
-  echo "❗ 사용법: $0 <os: ubuntu20|ubuntu22|rocky8|rocky9>"
-  exit 1
-fi
+main() {
+  echo "========== SELinux Setting Start =========="
+  case "$OS_ID" in
+    rocky8)  apply_rocky ;;
+    rocky9)  apply_rocky ;;
+    ubuntu20) apply_ubuntu ;;
+    ubuntu22) apply_ubuntu ;;
+    *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; exit 2 ;;
+  esac
 
-main
+  echo "[OK] 저장소 초기화 및 재설정 완료"
+  exit 0
+}

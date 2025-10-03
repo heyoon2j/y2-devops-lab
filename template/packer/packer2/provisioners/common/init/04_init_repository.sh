@@ -8,7 +8,7 @@ set -e
 OS_ID=$1
 ARCH=$2
 
-CONF_DIR="/tmp/config/repo"
+CONF_DIR="/tmp/packer/config/repo"
 
 # 기본 경로
 ##### Ubuntu #####
@@ -47,49 +47,51 @@ apply_repo_file() {
   fi
 }
 
-#######################################################
-#####               Function - Main               #####
-#######################################################
-main() {
-  # ---- Ubuntu 처리 ----
-  if [[ "$OS_ID" == "ubuntu" || "$OS_ID" == "ubuntu20" || "$OS_ID" == "ubuntu22"  ]]; then
-    echo "🔁 Ubuntu 저장소 초기화 중"
-    sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak.$(date +%F-%H%M%S)
-    sudo rm -f /etc/apt/sources.list.d/*.list
-    apply_repo_file "$UBUNTU2X_DEFAULT_REPO_PATH" "$UBUNTU_DEFAULT_REPO_PATH"
-    apply_repo_file "$UBUNTU2X_EXTRA_REPO_PATH" "$UBUNTU_EXTRA_REPO_PATH"
-    sudo apt update -y
+########################################
+#           Ubuntu (Debian系)          #
+########################################
+apply_ubuntu() {
+  echo "🔁 $OS_ID 저장소 초기화 중"
+  sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak.$(date +%F-%H%M%S)
+  sudo rm -f /etc/apt/sources.list.d/*.list
 
-  #####################################################
-  # ---- Rocky 처리 ----
-  elif [[ "$OS_ID" == "rocky8" || "$OS_ID" == "rocky9" ]]; then
-    echo "🔁 $OS_ID 저장소 초기화 중"
+  apply_repo_file "$UBUNTU2X_DEFAULT_REPO_PATH" "$UBUNTU_DEFAULT_REPO_PATH"
+  apply_repo_file "$UBUNTU2X_EXTRA_REPO_PATH" "$UBUNTU_EXTRA_REPO_PATH"
 
-    DEFAULT_REPO_FILES=(/etc/yum.repos.d/Rocky-*.repo)
-    for FILE in "${DEFAULT_REPO_FILES[@]}"; do
-      echo "# Do not modify this file" | sudo tee "$FILE" > /dev/null
-      echo "[INFO] $FILE 주석 처리됨"
-    done
+  sudo apt-get update -y
+}
 
-    apply_repo_file "$ROCKY_DEFAULT_REPO_SOURCE" "$ROCKY_DEFAULT_REPO_PATH"
-    apply_repo_file "$ROCKY_RHEL_REPO_SOURCE" "$ROCKY_RHEL_REPO_PATH"
+########################################
+#         Rocky Linux (RHEL系)         #
+########################################
+apply_rocky() {
+  echo "🔁 $OS_ID 저장소 초기화 중"
 
-    echo "📦 메타데이터 초기화 중..."
-    sudo dnf clean all
-    sudo dnf makecache
+  DEFAULT_REPO_FILES=(/etc/yum.repos.d/Rocky-*.repo)
+  for FILE in "${DEFAULT_REPO_FILES[@]}"; do
+    echo "# Do not modify this file" | sudo tee "$FILE" > /dev/null
+    echo "[INFO] $FILE 주석 처리됨"
+  done
 
-  #####################################################
-  # ---- 예외 처리 ----
-  else
-    echo "❌ 지원되지 않는 OS: $OS_ID"
-    exit 2
-  fi
+  apply_repo_file "$ROCKY_DEFAULT_REPO_SOURCE" "$ROCKY_DEFAULT_REPO_PATH"
+  apply_repo_file "$ROCKY_RHEL_REPO_SOURCE" "$ROCKY_RHEL_REPO_PATH"
 
-  echo "[OK] 저장소 초기화 및 재설정 완료"
+  echo "📦 메타데이터 초기화 중..."
+  sudo dnf clean all
+  sudo dnf makecache
 }
 
 
 #######################################################
-#####                                             #####
+#####                  Execute                    #####
 #######################################################
-main
+case "$OS_ID" in
+  rocky8)  apply_rocky ;;
+  rocky9)  apply_rocky ;;
+  ubuntu20) apply_ubuntu ;;
+  ubuntu22) apply_ubuntu ;;
+  *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; exit 2 ;;
+esac
+
+echo "[OK] 저장소 초기화 및 재설정 완료"
+exit 0
