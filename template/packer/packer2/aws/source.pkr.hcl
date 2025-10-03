@@ -56,6 +56,7 @@ variable "ssh_username" {
 source "amazon-ebs" "base" {
   region = var.aws_region
   profile = var.aws_profile
+  ssh_pty = true
 
   ssh_username = var.ssh_username
   instance_type = var.instance_type

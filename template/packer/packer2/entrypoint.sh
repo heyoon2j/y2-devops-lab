@@ -3,8 +3,8 @@ set -e
 CLOUD=$1
 OS_NAME=$2
 ARCH_TYPE=$3
-TEMPLATE_DIR="../${CLOUD}"
-VARS_DIR="../${CLOUD}/variables"
+TEMPLATE_DIR="${CLOUD}"
+VARS_DIR="${CLOUD}/variables"
 echo "▶️ Running Packer build for ${CLOUD} - ${OS_NAME}"
 #packer build -var-file="${VARS}" "${TEMPLATE}"
 packer build \
