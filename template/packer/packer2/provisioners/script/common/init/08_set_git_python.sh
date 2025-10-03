@@ -13,7 +13,6 @@ MY_PATH="/opt/"
 PYTHON_VERSION="3.12.6"
 PYTHON_SHORT_VERSION=$(echo "$PYTHON_VERSION" | cut -d. -f1,2)
 PYTHON_BIN="/usr/local/bin/python${PYTHON_SHORT_VERSION}"
-PYTHON_SRC_URL="https://www.python.org/ftp/python/${PYTHON_VERSION}/Python-${PYTHON_VERSION}.tgz"
 
 PIP_INDEX_URL="https://pypi.yourcompany.com/simple"
 PIP_TRUST_HOST="pypi.yourcompany.com"
@@ -41,8 +40,8 @@ build_python() {
   # 빌드 의존성 설치
   if command -v apt >/dev/null 2>&1; then
     echo "[INFO] Ubuntu/Debian 환경: build deps 설치"
-    sudo apt update -y
-    sudo apt install -y build-essential zlib1g-dev libncurses5-dev \
+    sudo apt-get update -y
+    sudo apt-get install -y build-essential zlib1g-dev libncurses5-dev \
       libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev \
       wget curl libsqlite3-dev
   elif command -v yum >/dev/null 2>&1; then
@@ -53,7 +52,6 @@ build_python() {
   fi
 
   cd "$MY_PATH"
-  wget "$PYTHON_SRC_URL" -O "Python-${PYTHON_VERSION}.tgz"
   tar -xzf "Python-${PYTHON_VERSION}.tgz"
   cd "Python-${PYTHON_VERSION}"
 
@@ -102,10 +100,10 @@ install_pip_packages() {
 #####                     Main                     #####
 #######################################################
 main() {
-  clone_repo
+  # clone_repo
   build_python
-  configure_pip
-  install_pip_packages
+  # configure_pip
+  # install_pip_packages
 }
 
 main
