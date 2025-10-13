@@ -9,23 +9,23 @@ build {
     inline = [
       "mkdir -p /tmp/packer/files",
       "mkdir -p /tmp/packer/config",
-      "mkdir -p /tmp/packer/scripts",
+      "mkdir -p /tmp/packer/script",
     ]
   }
 
   provisioner "file" {
-    source      = "../provisioners/files/"
+    source      = "./provisioners/files/"
     destination = "/tmp/packer/files"
   }
 
   provisioner "file" {
-    source      = "../provisioners/config/"
-    destination = "/tmp/packer/config"
+    source      = "./provisioners/config/"
+    destination = "tmp/packer/config"
   }
 
   provisioner "file" {
-    source      = "../provisioners/scripts/"
-    destination = "/tmp/packer/scripts"
+    source      = "./provisioners/script/"
+    destination = "/tmp/packer/script"
   }
 
   ##############################################
@@ -41,7 +41,7 @@ build {
       "/tmp/packer/script/common/init/00_init_cloud_cfg.sh",
       "/tmp/packer/script/common/init/01_init_ssh.sh",
       "/tmp/packer/script/common/init/02_init_selinux.sh $OS_ID",
-      "/tmp/packer/script/common/init/03_init_dns_resolve.sh $OS_ID",
+      "/tmp/packer/script/common/init/03_init_dns_resolve.sh $OS_ID ${var.cloud}",
       "/tmp/packer/script/common/init/04_init_repository.sh $OS_ID $ARCH",
       "/tmp/packer/script/common/init/05_install_package.sh $OS_ID",
       "/tmp/packer/script/common/init/06_init_ntp.sh $OS_ID",

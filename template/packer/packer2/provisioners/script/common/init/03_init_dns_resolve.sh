@@ -6,12 +6,14 @@
 # set -Eeuo pipefail
 set -e
 
+OS_ID=$1
+CLOUD=$2
+
 ########################################
 #            Config (edit here)        #
 ########################################
 DNS_IP="10.44.100.100"
-DOMAINS="svc.cluster.local cluster.local"
-OS_ID=$1
+DOMAINS="${CLOUD}.svc.cluster.local ${CLOUD}.cluster.local"
 
 ########################################
 #           Pre-flight checks          #
