@@ -1,0 +1,6 @@
+os_name = "rocky9"
+arch_type = "arm64"
+ami_filter_name = "Rocky-9-EC2-*.aarch64-*"
+ami_filter_owner = "679593333241"
+ssh_username = "rocky"
+instance_type = "t4g.small"

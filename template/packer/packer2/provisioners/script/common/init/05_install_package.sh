@@ -18,9 +18,10 @@ NEED_PACKAGES=""
 #           Ubuntu (Debian系)          #
 ########################################
 apply_ubuntu() {
-    sudo apt-get update -y
-    sudo apt-get upgrade -y --fix-missing --fix-broken
     export DEBIAN_FRONTEND=noninteractive
+    sudo apt-get update -y
+    sudo apt-get upgrade -y
+    #sudo apt-get upgrade -y --fix-missing --fix-broken
 
     echo "🔍 설치되지 않은 패키지 확인 중..."
     for pkg in $UBUNTU_DEFAULT_PACKAGES; do

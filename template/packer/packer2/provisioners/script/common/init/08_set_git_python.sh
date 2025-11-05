@@ -8,9 +8,10 @@ GITHUB_URL="https://github.test.com/abc-test/aa.git"
 BRANCH_NAME="dev-test"
 GITHUB_USER="your-username"               # 사용자명
 GITHUB_TOKEN="your-personal-access-token" # PAT
-MY_PATH="/opt/"
+CLONE_PATH="/opt/"
 
-PYTHON_VERSION="3.12.6"
+FILE_PATH="/tmp/packer/files/python"
+PYTHON_VERSION="3.12.0"
 PYTHON_SHORT_VERSION=$(echo "$PYTHON_VERSION" | cut -d. -f1,2)
 PYTHON_BIN="/usr/local/bin/python${PYTHON_SHORT_VERSION}"
 
@@ -26,9 +27,10 @@ PIP_PACKAGES="" # "requests flask"
 clone_repo() {
   echo "========== Git Clone Start =========="
 
-  cd "$MY_PATH"
-  AUTH_URL=$(echo "$GITHUB_URL" | sed "s#https://#https://$GITHUB_USER:$GITHUB_TOKEN@#")
-  git clone --branch "$BRANCH_NAME" "$AUTH_URL"
+  #cd "$CLONE_PATH"
+  #cp -r /tmp/pakcer/files/amos "CLONE_PATH" 
+  #AUTH_URL=$(echo "$GITHUB_URL" | sed "s#https://#https://$GITHUB_USER:$GITHUB_TOKEN@#")
+  #git clone --branch "$BRANCH_NAME" "$AUTH_URL"
 }
 
 #######################################################
@@ -38,21 +40,21 @@ build_python() {
   echo "========== Python Build Start =========="
 
   # 빌드 의존성 설치
-  if command -v apt >/dev/null 2>&1; then
-    echo "[INFO] Ubuntu/Debian 환경: build deps 설치"
-    sudo apt-get update -y
-    sudo apt-get install -y build-essential zlib1g-dev libncurses5-dev \
-      libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev \
-      wget curl libsqlite3-dev
-  elif command -v yum >/dev/null 2>&1; then
-    echo "[INFO] Rocky/CentOS 환경: build deps 설치"
-    sudo yum groupinstall -y "Development Tools"
-    sudo yum install -y gcc zlib-devel bzip2 bzip2-devel xz-devel wget make \
-      libffi-devel sqlite sqlite-devel ncurses-devel gdbm-devel readline-devel tk-devel
-  fi
+  # if command -v apt >/dev/null 2>&1; then
+  #   echo "[INFO] Ubuntu/Debian 환경: build deps 설치"
+  #   sudo apt-get update -y
+  #   sudo apt-get install -y build-essential zlib1g-dev libncurses5-dev \
+  #     libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev \
+  #     wget curl libsqlite3-dev
+  # elif command -v yum >/dev/null 2>&1; then
+  #   echo "[INFO] Rocky/CentOS 환경: build deps 설치"
+  #   sudo yum groupinstall -y "Development Tools"
+  #   sudo yum install -y gcc zlib-devel bzip2 bzip2-devel xz-devel wget make \
+  #     libffi-devel sqlite sqlite-devel ncurses-devel gdbm-devel readline-devel tk-devel
+  # fi
 
-  cd "$MY_PATH"
-  tar -xzf "Python-${PYTHON_VERSION}.tgz"
+  cd "$FILE_PATH"
+  tar -xf "Python-${PYTHON_VERSION}.tar.xz"
   cd "Python-${PYTHON_VERSION}"
 
   ./configure --enable-optimizations --prefix=/usr/local
@@ -100,10 +102,10 @@ install_pip_packages() {
 #####                     Main                     #####
 #######################################################
 main() {
-  # clone_repo
   build_python
-  # configure_pip
-  # install_pip_packages
+  configure_pip
+  install_pip_packages
+  clone_repo
 }
 
 main

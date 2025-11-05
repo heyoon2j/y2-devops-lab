@@ -22,7 +22,7 @@ UBUNTU2X_EXTRA_REPO_PATH="${CONF_DIR}/ubuntu/${OS_ID}-extra.list"
 ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-default.repo"
 ROCKY_RHEL_REPO_PATH="/etc/yum.repos.d/infra-rhel.repo"
 
-ROCKY_DEFAULT_REPO_SOURCE="${CONF_DIR}/rocky/infra-{$OS_ID}.repo"
+ROCKY_DEFAULT_REPO_SOURCE="${CONF_DIR}/rocky/infra-$OS_ID.repo"
 ROCKY_RHEL_REPO_SOURCE="${CONF_DIR}/rocky/infra-rhel.repo"
 
 
@@ -67,7 +67,16 @@ apply_ubuntu() {
 apply_rocky() {
   echo "🔁 $OS_ID 저장소 초기화 중"
 
-  DEFAULT_REPO_FILES=(/etc/yum.repos.d/Rocky-*.repo)
+  case "$OS_ID" in
+    rocky8)
+      DEFAULT_REPO_FILES=(/etc/yum.repos.d/Rocky-*.repo)
+      ;;
+    rocky9)
+      DEFAULT_REPO_FILES=(/etc/yum.repos.d/rocky*.repo)
+      ;;
+    *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; exit 2 ;;
+  esac
+
   for FILE in "${DEFAULT_REPO_FILES[@]}"; do
     echo "# Do not modify this file" | sudo tee "$FILE" > /dev/null
     echo "[INFO] $FILE 주석 처리됨"
