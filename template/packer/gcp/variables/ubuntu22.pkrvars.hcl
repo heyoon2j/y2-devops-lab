@@ -1,9 +1,10 @@
-# project_id = default
-# zone       = default
-# ami_name       = "custom-ubuntu20-{{timestamp}}"
-
-os_name                 = "ubuntu22"
-source_image_family     = "ubuntu-2204-lts"
+gcp_project_id = "your-gcp-project-id"
+gcp_zone = "asia-northeast3-a"
+gcp_region = "asia-northeast3"
+os_name = "ubuntu22"
+ami_name = "custom-ubuntu22-{{timestamp}}"
+source_image_family = "ubuntu-2204-lts"
 source_image_project_id = "ubuntu-os-cloud"
-ssh_username            = "packer"
-machine_type            = "e2-medium"
+ssh_username = "packer"
+machine_type = "e2-medium"
+cloud = "gcp"

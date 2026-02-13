@@ -1,9 +1,10 @@
-# project_id = default
-# zone       = default
-# ami_name       = "custom-ubuntu20-{{timestamp}}"
-
-os_name                 = "rocky8"
-source_image_family     = "rocky-linux-8"
-source_image_project_id = "rocky-linux-cloud"
-ssh_username            = "packer"
-machine_type            = "e2-medium"
+gcp_project_id = "your-gcp-project-id"
+gcp_zone = "asia-northeast3-a"
+gcp_region = "asia-northeast3"
+os_name = "rocky9"
+ami_name = "custom-rocky9-{{timestamp}}"
+source_image_family = "rocky-linux-9"
+source_image_project_id = "ubuntu-os-cloud"
+ssh_username = "packer"
+machine_type = "e2-medium"
+cloud = "gcp"
