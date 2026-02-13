@@ -7,7 +7,7 @@ set -e
 #######################################################
 SSHD_CONFIG="/etc/ssh/sshd_config"
 CLOUD_CONFIG="/etc/cloud/cloud.cfg"
-
+ALLOW_ROOT_IPS="10.10.10.10,203.0.113.5"
 
 #######################################################
 #####               Function - Main               #####
@@ -57,13 +57,33 @@ main() {
   fi
   echo "[OK] PubkeyAuthentication Setting"
 
-  # PermitRootLogin 설정 변경
+  ########################################################
+  # PermitRootLogin: 기본은 막고, 특정 IP만 Match로 허용
+  echo "[INFO] Configuring PermitRootLogin with Match Address"
+
+  # 1) 전역 기본값: PermitRootLogin no
   if grep -q "^#*PermitRootLogin" "$SSHD_CONFIG"; then
-      sudo sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' "$SSHD_CONFIG"
-  else
-      echo "PermitRootLogin yes" | sudo tee -a "$SSHD_CONFIG" > /dev/null
+      sudo sed -i 's/^#*PermitRootLogin.*/PermitRootLogin no/' "$SSHD_CONFIG"
   fi
-  echo "[OK] PermitRootLogin Setting"
+
+  # 2) Match 블록 추가 (파일 맨 아래에 있어야 안전함)
+  cat <<EOF | sudo tee -a "$SSHD_CONFIG" > /dev/null
+PermitRootLogin no
+Match Address $ALLOW_ROOT_IPS
+    PermitRootLogin yes
+EOF
+
+  # # PermitRootLogin 설정 변경
+  # if grep -q "^#*PermitRootLogin" "$SSHD_CONFIG"; then
+  #     sudo sed -i 's/^#*PermitRootLogin.*/PermitRootLogin yes/' "$SSHD_CONFIG"
+  # else
+  #     echo "PermitRootLogin yes" | sudo tee -a "$SSHD_CONFIG" > /dev/null
+  # fi
+  # echo "[OK] PermitRootLogin Setting"
+
+  # 특정 IP에서만 Root 허용
+
+
 
   ########################################################
   # SSH 서비스 재시작

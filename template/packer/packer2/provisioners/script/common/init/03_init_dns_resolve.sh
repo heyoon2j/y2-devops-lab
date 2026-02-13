@@ -42,6 +42,8 @@ apply_rocky() {
   local RESOLV_FILE="/etc/resolv.conf"
 
   # 1) cloud-init network v2 템플릿
+  #    - use-dns: false 설정으로 cloud-init가 resolv.conf 건드리지 않도록 함
+  #    - NetworkManager 사용하지만 cloud-init가 resolv.conf 덮어쓰는 문제 방지
   sudo mkdir -p "$(dirname "$CLOUD_FILE")"
   backup "$CLOUD_FILE"
   sudo tee "$CLOUD_FILE" > /dev/null <<'EOF'
@@ -79,7 +81,7 @@ EOF
   sudo chmod 0644 "$RESOLV_FILE"
   echo "[OK] resolv.conf → $RESOLV_FILE"
 
-  echo "[SUCCESS] Rocky DNS setup completed (cloud-init + static resolv.conf)."
+  echo "[SUCCESS] Rocky DNS setup completed (cloud-init + static resolv.conf + NetworkManager)."
 }
 
 ########################################
@@ -88,6 +90,12 @@ EOF
 apply_ubuntu() {
   echo "[INFO] Detected Ubuntu/Debian family."
 
+  # systemd-resolved 기반 DNS 설정
+  # DNS 해석 흐름:
+  # /etc/resolv.conf (symlink) → /run/systemd/resolve/stub-resolv.conf
+  # → nameserver 127.0.0.1 → systemd-resolved 데몬
+  # → /etc/systemd/resolved.conf 참조
+  # → 실제 DNS 서버(10.44.100.100)로 쿼리 전송
   local RESOLVED_FILE="/etc/systemd/resolved.conf"
 
   # resolved.conf 백업
@@ -128,9 +136,19 @@ EOF
 #######################################################
 #####                  Execute                    #####
 #######################################################
-case "$OS_ID" in
-  rocky8)  apply_rocky ;;
-  rocky9)  apply_rocky ;;
-  ubuntu20) apply_ubuntu ;;
-  ubuntu22) apply_ubuntu ;;
-esac
+main() {
+  # kc인 경우만 DNS 설정 적용
+  if [[ "$CLOUD" != "kc" ]]; then
+    echo "[INFO] CLOUD=$CLOUD (kc가 아님) - DNS 설정 스킵"
+    return 0
+  fi
+
+  case "$OS_ID" in
+    rocky*)   apply_rocky ;;
+    amazon*)  apply_rocky ;;
+    ubuntu*)  apply_ubuntu ;;
+    *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; return 1;;
+  esac
+}
+
+main

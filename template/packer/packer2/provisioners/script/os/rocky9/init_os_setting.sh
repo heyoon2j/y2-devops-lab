@@ -1,4 +1,5 @@
 #!/bin/bas
-set -e
 
-./set_psi.sh
+SCRIPT_DIR=""
+
+sudo ${SCRIPT_DIR}/set_psi.sh

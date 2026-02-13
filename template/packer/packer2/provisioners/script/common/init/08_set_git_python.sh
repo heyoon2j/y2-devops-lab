@@ -4,34 +4,34 @@ set -e
 #######################################################
 #####                Local Variable               #####
 #######################################################
-GITHUB_URL="https://github.test.com/abc-test/aa.git"
-BRANCH_NAME="dev-test"
-GITHUB_USER="your-username"               # 사용자명
-GITHUB_TOKEN="your-personal-access-token" # PAT
-CLONE_PATH="/opt/"
+# GITHUB_URL="https://github.test.com/abc-test/aa.git"
+# BRANCH_NAME="dev-test"
+# GITHUB_USER="your-username"               # 사용자명
+# GITHUB_TOKEN="your-personal-access-token" # PAT
+# CLONE_PATH="/opt/"
 
-FILE_PATH="/tmp/packer/files/python"
+PYTHON_DIR="/opt/packer/files/python"
 PYTHON_VERSION="3.12.0"
 PYTHON_SHORT_VERSION=$(echo "$PYTHON_VERSION" | cut -d. -f1,2)
 PYTHON_BIN="/usr/local/bin/python${PYTHON_SHORT_VERSION}"
 
-PIP_INDEX_URL="https://pypi.yourcompany.com/simple"
-PIP_TRUST_HOST="pypi.yourcompany.com"
+# PIP_INDEX_URL="https://pypi.yourcompany.com/simple"
+# PIP_TRUST_HOST="pypi.yourcompany.com"
 
-# 설치할 pip 패키지 목록 (필요 시 수정)
-PIP_PACKAGES="" # "requests flask"
+# # 설치할 pip 패키지 목록 (필요 시 수정)
+PIP_PACKAGES="requests urllib3 psutil pyyaml ipaddress typing_extensions" # "requests flask"
 
-#######################################################
-#####               Function - Git Clone          #####
-#######################################################
-clone_repo() {
-  echo "========== Git Clone Start =========="
+# #######################################################
+# #####               Function - Git Clone          #####
+# #######################################################
+# clone_repo() {
+#   echo "========== Git Clone Start =========="
 
-  #cd "$CLONE_PATH"
-  #cp -r /tmp/pakcer/files/amos "CLONE_PATH" 
-  #AUTH_URL=$(echo "$GITHUB_URL" | sed "s#https://#https://$GITHUB_USER:$GITHUB_TOKEN@#")
-  #git clone --branch "$BRANCH_NAME" "$AUTH_URL"
-}
+#   #cd "$CLONE_PATH"
+#   #cp -r /tmp/pakcer/files/amos "CLONE_PATH" 
+#   #AUTH_URL=$(echo "$GITHUB_URL" | sed "s#https://#https://$GITHUB_USER:$GITHUB_TOKEN@#")
+#   #git clone --branch "$BRANCH_NAME" "$AUTH_URL"
+# }
 
 #######################################################
 #####           Function - Python Build            #####
@@ -40,20 +40,20 @@ build_python() {
   echo "========== Python Build Start =========="
 
   # 빌드 의존성 설치
-  # if command -v apt >/dev/null 2>&1; then
-  #   echo "[INFO] Ubuntu/Debian 환경: build deps 설치"
-  #   sudo apt-get update -y
-  #   sudo apt-get install -y build-essential zlib1g-dev libncurses5-dev \
-  #     libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev \
-  #     wget curl libsqlite3-dev
-  # elif command -v yum >/dev/null 2>&1; then
-  #   echo "[INFO] Rocky/CentOS 환경: build deps 설치"
-  #   sudo yum groupinstall -y "Development Tools"
-  #   sudo yum install -y gcc zlib-devel bzip2 bzip2-devel xz-devel wget make \
-  #     libffi-devel sqlite sqlite-devel ncurses-devel gdbm-devel readline-devel tk-devel
-  # fi
+  if command -v apt >/dev/null 2>&1; then
+    echo "[INFO] Ubuntu/Debian 환경: build deps 설치"
+    sudo apt-get update -y
+    sudo apt-get install -y build-essential zlib1g-dev libncurses5-dev \
+      libgdbm-dev libnss3-dev libssl-dev libreadline-dev libffi-dev \
+      wget curl libsqlite3-dev
+  elif command -v yum >/dev/null 2>&1; then
+    echo "[INFO] Rocky/CentOS 환경: build deps 설치"
+    sudo yum groupinstall -y "Development Tools"
+    sudo yum install -y gcc zlib-devel bzip2 bzip2-devel xz-devel wget make \
+      libffi-devel sqlite sqlite-devel ncurses-devel gdbm-devel readline-devel tk-devel
+  fi
 
-  cd "$FILE_PATH"
+  cd "$PYTHON_DIR"
   tar -xf "Python-${PYTHON_VERSION}.tar.xz"
   cd "Python-${PYTHON_VERSION}"
 
@@ -93,7 +93,9 @@ install_pip_packages() {
   $PYTHON_BIN -m pip install --upgrade pip setuptools wheel
 
   # 원하는 패키지 설치
-  $PYTHON_BIN -m pip install $PIP_PACKAGES
+  # $PYTHON_BIN -m pip install $PIP_PACKAGES
+  $PYTHON_BIN -m pip install --no-index --find-links=/opt/packer/files/python/packages $PIP_PACKAGES
+
 
   echo "✅ pip 패키지 설치 완료 ($PIP_PACKAGES)"
 }
@@ -103,7 +105,7 @@ install_pip_packages() {
 #######################################################
 main() {
   build_python
-  configure_pip
+  # configure_pip
   install_pip_packages
   clone_repo
 }

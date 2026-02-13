@@ -21,4 +21,6 @@ sudo sed -i -E \
     -e 's/^( *preserve_hostname: *)1/\10/' \
     "$CLOUD_CFG"
 
+# 
+
 echo "수정 완료: $CLOUD_CFG (백업: $BACKUP_FILE)"

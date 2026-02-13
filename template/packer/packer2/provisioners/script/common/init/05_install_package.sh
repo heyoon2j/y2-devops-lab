@@ -9,7 +9,7 @@ OS_ID=$1
 
 # 기본 패키지 목록
 UBUNTU_DEFAULT_PACKAGES="jq git chrony net-tools nmap build-essential libssl-dev pkg-config bind-utils"
-ROCKY_DEFAULT_PACKAGES="jq git wget bc bind-utils chrony net-tools nc bind-utils"
+ROCKY_DEFAULT_PACKAGES="jq git wget bc bind-utils chrony net-tools nc"
 
 # 설치되지 않은 패키지 목록을 담을 변수
 NEED_PACKAGES=""
@@ -19,9 +19,8 @@ NEED_PACKAGES=""
 ########################################
 apply_ubuntu() {
     export DEBIAN_FRONTEND=noninteractive
-    sudo apt-get update -y
-    sudo apt-get upgrade -y
-    #sudo apt-get upgrade -y --fix-missing --fix-broken
+    sudo apt-get update -y -qq
+    sudo apt-get upgrade -y -qq
 
     echo "🔍 설치되지 않은 패키지 확인 중..."
     for pkg in $UBUNTU_DEFAULT_PACKAGES; do
@@ -32,7 +31,7 @@ apply_ubuntu() {
 
     if [ -n "$NEED_PACKAGES" ]; then
       echo "📥 설치할 패키지: $NEED_PACKAGES"
-      sudo apt-get install -y $NEED_PACKAGES
+      sudo apt-get install -y -qq $NEED_PACKAGES
     else
       echo "✅ [Success] Installed all packages."
     fi
@@ -63,12 +62,20 @@ apply_rocky() {
 #######################################################
 #####                  Execute                    #####
 #######################################################
-case "$OS_ID" in
-  rocky8)  apply_rocky ;;
-  rocky9)  apply_rocky ;;
-  ubuntu20) apply_ubuntu ;;
-  ubuntu22) apply_ubuntu ;;
-  *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; exit 2 ;;
-esac
+main() {
+    case "$OS_ID" in
+        rocky*)
+            apply_rocky
+            ;;
+        ubuntu*)
+            apply_ubuntu
+            ;;
+        *)
+            echo "[ERROR] 지원되지 않는 OS: $OS_ID"
+            exit 2
+            ;;
+    esac
+}
 
+main
 exit 0 

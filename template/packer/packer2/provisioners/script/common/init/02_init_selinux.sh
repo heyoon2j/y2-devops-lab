@@ -51,11 +51,12 @@ apply_ubuntu() {
 main() {
   echo "========== SELinux Setting Start =========="
   case "$OS_ID" in
-    rocky8)  apply_rocky ;;
-    rocky9)  apply_rocky ;;
-    ubuntu20) apply_ubuntu ;;
-    ubuntu22) apply_ubuntu ;;
-    *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; exit 2 ;;
+    rocky*)   apply_rocky ;;
+    amazon*)  apply_rocky ;;
+    ubuntu*)  apply_ubuntu ;;
+    *)
+      echo "[ERROR] 지원되지 않는 OS: $OS_ID" ;
+      return 1;;
   esac
 
   echo "[OK] 저장소 초기화 및 재설정 완료"

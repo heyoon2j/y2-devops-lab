@@ -7,15 +7,15 @@ build {
   ##############################################
   provisioner "shell" {
     inline = [
-      "mkdir -p /tmp/packer/files",
-      "mkdir -p /tmp/packer/config",
-      "mkdir -p /tmp/packer/script",
+      "mkdir -p /opt/packer/files",
+      "mkdir -p /opt/packer/config",
+      "mkdir -p /opt/packer/script",
     ]
   }
 
   provisioner "file" {
     source      = "./provisioners/files/"
-    destination = "/tmp/packer/files"
+    destination = "/opt/packer/files"
   }
 
   provisioner "file" {
@@ -25,42 +25,67 @@ build {
 
   provisioner "file" {
     source      = "./provisioners/script/"
-    destination = "/tmp/packer/script"
+    destination = "/opt/packer/script"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "sudo mkdir -p /opt/packer/"
+    ]
+  }
+
+  provisioner "file" {
+    source      = "./provisioners/"
+    destination = "/opt/packer/"
   }
 
   ##############################################
   # 🛠 Run Init Script + Cleanup
   ##############################################
   provisioner "shell" {
+    timeout = "5m"
+
     inline = [
-      "chmod +x /tmp/packer/script/common/init/*",
-      "chmod +x /tmp/packer/script/common/check_os.sh",
-      "chmod +x /tmp/packer/script/common/check_arch.sh",
-      "OS_ID=$(/tmp/packer/script/common/check_os.sh)",
-      "ARCH=$(/tmp/packer/script/common/check_arch.sh)",
-      "/tmp/packer/script/common/init/00_init_cloud_cfg.sh",
-      "/tmp/packer/script/common/init/01_init_ssh.sh",
-      "/tmp/packer/script/common/init/02_init_selinux.sh $OS_ID",
-      "/tmp/packer/script/common/init/03_init_dns_resolve.sh $OS_ID ${var.cloud}",
-      "/tmp/packer/script/common/init/04_init_repository.sh $OS_ID $ARCH",
-      "/tmp/packer/script/common/init/05_install_package.sh $OS_ID",
-      "/tmp/packer/script/common/init/06_init_ntp.sh $OS_ID",
-      "/tmp/packer/script/common/init/07_set_sudoeors.sh",
-      "/tmp/packer/script/common/init/08_set_git_python.sh",
-      "/tmp/packer/script/common/init/09_sysctl.sh",
-      "/tmp/packer/script/common/init/10_rsyslog.sh",
-      "/tmp/packer/script/common/init/99_last.sh",
+      "sudo chmod +x /opt/packer/script/utils/*",
+      "sudo chmod +x /opt/packer/script/common/init/*",
+      "sudo /opt/packer/script/common/init/00_init_cloud_cfg.sh",
+      "sudo /opt/packer/script/common/init/01_init_ssh.sh",
+      "sudo /opt/packer/script/common/init/02_init_selinux.sh ${var.os_name}",
+      "sudo /opt/packer/script/common/init/03_init_dns_resolve.sh ${var.os_name} ${var.cloud}",
+      "sudo /opt/packer/script/common/init/04_init_repository.sh ${var.os_name} ${var.arch_type}",
+      "sudo /opt/packer/script/common/init/05_install_package.sh ${var.os_name}",
     ]
   }
 
+  provisioner "shell" {
+    inline = [
+      "echo 'System will now reboot to apply all updates..',
+      "sudo reboot"
+    ]
+    expect_disconnect = true
+    timeout = "5m"
+  }
+
+  provisioner "shell" {
+    pause_before  = "5m"
+    timeout       = "5m"
+    inline = [
+      "sudo /opt/packer/script/common/init/06_init_ntp.sh ${var.os_name}",
+      "sudo /opt/packer/script/common/init/07_set_sudoeors.sh",
+      "sudo /opt/packer/script/common/init/08_set_git_python.sh",
+      "sudo /opt/packer/script/common/init/09_sysctl.sh",
+      "sudo /opt/packer/script/common/init/10_rsyslog.sh",
+      "sudo /opt/packer/script/common/init/99_last.sh",
+    ]
+  }
 
   ##############################################
   # 🛠 Run Init OS (each) + Cleanup
   ##############################################
   provisioner "shell" {
     inline = [
-      "chmod +x /tmp/packer/script/os/*",
-      "/tmp/packer/script/os/${var.os_name}/init_os_setting.sh",
+      "sudo chmod +x /opt/packer/script/os/${var.os_name}/*",
+      "sudo /opt/packer/script/os/${var.os_name}/init_os_setting.sh",
     ]
   }
 
@@ -70,9 +95,26 @@ build {
   ##############################################
   provisioner "shell" {
     inline = [
-      "chmod +x /tmp/packer/script/cloud/*",
-      "/tmp/packer/script/cloud/${var.cloud}/init_csp_setting.sh",
+      "sudo chmod +x /opt/packer/script/cloud/${var.cloud}/*",
+      "sudo /opt/packer/script/cloud/${var.cloud}/init_csp_setting.sh",
     ]
+  }
+
+  ##############################################
+  # ✅ Validation & Logging
+  ##############################################
+  provisioner "shell" {
+    inline = [
+      "echo '[INFO] Running validation scripts...'",
+      "sudo chmod +x /opt/packer/script/validation/*"
+      "sudo /opt/packer/script/validate/a.sh"
+    ]
+  }
+
+  provisioner "file" {
+    source      = "/opt/packer/validation.log"
+    destination = "./validation.log"
+    direction   = "download"
   }
 
   ##############################################
@@ -80,7 +122,7 @@ build {
   ##############################################
   provisioner "shell" {
     inline = [
-      "rm -rf /tmp/packer"
+      "rm -rf /opt/packer"
     ]
   }
 

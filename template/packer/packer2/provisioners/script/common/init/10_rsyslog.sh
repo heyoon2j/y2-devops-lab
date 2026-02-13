@@ -2,90 +2,80 @@
 set -e
 
 #######################################################
-# Configurable File Paths (변경 가능한 파일 경로)
-#####################k##################################
-REPO_DIR="/tmp/packer/config/repo"                     # repo 파일들이 있는 디렉토리
-ROCKY_REPO_FILE="infra-rhel.repo"   # Rocky Linux용 repo 파일
-UBUNTU20_LIST_FILE="ubuntu20-rsyslog-ut20.list"   # Ubuntu 20.04용 list 파일
-UBUNTU22_LIST_FILE="rsyslog-ut22.list"   # Ubuntu 22.04용 list 파일
+#####                Local Variable               #####
+#######################################################
+OS_ID=$1
 
 #######################################################
-# OS 판별
+# Source common.sh
 #######################################################
-function detect_os() {
-  if [ -f /etc/os-release ]; then
-    . /etc/os-release
-    OS_ID="$ID"
-    OS_VER="${VERSION_ID%%.*}"
-  else
-    echo "Cannot detect OS. /etc/os-release not found."
-    exit 1
-  fi
-}
+source /opt/packer/script/utils/common.sh
 
 #######################################################
 # RockyLinux 설치
 #######################################################
 function install_rsyslog_rocky() {
-  echo "[*] OS: RockyLinux $OS_VER"
-  local src_file="${REPO_DIR}/${ROCKY_REPO_FILE}"
-  local dest_path="/etc/yum.repos.d/${ROCKY_REPO_FILE}"
+  echo "[*] OS: RockyLinux $OS_ID"
 
-  if [ ! -f "$src_file" ]; then
-    echo "❌ Repo file not found: $src_file"
-    exit 1
-  fi
+  get_repo_data foreman "/cloud/config/repo/rocky/rocky-rsyslog.repo" "/etc/yum.repos.d/rsyslog.repo"
 
-  sudo cp "$src_file" "$dest_path"
-  sudo yum clean all
-  sudo yum makecache
-  sudo yum install -y rsyslog rsyslog-kafka
+  install_packages rsyslog rsyslog-kafka
 }
 
 #######################################################
 # Ubuntu 설치
 #######################################################
 function install_rsyslog_ubuntu() {
-  echo "[*] OS: Ubuntu $OS_VER"
+  echo "[*] OS: Ubuntu $OS_ID"
+  local src_file="local"
 
-  local src_file=""
-  case "$OS_VER" in
-    20)
-      src_file="${REPO_DIR}/${UBUNTU20_LIST_FILE}"
+  case "$OS_ID" in
+    ubuntu20)
+      src_file="/cloud/config/repo/ubuntu/ubuntu20-rsyslog.list"
       ;;
-    22)
-      src_file="${REPO_DIR}/${UBUNTU22_LIST_FILE}"
+    ubuntu22)
+      src_file="/cloud/config/repo/ubuntu/ubuntu22-rsyslog.list"
       ;;
     *)
-      echo "❌ Unsupported Ubuntu version: $OS_VER"
+      echo "❌ Unsupported Ubuntu version: $OS_ID"
       exit 1
       ;;
   esac
 
-  local dest_path="/etc/apt/sources.list.d/rsyslog.list"
+  get_repo_data foreman "$src_file" "/etc/apt/sources.list.d/rsyslog.list"
 
-  if [ ! -f "$src_file" ]; then
-    echo "❌ List file not found: $src_file"
-    exit 1
+  install_packages rsyslog rsyslog-kafka
+}
+
+#######################################################
+# Amazon Linux 설치
+function install_rsyslog_amzn() {
+  echo "[*] OS: Amazon Linux $OS_ID"
+
+  if [[ "$OS_ID" != "amzn2023" ]]; then
+    get_repo_data foreman "/cloud/config/repo/amzn/amzn2023-rsyslog.repo" "/etc/yum.repos.d/rsyslog.repo"
   fi
 
-  sudo cp "$src_file" "$dest_path"
-  sudo apt-get update
-  sudo apt-get install -y rsyslog rsyslog-kafka
+  sudo yum clean all
+  sudo yum makecache
+  install_packages rsyslog rsyslog-kafka
 }
+
 
 #######################################################
 # Main
 #######################################################
 function main() {
-  detect_os
 
   case "$OS_ID" in
-    rocky)
+    rocky*)
       install_rsyslog_rocky
       ;;
-    ubuntu)
+    ubuntu*)
       install_rsyslog_ubuntu
+      ;;
+    amzn*)
+      install_rsyslog_amzn
       ;;
     *)
       echo "❌ Unsupported OS: $OS_ID"

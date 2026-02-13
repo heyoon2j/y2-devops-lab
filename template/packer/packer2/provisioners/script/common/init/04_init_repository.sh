@@ -8,15 +8,15 @@ set -e
 OS_ID=$1
 ARCH=$2
 
-CONF_DIR="/tmp/packer/config/repo"
+CONF_DIR="/opt/packer/config/repo"
 
 # 기본 경로
 ##### Ubuntu #####
 UBUNTU_DEFAULT_REPO_PATH="/etc/apt/sources.list"
 UBUNTU_EXTRA_REPO_PATH="/etc/apt/sources.list.d/ubuntu-extra.list"
 
-UBUNTU2X_DEFAULT_REPO_PATH="${CONF_DIR}/ubuntu/${OS_ID}-${ARCH}-sources.list"
-UBUNTU2X_EXTRA_REPO_PATH="${CONF_DIR}/ubuntu/${OS_ID}-extra.list"
+UBUNTU_DEFAULT_REPO_SOURCE="${CONF_DIR}/ubuntu/${OS_ID}-${ARCH}-sources.list"
+UBUNTU_EXTRA_REPO_SOURCE="${CONF_DIR}/ubuntu/${OS_ID}-extra.list"
 
 ##### Rocky #####
 ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-default.repo"
@@ -55,8 +55,8 @@ apply_ubuntu() {
   sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak.$(date +%F-%H%M%S)
   sudo rm -f /etc/apt/sources.list.d/*.list
 
-  apply_repo_file "$UBUNTU2X_DEFAULT_REPO_PATH" "$UBUNTU_DEFAULT_REPO_PATH"
-  apply_repo_file "$UBUNTU2X_EXTRA_REPO_PATH" "$UBUNTU_EXTRA_REPO_PATH"
+  apply_repo_file "$UBUNTU_DEFAULT_REPO_SOURCE" "$UBUNTU_DEFAULT_REPO_PATH"
+  apply_repo_file "$UBUNTU_EXTRA_REPO_SOURCE" "$UBUNTU_EXTRA_REPO_PATH"
 
   sudo apt-get update -y
 }
@@ -94,13 +94,15 @@ apply_rocky() {
 #######################################################
 #####                  Execute                    #####
 #######################################################
-case "$OS_ID" in
-  rocky8)  apply_rocky ;;
-  rocky9)  apply_rocky ;;
-  ubuntu20) apply_ubuntu ;;
-  ubuntu22) apply_ubuntu ;;
-  *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; exit 2 ;;
-esac
+main() {
+  case "$OS_ID" in
+    rocky*)   apply_rocky ;;
+    #amazon*)  apply_rocky ;;
+    ubuntu*)  apply_ubuntu ;;
+    *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; return 1;;
+  esac
 
-echo "[OK] 저장소 초기화 및 재설정 완료"
-exit 0
+  echo "[OK] 저장소 초기화 및 재설정 완료"
+}
+
+main
