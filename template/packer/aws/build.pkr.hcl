@@ -10,6 +10,7 @@ build {
       "mkdir -p /opt/packer/files",
       "mkdir -p /opt/packer/config",
       "mkdir -p /opt/packer/script",
+      "wget -O "
     ]
   }
 
@@ -76,6 +77,16 @@ build {
       "sudo /opt/packer/script/common/init/09_sysctl.sh",
       "sudo /opt/packer/script/common/init/10_rsyslog.sh",
       "sudo /opt/packer/script/common/init/99_last.sh",
+    ]
+  }
+
+  ##############################################
+  # Run Security Script
+  ##############################################
+  provisioner "shell" {
+    inline = [
+      "sudo chmod +x /opt/packer/script/security/srv/*",
+      "sudo /opt/packer/script/security/srv/patch_srv.sh"
     ]
   }
 
