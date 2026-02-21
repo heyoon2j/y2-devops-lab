@@ -15,4 +15,6 @@ echo "▶️ Running Packer build for ${CLOUD} - ${OS_NAME}"
 packer build \
   -var-file="${VARS_DIR}/${OS_NAME}-${ARCH_TYPE}.pkrvars.hcl" \
   -var-file="${VARS_DIR}/common.pkrvars.hcl" \
+  -var "ssh_username=${SSH_USERNAME}" \
+  -var "ssh_pwauth=${SSH_PWAUTH}" \
   "${TEMPLATE_DIR}"

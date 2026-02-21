@@ -28,6 +28,12 @@ variable "security_group_id" {
   type    = string
   default = ""
 }
+variable "ssh_username" {
+  type    = string
+}
+variable "ssh_pwauth" {
+  type    = string
+}
 ##############################
 ##############################
 # OS Variables
@@ -43,11 +49,6 @@ variable "ami_filter_name" {
 variable "ami_filter_owner" {
   type    = string
 }
-variable "ssh_username" {
-  type    = string
-}
-##############################
-
 
 
 ##############################################
@@ -59,6 +60,8 @@ source "amazon-ebs" "base" {
   ssh_pty = true
 
   ssh_username = var.ssh_username
+  ssh_pwauth = var.ssh_pwauth
+
   instance_type = var.instance_type
 
   ami_name     = "testaws-${var.os_name}_${var.arch_type}-base-${formatdate("YYMMDD", timestamp())}"
@@ -70,6 +73,57 @@ source "amazon-ebs" "base" {
     owners      = [var.ami_filter_owner]
     most_recent = true
   }
+
+  # userdata - 임시 계정 생성
+  user_data = base64encode(<<-EOT
+#!/bin/bash
+set -e
+
+echo "========== SSH Setting Start =========="
+
+########################################################
+## cloud-init 설정 - ssh_pwauth 값 변경
+echo "[INFO] Updating Cloud config file: $CLOUD_CONFIG"
+
+if grep -q "^ssh_pwauth:" "$CLOUD_CONFIG"; then
+  sudo sed -i 's/ssh_pwauth:\s*0\s*/ssh_pwauth: 1/' "$CLOUD_CONFIG"
+  sudo sed -i 's/ssh_pwauth:\s*false\s*/ssh_pwauth: true/' "$CLOUD_CONFIG"
+#else
+#    echo -e "\nssh_pwauth:   true" | sudo tee -a "$CLOUD_CONFIG"
+fi
+echo "[OK] $CLOUD_CONFIG 내 ssh_pwauth 설정이 완료되었습니다."
+
+
+## cloud-init sshd 파일 변경
+if [ -f /etc/ssh/sshd_config.d/60-cloudimg-settings.conf ]; then
+  sudo mv /etc/ssh/sshd_config.d/60-cloudimg-settings.conf /etc/ssh/sshd_config.d/60-cloudimg-settings.conf.bak
+  echo "[OK] Disable cloud-init - SSHD config"
+fi
+
+if [ -f /etc/ssh/sshd_config.d/50-cloud-init.conf ]; then
+  sudo mv /etc/ssh/sshd_config.d/50-cloud-init.conf /etc/ssh/sshd_config.d/50-cloud-init.conf.bak
+  echo "[OK] Disable cloud-init - SSHD config"
+fi
+
+########################################################
+# PasswordAuthentication 설정 변경
+echo "[INFO] Updating SSHD config: $SSHD_CONFIG"
+if grep -q "^#*PasswordAuthentication" "$SSHD_CONFIG"; then
+    sudo sed -i 's/^#*PasswordAuthentication.*/PasswordAuthentication yes/' "$SSHD_CONFIG"
+else
+    echo "PasswordAuthentication yes" | sudo tee -a "$SSHD_CONFIG" > /dev/null
+fi
+echo "[OK] PasswordAuthentication Setting"
+
+########################################################
+# 기본 계정 생성
+useradd -m -s /bin/bash -G wheel packer
+echo 'packer ALL=(ALL) NOPASSWD:ALL' | tee /etc/sudoers.d/packer
+chmod 0440 /etc/sudoers.d/packer
+mkdir -p /home/packer/.ssh
+chmod 700 /home/packer/.ssh
+EOT
+  )
 
   subnet_id                   = var.subnet_id
   security_group_id           = var.security_group_id
