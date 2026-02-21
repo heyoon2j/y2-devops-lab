@@ -3,6 +3,15 @@
 ##############################################
 
 ##############################
+# Entrypoint Variables
+variable "ssh_username" {
+  type    = string
+}
+variable "ssh_pwauth" {
+  type    = string
+}
+
+##############################
 # Common Variables
 variable "aws_region" {
   type    = string
@@ -28,13 +37,7 @@ variable "security_group_id" {
   type    = string
   default = ""
 }
-variable "ssh_username" {
-  type    = string
-}
-variable "ssh_pwauth" {
-  type    = string
-}
-##############################
+
 ##############################
 # OS Variables
 variable "os_name" {

@@ -1,41 +1,34 @@
-OS_ID=$1
-ARCH=$2
+#!/bin/bash
 
-CONF_DIR="/opt/packer/config"
+#######################################################
+# Source common.sh
+#######################################################
+source /opt/packer/script/utils/common.sh
 
-# 기본 경로
-##### Ubuntu #####
-UBUNTU_DEFAULT_REPO_PATH="/etc/apt/sources.list"
-UBUNTU_EXTRA_REPO_PATH="/etc/apt/sources.list.d/ubuntu-extra.list"
 
-UBUNTU_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/ubuntu/${OS_ID}-${ARCH}-sources.list"
-UBUNTU_EXTRA_REPO_SOURCE="${CONF_DIR}/repo/ubuntu/${OS_ID}-extra.list"
-
-##### Rocky #####
-ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-default.repo"
-ROCKY_RHEL_REPO_PATH="/etc/yum.repos.d/infra-rhel.repo"
-
-ROCKY_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/rocky/infra-$OS_ID.repo"
-ROCKY_RHEL_REPO_SOURCE="${CONF_DIR}/repo/rocky/infra-rhel.repo"#!/bin/bash
-
-CONF_DIR="/opt/packer/config"
+#######################################################
+#####                Local Variable               #####
+#######################################################
+# CONF_DIR="/opt/packer/config"
 
 # 사용자가 만든 설정 파일 경로
-SRC_SYSCTL_FILE="${CONF_DIR}/os/infra-sysctl.conf"
+# SRC_SYSCTL_FILE="${CONF_DIR}/os/infra-sysctl.conf"
 DST_SYSCTL_FILE="/etc/sysctl.d/99-sysctl.conf"
 
 config_sysctl() {
   echo "========== sysctl Setting Start =========="
-  # 설정 파일 존재 여부 확인
-  if [ ! -f "$SRC_SYSCTL_FILE" ]; then
-    echo "❌ 설정 파일이 존재하지 않습니다: $SRC_SYSCTL_FILE"
-    exit 1
-  fi
+  get_repo_data foreman "/cloud/config/os/infra-sysctl.conf" "$DST_SYSCTL_FILE"
 
-  echo "📄 $SRC_SYSCTL_FILE 내용을 $DST_SYSCTL_FILE 에 추가합니다..."
+  # # 설정 파일 존재 여부 확인
+  # if [ ! -f "$SRC_SYSCTL_FILE" ]; then
+  #   echo "❌ 설정 파일이 존재하지 않습니다: $SRC_SYSCTL_FILE"
+  #   exit 1
+  # fi
 
-  # 내용 추가
-  sudo cat "$SRC_SYSCTL_FILE" | sudo tee -a "$DST_SYSCTL_FILE" > /dev/null
+  # echo "📄 $SRC_SYSCTL_FILE 내용을 $DST_SYSCTL_FILE 에 추가합니다..."
+
+  # # 내용 추가
+  # sudo cat "$SRC_SYSCTL_FILE" | sudo tee -a "$DST_SYSCTL_FILE" > /dev/null
 
   ## 권한 설정
   sudo chmod 644 "$DST_SYSCTL_FILE"

@@ -9,8 +9,7 @@ build {
     inline = [
       "mkdir -p /opt/packer/files",
       "mkdir -p /opt/packer/config",
-      "mkdir -p /opt/packer/script",
-      "wget -O "
+      "mkdir -p /opt/packer/script"
     ]
   }
 
