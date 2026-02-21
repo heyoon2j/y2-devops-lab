@@ -6,11 +6,12 @@ set -e
 #####                Local Variable               #####
 #######################################################
 OS_ID=$1
+CLOUD=$2
 
 #######################################################
 #####               Function - Main               #####
 #######################################################
-main() {
+config_ntp() {
   # 배포판에 따라 chrony.conf 경로 결정
   if [ -f /etc/chrony/chrony.conf ]; then
     CHRONY_CONF="/etc/chrony/chrony.conf"
@@ -19,7 +20,7 @@ main() {
   fi
 
   # 백업
-  sudo cp "$CHRONY_CONF" "${CHRONY_CONF}.bak.$(date +%F-%H%M%S)"
+  sudo cp "$CHRONY_CONF" "${CHRONY_CONF}.bak"
 
   # 기존 server 또는 pool 라인을 주석 처리
   sudo sed -i -E '/^[[:space:]]*(server|pool)[[:space:]]+/ s/^/#/' "$CHRONY_CONF"
@@ -60,12 +61,27 @@ EOF
   echo "✅ [Success] Timezone set to Asia/Seoul."  
 }
 
-#######################################################
-#####                                             #####
-#######################################################
-if [ -z "$OS_ID" ]; then
-  echo "❗ 사용법: $0 <os: ubuntu|rocky8|rocky9>"
-  exit 1
-fi
+main() {
+ # kc인 경우만 DNS 설정 적용
+  if [[ "$CLOUD" != "kc" ]]; then
+    echo "[INFO] CLOUD=$CLOUD (kc가 아님) - DNS 설정 스킵"
+    exit 0
+  fi
+  case "$OS_ID" in
+     rocky*)
+         config_ntp
+         ;;
+     ubuntu*)
+         config_ntp
+         ;;
+     *)
+         echo "[ERROR] 지원되지 않는 OS: $OS_ID"
+         exit 1
+         ;;
+  esac
+
+  echo "[OK] NTP 설정 완료"
+  exit 0
+}
 
 main

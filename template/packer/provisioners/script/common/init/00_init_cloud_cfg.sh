@@ -3,7 +3,7 @@
 set -e
 
 CLOUD_CFG="/etc/cloud/cloud.cfg"
-BACKUP_FILE="${CLOUD_CFG}_$(date +%Y%m%d%H%M%S).bak"
+BACKUP_FILE="${CLOUD_CFG}.bak"
 
 # 백업
 sudo cp "$CLOUD_CFG" "$BACKUP_FILE"
@@ -21,6 +21,8 @@ sudo sed -i -E \
     -e 's/^( *preserve_hostname: *)1/\10/' \
     "$CLOUD_CFG"
 
-# 
+# 기본 계정 삭제
+sudo sed -i -z 's/users:[ \t\n]*- default/users: []/g' "$CLOUD_CFG"
+
 
 echo "수정 완료: $CLOUD_CFG (백업: $BACKUP_FILE)"

@@ -56,8 +56,13 @@ main() {
     ubuntu*)  apply_ubuntu ;;
     *)
       echo "[ERROR] 지원되지 않는 OS: $OS_ID" ;
-      return 1;;
+      exit 1;;
   esac
+
+  if [ $? -ne 0 ]; then
+    echo "[ERROR] SELinux 설정 실패"
+    exit 1
+  fi
 
   echo "[OK] 저장소 초기화 및 재설정 완료"
   exit 0

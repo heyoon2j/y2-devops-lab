@@ -29,7 +29,7 @@ DOMAINS="${CLOUD}.svc.cluster.local ${CLOUD}.cluster.local"
 backup() {
   local f="$1"
   [[ -e "$f" || -L "$f" ]] || return 0
-  sudo cp -a "$f" "${f}.bak.$(date +%Y%m%d%H%M%S)" || true
+  sudo cp -a "$f" "${f}.bak" || true
 }
 
 ########################################
@@ -140,15 +140,17 @@ main() {
   # kc인 경우만 DNS 설정 적용
   if [[ "$CLOUD" != "kc" ]]; then
     echo "[INFO] CLOUD=$CLOUD (kc가 아님) - DNS 설정 스킵"
-    return 0
+    exit 0
   fi
 
   case "$OS_ID" in
     rocky*)   apply_rocky ;;
     amazon*)  apply_rocky ;;
     ubuntu*)  apply_ubuntu ;;
-    *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; return 1;;
+    *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; exit 1;;
   esac
+
+  extit 0
 }
 
 main

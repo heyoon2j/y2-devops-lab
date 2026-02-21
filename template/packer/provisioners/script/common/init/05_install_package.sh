@@ -72,7 +72,7 @@ main() {
             ;;
         *)
             echo "[ERROR] 지원되지 않는 OS: $OS_ID"
-            exit 2
+            exit 1
             ;;
     esac
 }

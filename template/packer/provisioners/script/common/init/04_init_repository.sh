@@ -8,23 +8,23 @@ set -e
 OS_ID=$1
 ARCH=$2
 
-CONF_DIR="/opt/packer/config/repo"
+CONF_DIR="/opt/packer/config"
 
 # 기본 경로
 ##### Ubuntu #####
 UBUNTU_DEFAULT_REPO_PATH="/etc/apt/sources.list"
 UBUNTU_EXTRA_REPO_PATH="/etc/apt/sources.list.d/ubuntu-extra.list"
 
-UBUNTU_DEFAULT_REPO_SOURCE="${CONF_DIR}/ubuntu/${OS_ID}-${ARCH}-sources.list"
-UBUNTU_EXTRA_REPO_SOURCE="${CONF_DIR}/ubuntu/${OS_ID}-extra.list"
+UBUNTU_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/ubuntu/${OS_ID}-${ARCH}-sources.list"
+UBUNTU_EXTRA_REPO_SOURCE="${CONF_DIR}/repo/ubuntu/${OS_ID}-extra.list"
 
 ##### Rocky #####
 ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-default.repo"
 ROCKY_RHEL_REPO_PATH="/etc/yum.repos.d/infra-rhel.repo"
 
-ROCKY_DEFAULT_REPO_SOURCE="${CONF_DIR}/rocky/infra-$OS_ID.repo"
-ROCKY_RHEL_REPO_SOURCE="${CONF_DIR}/rocky/infra-rhel.repo"
-
+ROCKY_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/rocky/infra-$OS_ID.repo"
+ROCKY_RHEL_REPO_SOURCE="${CONF_DIR}/repo/rocky/infra-rhel.repo"
+  
 
 #######################################################
 #####                  Function                   #####
@@ -99,10 +99,11 @@ main() {
     rocky*)   apply_rocky ;;
     #amazon*)  apply_rocky ;;
     ubuntu*)  apply_ubuntu ;;
-    *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; return 1;;
+    *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; exit 1;;
   esac
 
   echo "[OK] 저장소 초기화 및 재설정 완료"
+  exit 0
 }
 
 main
