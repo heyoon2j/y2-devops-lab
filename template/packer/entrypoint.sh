@@ -17,4 +17,4 @@ packer build \
   -var-file="${VARS_DIR}/common.pkrvars.hcl" \
   -var "ssh_username=${SSH_USERNAME}" \
   -var "ssh_pwauth=${SSH_PWAUTH}" \
-  "${TEMPLATE_DIR}"
+  "${TEMPLATE_DIR}" 2>&1 | tee "packer_${CLOUD}_${OS_NAME}_${ARCH_TYPE}_$(date +%Y%m%d_%H%M%S).log"
