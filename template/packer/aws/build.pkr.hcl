@@ -7,9 +7,9 @@ build {
   ##############################################
   provisioner "shell" {
     inline = [
-      "mkdir -p /opt/packer/files",
-      "mkdir -p /opt/packer/config",
-      "mkdir -p /opt/packer/script"
+      "sudo mkdir -p /opt/packer/files",
+      "sudo mkdir -p /opt/packer/config",
+      "sudo mkdir -p /opt/packer/script"
     ]
   }
 
