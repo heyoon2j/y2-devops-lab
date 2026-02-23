@@ -33,10 +33,14 @@ variable "subnet_id" {
   type    = string
   default = ""
 }
-variable "security_group_id" {
-  type    = string
-  default = ""
+variable "security_group_ids" {
+  type    = list(string)
+  default = []
 }
+#variable "security_group_id" {
+#  type    = string
+#  default = ""
+#}
 
 ##############################
 # OS Variables
@@ -132,7 +136,8 @@ EOT
   )
 
   subnet_id                   = var.subnet_id
-  security_group_id           = var.security_group_id
+  # security_group_id           = var.security_group_id
+  security_group_ids          = var.security_group_ids
   associate_public_ip_address = false
 
   # iam_instance_profile    = "EC2InstanceProfileForSSM"
