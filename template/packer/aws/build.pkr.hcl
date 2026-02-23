@@ -116,7 +116,7 @@ build {
   provisioner "shell" {
     inline = [
       "echo '[INFO] Running validation scripts...'",
-      "sudo chmod +x /opt/packer/script/validation/*"
+      "sudo chmod +x /opt/packer/script/validation/*",
       "sudo /opt/packer/script/validate/a.sh"
     ]
   }
