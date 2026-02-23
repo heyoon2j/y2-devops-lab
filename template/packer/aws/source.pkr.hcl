@@ -125,6 +125,8 @@ else
 fi
 echo "[OK] PasswordAuthentication Setting"
 
+sudo systemctl restart sshd
+
 ########################################################
 # 기본 계정 생성
 useradd -m -s /bin/bash -G wheel packer
