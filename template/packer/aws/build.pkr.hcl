@@ -59,7 +59,7 @@ build {
 
   provisioner "shell" {
     inline = [
-      "echo 'System will now reboot to apply all updates..',
+      "echo 'System will now reboot to apply all updates..'",
       "sudo reboot"
     ]
     expect_disconnect = true
