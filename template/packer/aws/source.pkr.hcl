@@ -7,7 +7,7 @@
 variable "ssh_username" {
   type    = string
 }
-variable "ssh_pwauth" {
+variable "ssh_password" {
   type    = string
 }
 
@@ -63,7 +63,7 @@ source "amazon-ebs" "base" {
   ssh_pty = true
 
   ssh_username = var.ssh_username
-  ssh_pwauth = var.ssh_pwauth
+  ssh_password = var.ssh_password
 
   instance_type = var.instance_type
 
