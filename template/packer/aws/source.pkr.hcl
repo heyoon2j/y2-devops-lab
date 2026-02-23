@@ -82,6 +82,9 @@ source "amazon-ebs" "base" {
 #!/bin/bash
 set -e
 
+SSHD_CONFIG="/etc/ssh/sshd_config"
+CLOUD_CONFIG="/etc/cloud/cloud.cfg"
+
 echo "========== SSH Setting Start =========="
 
 ########################################################
