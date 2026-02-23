@@ -7,36 +7,21 @@ build {
   ##############################################
   provisioner "shell" {
     inline = [
-      "sudo mkdir -p /opt/packer/files",
-      "sudo mkdir -p /opt/packer/config",
-      "sudo mkdir -p /opt/packer/script"
-    ]
-  }
-
-  provisioner "file" {
-    source      = "./provisioners/files/"
-    destination = "/opt/packer/files"
-  }
-
-  provisioner "file" {
-    source      = "./provisioners/config/"
-    destination = "tmp/packer/config"
-  }
-
-  provisioner "file" {
-    source      = "./provisioners/script/"
-    destination = "/opt/packer/script"
-  }
-
-  provisioner "shell" {
-    inline = [
-      "sudo mkdir -p /opt/packer/"
+      "sudo mkdir -p /tmp/packer",
+      "sudo chown -R {test}:{test} /tmp/packer",
+      "sudo mkdir -p /opt/packer"
     ]
   }
 
   provisioner "file" {
     source      = "./provisioners/"
-    destination = "/opt/packer/"
+    destination = "/tmp/packer"
+  }
+
+  provisioner "shell" {
+    inline = [
+      "sudo mv /tmp/packer/* /opt/packer/"
+    ]
   }
 
   ##############################################
