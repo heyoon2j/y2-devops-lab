@@ -13,7 +13,7 @@ source /opt/packer/script/utils/common.sh
 OS_ID=$1
 ARCH=$2
 
-# CONF_DIR="/opt/packer/config"
+CONF_DIR="/opt/packer/config"
 
 # 기본 경로
 ##### Ubuntu #####
