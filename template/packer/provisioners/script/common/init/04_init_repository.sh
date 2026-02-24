@@ -20,15 +20,15 @@ ARCH=$2
 UBUNTU_DEFAULT_REPO_PATH="/etc/apt/sources.list"
 UBUNTU_EXTRA_REPO_PATH="/etc/apt/sources.list.d/ubuntu-extra.list"
 
-# UBUNTU_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/ubuntu/${OS_ID}-${ARCH}-sources.list"
-# UBUNTU_EXTRA_REPO_SOURCE="${CONF_DIR}/repo/ubuntu/${OS_ID}-extra.list"
+UBUNTU_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/ubuntu/${OS_ID}-${ARCH}-sources.list"
+UBUNTU_EXTRA_REPO_SOURCE="${CONF_DIR}/repo/ubuntu/${OS_ID}-extra.list"
 
 ##### Rocky #####
 ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-default.repo"
 ROCKY_RHEL_REPO_PATH="/etc/yum.repos.d/infra-rhel.repo"
 
-# ROCKY_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/rocky/infra-$OS_ID.repo"
-# ROCKY_RHEL_REPO_SOURCE="${CONF_DIR}/repo/rocky/infra-rhel.repo"
+ROCKY_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/rocky/infra-$OS_ID.repo"
+ROCKY_RHEL_REPO_SOURCE="${CONF_DIR}/repo/rocky/infra-rhel.repo"
   
 
 #######################################################
@@ -57,16 +57,17 @@ apply_repo_file() {
 ########################################
 apply_ubuntu() {
   echo "🔁 $OS_ID 저장소 초기화 중"
-  sudo apt-get install -y wget
 
   sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
   sudo rm -f /etc/apt/sources.list.d/*.list
 
-  get_repo_data foreman "/cloud/config/repo/ubuntu/${OS_ID}-${ARCH}-sources.list" "$UBUNTU_DEFAULT_REPO_SOURCE"
-  # apply_repo_file "$UBUNTU_DEFAULT_REPO_SOURCE" "$UBUNTU_DEFAULT_REPO_PATH"
+  # sudo apt-get install -y wget
 
-  get_repo_data foreman "/cloud/config/repo/ubuntu/${OS_ID}-extra.list" "$UBUNTU_EXTRA_REPO_SOURCE"
-  # apply_repo_file "$UBUNTU_EXTRA_REPO_SOURCE" "$UBUNTU_EXTRA_REPO_PATH"
+  # get_repo_data foreman "/cloud/config/repo/ubuntu/${OS_ID}-${ARCH}-sources.list" "$UBUNTU_DEFAULT_REPO_SOURCE"
+  apply_repo_file "$UBUNTU_DEFAULT_REPO_SOURCE" "$UBUNTU_DEFAULT_REPO_PATH"
+
+  # get_repo_data foreman "/cloud/config/repo/ubuntu/${OS_ID}-extra.list" "$UBUNTU_EXTRA_REPO_SOURCE"
+  apply_repo_file "$UBUNTU_EXTRA_REPO_SOURCE" "$UBUNTU_EXTRA_REPO_PATH"
 
   sudo apt-get update -y
 }
@@ -76,7 +77,6 @@ apply_ubuntu() {
 ########################################
 apply_rocky() {
   echo "🔁 $OS_ID 저장소 초기화 중"
-  sudo dnf install -y wget
 
   case "$OS_ID" in
     rocky8)
@@ -93,11 +93,13 @@ apply_rocky() {
     echo "[INFO] $FILE 주석 처리됨"
   done
 
-  get_repo_data foreman "/cloud/config/repo/rocky/infra-$OS_ID.repo" "$ROCKY_DEFAULT_REPO_PATH"
-  # apply_repo_file "$ROCKY_DEFAULT_REPO_SOURCE" "$ROCKY_DEFAULT_REPO_PATH"
+  # sudo dnf install -y wget
 
-  get_repo_data foreman "/cloud/config/repo/rocky/infra-rhel.repo" "$ROCKY_RHEL_REPO_PATH"
-  # apply_repo_file "$ROCKY_RHEL_REPO_SOURCE" "$ROCKY_RHEL_REPO_PATH"
+  # get_repo_data foreman "/cloud/config/repo/rocky/infra-$OS_ID.repo" "$ROCKY_DEFAULT_REPO_PATH"
+  apply_repo_file "$ROCKY_DEFAULT_REPO_SOURCE" "$ROCKY_DEFAULT_REPO_PATH"
+
+  # get_repo_data foreman "/cloud/config/repo/rocky/infra-rhel.repo" "$ROCKY_RHEL_REPO_PATH"
+  apply_repo_file "$ROCKY_RHEL_REPO_SOURCE" "$ROCKY_RHEL_REPO_PATH"
 
   echo "📦 메타데이터 초기화 중..."
   sudo dnf clean all
