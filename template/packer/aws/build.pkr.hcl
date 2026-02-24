@@ -53,7 +53,7 @@ build {
 
   provisioner "shell" {
     pause_before  = "5m"
-    timeout       = "5m"
+    timeout       = "10m"
     inline = [
       "sudo /opt/packer/script/common/init/06_init_ntp.sh ${var.os_name}",
       "sudo /opt/packer/script/common/init/07_set_sudoeors.sh",
