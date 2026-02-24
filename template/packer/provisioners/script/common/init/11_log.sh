@@ -1,3 +1,5 @@
+#!/bin/bash
+echo "[Log Setting] current not setting"
 # # Log 정랙
 # - 어떤 것들을 로깅할 것인지?
 # - 로그 로테이트 방법

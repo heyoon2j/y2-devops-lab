@@ -53,13 +53,14 @@ build {
 
   provisioner "shell" {
     pause_before  = "5m"
-    timeout       = "10m"
+    timeout       = "30m"
     inline = [
       "sudo /opt/packer/script/common/init/06_init_ntp.sh ${var.os_name}",
       "sudo /opt/packer/script/common/init/07_set_sudoeors.sh",
       "sudo /opt/packer/script/common/init/08_set_git_python.sh",
       "sudo /opt/packer/script/common/init/09_sysctl.sh",
       "sudo /opt/packer/script/common/init/10_rsyslog.sh",
+      "sudo /opt/packer/script/common/init/11_log.sh",
       "sudo /opt/packer/script/common/init/99_last.sh",
     ]
   }
