@@ -57,6 +57,8 @@ apply_repo_file() {
 ########################################
 apply_ubuntu() {
   echo "🔁 $OS_ID 저장소 초기화 중"
+  sudo apt-get install -y wget
+
   sudo cp /etc/apt/sources.list /etc/apt/sources.list.bak
   sudo rm -f /etc/apt/sources.list.d/*.list
 
@@ -74,6 +76,7 @@ apply_ubuntu() {
 ########################################
 apply_rocky() {
   echo "🔁 $OS_ID 저장소 초기화 중"
+  sudo dnf install -y wget
 
   case "$OS_ID" in
     rocky8)
