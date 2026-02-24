@@ -28,7 +28,7 @@ build {
   # 🛠 Run Init Script + Cleanup
   ##############################################
   provisioner "shell" {
-    timeout = "5m"
+    timeout = "30m"
 
     inline = [
       "sudo chmod +x /opt/packer/script/utils/*",
