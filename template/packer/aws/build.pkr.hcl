@@ -8,7 +8,7 @@ build {
   provisioner "shell" {
     inline = [
       "sudo mkdir -p /tmp/packer",
-      "sudo chown -R {test}:{test} /tmp/packer",
+      "sudo chown -R packer:packer /tmp/packer",
       "sudo mkdir -p /opt/packer"
     ]
   }
