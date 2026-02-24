@@ -69,7 +69,7 @@ apply_ubuntu() {
   # get_repo_data foreman "/cloud/config/repo/ubuntu/${OS_ID}-extra.list" "$UBUNTU_EXTRA_REPO_SOURCE"
   apply_repo_file "$UBUNTU_EXTRA_REPO_SOURCE" "$UBUNTU_EXTRA_REPO_PATH"
 
-  sudo apt-get update -y
+  # sudo apt-get update -y
 }
 
 ########################################
