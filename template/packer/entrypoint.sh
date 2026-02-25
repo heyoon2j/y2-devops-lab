@@ -17,4 +17,4 @@ nohup packer build \
   -var-file="${VARS_DIR}/common.pkrvars.hcl" \
   -var "ssh_username=${SSH_USERNAME}" \
   -var "ssh_password=${SSH_PASSWORD}" \
-  "${TEMPLATE_DIR}" 2>&1 | tee "packer_${CLOUD}_${OS_NAME}_${ARCH_TYPE}_$(date +%Y%m%d_%H%M%S).log" 2>&1 &
+  "${TEMPLATE_DIR}" 2>&1 | tee -a "packer_${CLOUD}_${OS_NAME}_${ARCH_TYPE}_$(date +%Y%m%d_%H%M%S).log" &
