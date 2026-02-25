@@ -10,6 +10,8 @@ set -e
 # GITHUB_TOKEN="your-personal-access-token" # PAT
 # CLONE_PATH="/opt/"
 
+FILE_DIR="/opt/packer/files"
+
 PYTHON_DIR="/opt/packer/files/python"
 PYTHON_VERSION="3.12.0"
 PYTHON_SHORT_VERSION=$(echo "$PYTHON_VERSION" | cut -d. -f1,2)
@@ -69,17 +71,24 @@ build_python() {
 #####           Function - pip.conf Setup          #####
 #######################################################
 configure_pip() {
-  echo "========== pip.conf 설정 =========="
+#   echo "========== pip.conf 설정 =========="
 
-  local pip_conf="/etc/pip.conf"
+#   local pip_conf="/etc/pip.conf"
 
-  sudo tee "$pip_conf" > /dev/null <<EOF
-[global]
-index-url = ${PIP_INDEX_URL}
-trusted-host = ${PIP_TRUST_HOST}
-EOF
+#   sudo tee "$pip_conf" > /dev/null <<EOF
+# [global]
+# index-url = ${PIP_INDEX_URL}
+# trusted-host = ${PIP_TRUST_HOST}
+# EOF
 
-  echo "✅ pip.conf 설정 완료 → $pip_conf"
+#   echo "✅ pip.conf 설정 완료 → $pip_conf"
+
+  echo "========== pip 설치 (로컬 패키지) =========="
+  $PYTHON_BIN "$FILE_DIR/python/packages/setuptools-82.0.0-py3-none-any.whl" --no-index --find-links="$FILE_DIR/python/packages" setuptools
+  $PYTHON_BIN "$FILE_DIR/python/packages/wheel-0.46.3-py3-none-any.whl" --no-index --find-links="$FILE_DIR/python/packages" wheel
+  $PYTHON_BIN "$FILE_DIR/python/packages/pip-26.0.1-py3-none-any.whl" --no-index --find-links="$FILE_DIR/python/packages" pip
+
+  echo "✅ pip 설치 완료 → $PYTHON_BIN -m pip --version"
 }
 
 #######################################################
@@ -105,7 +114,7 @@ install_pip_packages() {
 #######################################################
 main() {
   build_python
-  # configure_pip
+  configure_pip
   install_pip_packages
   clone_repo
 }
