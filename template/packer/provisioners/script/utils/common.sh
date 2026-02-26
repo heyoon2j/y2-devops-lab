@@ -191,7 +191,7 @@ get_repo_data() {
     repo_url="https://dl.fedoraproject.org/pub/epel/epel-release-latest-8.noarch.rpm"
   fi
 
-  wget -O "$file" "$repo_url$file"
+  wget -O "$path" "$repo_url$file"
 }
 
 enable_and_start_service() {
