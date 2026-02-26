@@ -17,7 +17,7 @@ source /opt/packer/script/utils/common.sh
 function install_rsyslog_rocky() {
   echo "[*] OS: RockyLinux $OS_ID"
 
-  get_repo_data foreman "/cloud/config/repo/rocky/rocky-rsyslog.repo" "/etc/yum.repos.d/rsyslog.repo"
+  get_repo_data foreman "/cloud/config/repo/rocky/infra-rsyslog.repo" "/etc/yum.repos.d/rsyslog.repo"
 
   install_packages rsyslog rsyslog-kafka
 }
