@@ -5,6 +5,7 @@ set -e
 #####                Local Variable               #####
 #######################################################
 OS_ID=$1
+ARCH=$2
 
 #######################################################
 # Source common.sh
@@ -15,9 +16,22 @@ source /opt/packer/script/utils/common.sh
 # RockyLinux 설치
 #######################################################
 function install_rsyslog_rocky() {
-  echo "[*] OS: RockyLinux $OS_ID"
+  echo "[*] OS: RockyLinux $OS_ID $ARCH"
 
-  get_repo_data foreman "/cloud/config/repo/rocky/infra-rsyslog.repo" "/etc/yum.repos.d/rsyslog.repo"
+  case "$OS_ID" in
+    rocky8)
+      get_repo_data foreman "/cloud/config/repo/rocky/infra-rsyslog.repo" "/etc/yum.repos.d/rsyslog.repo"
+      ;;
+    rocky9)
+      # get_repo_data foreman "/cloud/config/repo/rocky/rocky9-rsyslog.repo" "/etc/yum.repos.d/rsyslog.repo"
+      echo "Rocky Linux 9 does not require a custom rsyslog repository. Using default repositories."
+      ;;
+    *)
+      echo "❌ Unsupported RockyLinux version: $OS_ID"
+      exit 1
+      ;;
+  esac
+  
 
   install_packages rsyslog rsyslog-kafka
 }
