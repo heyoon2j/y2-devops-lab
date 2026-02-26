@@ -103,7 +103,9 @@ build {
     inline = [
       "echo '[INFO] Running validation scripts...'",
       "sudo chmod +x /opt/packer/script/validation/*",
-      "sudo /opt/packer/script/validate/a.sh"
+      "sudo /opt/packer/script/validation/validate_init.sh",
+      "sudo /opt/packer/script/validation/validate_${var.os_name}.sh",
+      "sudo /opt/packer/script/validation/validate_${var.cloud}.sh"
     ]
   }
 
