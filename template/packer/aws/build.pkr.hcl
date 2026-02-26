@@ -59,7 +59,7 @@ build {
       "sudo /opt/packer/script/common/init/07_set_sudoeors.sh",
       "sudo /opt/packer/script/common/init/08_set_git_python.sh",
       "sudo /opt/packer/script/common/init/09_sysctl.sh",
-      "sudo /opt/packer/script/common/init/10_rsyslog.sh",
+      "sudo /opt/packer/script/common/init/10_rsyslog.sh ${var.os_name}",
       "sudo /opt/packer/script/common/init/11_log.sh",
       "sudo /opt/packer/script/common/init/99_last.sh",
     ]
