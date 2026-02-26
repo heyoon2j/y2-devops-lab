@@ -84,9 +84,8 @@ configure_pip() {
 #   echo "✅ pip.conf 설정 완료 → $pip_conf"
 
   echo "========== pip 설치 (로컬 패키지) =========="
-  $PYTHON_BIN "$FILE_DIR/python/packages/setuptools-82.0.0-py3-none-any.whl" --no-index --find-links="$FILE_DIR/python/packages" setuptools
-  $PYTHON_BIN "$FILE_DIR/python/packages/wheel-0.46.3-py3-none-any.whl" --no-index --find-links="$FILE_DIR/python/packages" wheel
-  $PYTHON_BIN "$FILE_DIR/python/packages/pip-26.0.1-py3-none-any.whl" --no-index --find-links="$FILE_DIR/python/packages" pip
+  # pip whl 파일을 이용하여 pip 설치
+  $PYTHON_BIN "$FILE_DIR/python/packages/pip-26.0.1-py3-none-any.whl/pip" install --no-index --find-links="$FILE_DIR/python/packages" pip setuptools wheel
 
   echo "✅ pip 설치 완료 → $PYTHON_BIN -m pip --version"
 }
@@ -98,8 +97,8 @@ install_pip_packages() {
   echo "========== pip 패키지 설치 =========="
 
   # pip 설치 및 업그레이드
-  $PYTHON_BIN -m ensurepip --upgrade || true
-  $PYTHON_BIN -m pip install --upgrade pip setuptools wheel
+  # $PYTHON_BIN -m ensurepip --upgrade || true
+  # $PYTHON_BIN -m pip install --upgrade pip setuptools wheel
 
   # 원하는 패키지 설치
   # $PYTHON_BIN -m pip install $PIP_PACKAGES
@@ -116,7 +115,7 @@ main() {
   build_python
   configure_pip
   install_pip_packages
-  clone_repo
+  #clone_repo
 }
 
 main
