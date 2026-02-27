@@ -57,6 +57,20 @@ variable "ami_filter_owner" {
   type    = string
 }
 
+##############################
+# S3 Log Upload Variables
+variable "s3_bucket" {
+  type    = string
+  default = "packer_build.log"
+}
+variable "s3_bucket" { 
+  type    = string
+  default = "packer-bucket"
+}
+variable "s3_path" {
+  type    = string
+  default = "packer-logs"
+}
 
 ##############################################
 # Source

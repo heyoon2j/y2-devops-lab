@@ -109,18 +109,12 @@ build {
     ]
   }
 
-  provisioner "file" {
-    source      = "/opt/packer/validation.log"
-    destination = "./validation.log"
-    direction   = "download"
-  }
-
   ##############################################
   # 🛠 Cleanup
   ##############################################
   provisioner "shell" {
     inline = [
-      "rm -rf /opt/packer"
+      "sudo rm -rf /opt/packer"
     ]
   }
 
@@ -130,6 +124,9 @@ build {
   post-processor "shell-local" {
     inline = [
       "echo '✅ Build complete for ${var.os_name} on ${var.cloud}'",
+      "echo 'Log file: ${var.log_file_name}'",
+      "echo 'Uploading log to S3: s3://${var.s3_bucket}/${var.s3_path}/${var.log_file_name}'",
+      # "aws s3 cp '${var.log_file_name}' 's3://${var.s3_bucket}/${var.s3_path}/${var.log_file_name}' && echo 'Log uploaded successfully' || echo 'S3 upload failed or AWS credentials not configured'"
       # "curl -X POST -H 'Content-type: application/json' --data '{"text":"✅ Packer build complete for ${var.os_name} on ${var.cloud}."}' https://hooks.slack.com/services/T00000000/B00000000/XXXXXXXXXXXXXXXXXXXXXXXX"
     ]
   }
