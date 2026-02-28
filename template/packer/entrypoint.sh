@@ -25,7 +25,7 @@ nohup packer build \
   -var-file="${VARS_DIR}/common.pkrvars.hcl" \
   -var "ssh_username=${SSH_USERNAME}" \
   -var "ssh_password=${SSH_PASSWORD}" \
-  -var "log_file=${LOG_FILE}" \
+  -var "log_file_name=${LOG_FILE}" \
   -var "s3_bucket=${S3_BUCKET}" \
   -var "s3_path=${S3_PATH}" \
   "${TEMPLATE_DIR}" 2>&1 | tee -a "${LOG_FILE}" &

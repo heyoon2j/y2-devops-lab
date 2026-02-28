@@ -59,7 +59,7 @@ variable "ami_filter_owner" {
 
 ##############################
 # S3 Log Upload Variables
-variable "s3_bucket" {
+variable "log_file_name" {
   type    = string
   default = "packer_build.log"
 }
