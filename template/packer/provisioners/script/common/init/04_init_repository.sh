@@ -24,11 +24,11 @@ UBUNTU_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/ubuntu/${OS_ID}-${ARCH}-sources.lis
 UBUNTU_EXTRA_REPO_SOURCE="${CONF_DIR}/repo/ubuntu/${OS_ID}-extra.list"
 
 ##### Rocky #####
-ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-default.repo"
+ROCKY_DEFAULT_REPO_PATH="/etc/yum.repos.d/infra-base.repo"
 ROCKY_RHEL_REPO_PATH="/etc/yum.repos.d/infra-rhel.repo"
 
-ROCKY_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/rocky/infra-$OS_ID.repo"
-ROCKY_RHEL_REPO_SOURCE="${CONF_DIR}/repo/rocky/infra-rhel.repo"
+ROCKY_DEFAULT_REPO_SOURCE="${CONF_DIR}/repo/rocky/$OS_ID-base.repo"
+ROCKY_RHEL_REPO_SOURCE="${CONF_DIR}/repo/rocky/rocky-rhel.repo"
   
 
 #######################################################
