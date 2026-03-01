@@ -19,7 +19,7 @@ echo "06_init_ntp.sh"
 
 echo "07_set_sudoeors.sh"
 
-echo "08_init_firewall.sh"
+echo "08_init_bootstrap.sh"
 
 echo "09_sysctl.sh"
 
