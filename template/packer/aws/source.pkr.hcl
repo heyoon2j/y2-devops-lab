@@ -85,7 +85,11 @@ source "amazon-ebs" "base" {
 
   instance_type = var.instance_type
 
-  ami_name     = "testaws-${var.os_name}_${var.arch_type}-base-${formatdate("YYMMDD", timestamp())}"
+  ami_name     = "testaws-os-${var.os_name}_${var.arch_type}-${formatdate("YYMMDD", timestamp())}"
+  tags = {
+    Name = "testaws-os-${var.os_name}_${var.arch_type}-${formatdate("YYMMDD", timestamp())}"
+  }
+
   source_ami_filter {
     filters = {
       name                = var.ami_filter_name
