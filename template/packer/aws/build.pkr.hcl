@@ -61,8 +61,7 @@ build {
       "sudo cp -r /opt/packer/files/bootstrap/ /opt/",
       "sudo /opt/packer/script/common/init/09_sysctl.sh",
       "sudo /opt/packer/script/common/init/10_rsyslog.sh ${var.os_name} ${var.arch_type}",
-      "sudo /opt/packer/script/common/init/11_log.sh",
-      "sudo /opt/packer/script/common/init/99_last.sh",
+      "sudo /opt/packer/script/common/init/11_log.sh"
     ]
   }
 

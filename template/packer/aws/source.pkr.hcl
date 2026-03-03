@@ -147,8 +147,13 @@ sudo systemctl restart sshd
 
 ########################################################
 # 기본 계정 생성
-useradd -m -s /bin/bash -G wheel packer
-echo 'packer ALL=(ALL) NOPASSWD:ALL' | tee /etc/sudoers.d/packer
+sudo groupadd -g 2000 packer
+sudo useradd -u 2000 -g 2000 -d /home/packer -s /bin/bash -m packer
+
+echo 'packer:packer12!@' | sudo chpasswd -e
+sudo chage -E -1 -M 99999 packer
+
+echo 'packer ALL=(ALL) NOPASSWD:ALL' | sudo tee /etc/sudoers.d/packer > /dev/null
 chmod 0440 /etc/sudoers.d/packer
 mkdir -p /home/packer/.ssh
 chmod 700 /home/packer/.ssh
