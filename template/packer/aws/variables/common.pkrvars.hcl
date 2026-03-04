@@ -4,3 +4,4 @@ aws_profile     = ""
 cloud           = "aws"
 subnet_id       = ""
 security_group_ids = []
+iam_instance_profile = ""

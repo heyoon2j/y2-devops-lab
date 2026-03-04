@@ -41,6 +41,10 @@ variable "security_group_ids" {
 #  type    = string
 #  default = ""
 #}
+variable "iam_instance_profile" {
+  type    = string
+  default = ""
+}
 
 ##############################
 # OS Variables
@@ -165,7 +169,8 @@ EOT
   security_group_ids          = var.security_group_ids
   associate_public_ip_address = false
 
-  # iam_instance_profile    = "EC2InstanceProfileForSSM"
+  iam_instance_profile        = var.iam_instance_profile != "" ? var.iam_instance_profile : null
+  
   metadata_options {
     http_tokens                  = "optional"   # IMDSv1 허용
     http_endpoint                = "enabled"    # IMDS 자체는 활성화
