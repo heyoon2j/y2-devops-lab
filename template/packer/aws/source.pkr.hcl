@@ -169,7 +169,7 @@ EOT
   security_group_ids          = var.security_group_ids
   associate_public_ip_address = false
 
-  iam_instance_profile        = var.iam_instance_profile != "" ? var.iam_instance_profile : null
+  # iam_instance_profile        = var.iam_instance_profile != "" ? var.iam_instance_profile : null
   
   metadata_options {
     http_tokens                  = "optional"   # IMDSv1 허용
