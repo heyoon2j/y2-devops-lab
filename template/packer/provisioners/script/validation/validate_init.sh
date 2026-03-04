@@ -17,7 +17,7 @@ echo "05_install_package.sh"
 
 echo "06_init_ntp.sh"
 
-echo "07_set_sudoeors.sh"
+echo "07_set_auth.sh"
 
 echo "08_init_bootstrap.sh"
 

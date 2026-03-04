@@ -56,7 +56,7 @@ build {
     timeout       = "30m"
     inline = [
       "sudo /opt/packer/script/common/init/06_init_ntp.sh ${var.os_name}",
-      "sudo /opt/packer/script/common/init/07_set_sudoeors.sh",
+      "sudo /opt/packer/script/common/init/07_set_auth.sh",
       "sudo /opt/packer/script/common/init/08_set_bootstrap.sh",
       "sudo cp -r /opt/packer/files/bootstrap/ /opt/",
       "sudo /opt/packer/script/common/init/09_sysctl.sh",
