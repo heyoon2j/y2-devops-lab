@@ -102,6 +102,16 @@ build {
   ##############################################
   provisioner "shell" {
     inline = [
+      "echo 'System will now reboot to apply all setting..'",
+      "sudo reboot"
+    ]
+    expect_disconnect = true
+    timeout = "5m"
+  }
+
+  provisioner "shell" {
+    pause_before  = "5m"
+    inline = [
       "echo '[INFO] Running validation scripts...'",
       "sudo chmod +x /opt/packer/script/validation/*",
       "sudo /opt/packer/script/validation/validate_init.sh",
