@@ -19,7 +19,7 @@ apply_ubuntu() {
 ########################################
 #           Ubuntu (Debian系)          #
 ########################################
-apply_ubuntu() {
+apply_rocky() {
     echo "[INFO] Rocky - Check SELinux state"
     CURRENT_STATE=$(sudo getenforce)
     if [[ "$CURRENT_STATE" == "Disabled" ]]; then
