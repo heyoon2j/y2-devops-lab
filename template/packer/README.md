@@ -1,90 +1,51 @@
 ```
-packer/
-├── templates/            # Packer 템플릿(JSON/HCL) 파일 저장
-│   ├── base-image.pkr.hcl  # 기본 이미지 생성 템플릿
-│   ├── app-image.pkr.hcl   # 애플리케이션 포함된 이미지 템플릿
-│   ├── variables.pkrvars.hcl  # 변수 정의 파일
-│   └── ubuntu/           # OS별로 폴더 구분 가능
-│       ├── ubuntu-20.pkr.hcl
-│       └── ubuntu-22.pkr.hcl
-│
-├── scripts/              # 이미지 빌드 후 실행할 스크립트
-│   ├── install_docker.sh
-│   ├── configure_app.sh
-│   ├── hardening.sh
-│   └── cleanup.sh
-│
-├── ansible/              # Ansible 플레이북(선택 사항)
-│   ├── playbook.yml
-│   ├── roles/
-│   └── inventory
-│
-├── modules/              # Packer 모듈(공유 가능한 설정)
-│   ├── aws.pkr.hcl       # AWS 관련 빌더 설정
-│   ├── gcp.pkr.hcl       # GCP 관련 빌더 설정
-│   ├── azure.pkr.hcl     # Azure 관련 빌더 설정
-│   └── common.pkr.hcl    # 공통 설정 파일
-│
-├── output/               # 빌드된 아티팩트(AMI ID, 이미지 정보 등 저장)
-│   ├── ami-manifest.json
-│   ├── docker-image.tar
-│   ├── metadata.log
-│   └── packer.log
-│
-├── packer.auto.pkrvars.hcl  # 기본 변수(자동 로드됨)
-├── packer.hcl             # Packer 기본 설정 파일
-├── README.md              # 프로젝트 설명 파일
-└── .gitignore             # Git 제외할 파일 설정
-
-```
-- templates: 빌드 정의 (builders, provisioners, source) 등을 정의하는 핵심 Packer 템플릿 파일을 모아둔 디렉토리
-    - ./shared: 공통 로직 (빌드 전략, 프로비저닝 방식 등)
-    - ./local: 클라우드별 빌더 정의
-- modules: OS별 설치 스크립트 - 실제 인스턴스에서 실행될 설정들
-- scripts: 유틸리티 실행 스크립트 (Packer 자체와 무관한 Helper 도구의 성격 스크립트 / ex> Packer 실행)
-- variables: 공통적으로 사용되는 변수들
-
-
-사용자 실행 (scripts/entrypoint.sh 또는 직접 명령어 실행)
-→ template.pkr.hcl 로딩 (aws/, gcp/)
-→ templates/shared/ 및 templates/local/ 템플릿 merge
-→ variables/common.pkrvars.hcl 로 변수 주입
-→ modules/<os>/install.sh 실행
-→ 빌드 완료 후 AMI 또는 GCP 이미지 생성
-
-
-```
-packer/
-├── aws/
-│   ├── template.pkr.hcl
+template/packer
+├── entrypoint.sh                # 단일 진입점. 클라우드/OS/아키텍처를 받아 Packer 빌드를 실행
+├── aws/                         # AWS 전용 템플릿/변수/플러그인
+│   ├── build.pkr.hcl             # aws 빌드 정의 (builder/provisioner 등)
+│   ├── source.pkr.hcl            # ami, aws 리소스 등 source 블록 정의
+│   ├── plugin.pkr.hcl            # 플러그인 및 공통 설정
+│   └── variables/                # OS/아키텍처별 변수 파일
+├── gcp/                         # GCP용 빌드 정의와 변수 디렉토리
+│   ├── build.pkr.hcl
 │   └── variables/
-│       ├── rocky8.pkrvars.hcl
-│       ├── rocky9.pkrvars.hcl
-│       └── ubuntu22.pkrvars.hcl
-│
-├── gcp/
-│   ├── template.pkr.hcl
-│   └── variables/
-│       ├── ubuntu20.pkrvars.hcl
-│       └── ubuntu22.pkrvars.hcl
-│
-├── module/
-│   ├── aws.pkr.hcl
-│   └── gcp.pkr.hcl
-│
-├── provisioners/
-│   ├── common/
-│   │   └── install_common_tools.sh
-│   ├── aws/
-│   │   └── install_aws_specific.sh
-│   └── gcp/
-│       └── install_gcp_specific.sh
-│
-├── script/
-│   └── entrypoint.sh
-
+├── kc/                          # 자체 커스텀 클라우드(kc)용 템플릿
+├── provisioners/                # 빌드한 이미지 내부에서 실행되는 스크립트/설정
+│   ├── config/                   # 리포지토리/부트스트랩/rsyslog 설정
+│   │   ├── bootstrap/            # 부트스트랩시 필요한 rsyslog 구성 등
+│   │   └── repo/                 # yum/apt 리포지토리 정의 파일
+│   ├── files/                    # 복사할 정적 파일
+│   └── script/                   # 실제 빌드/초기화 스크립트
+│       ├── common/               # 모든 OS 공통 init/설정 스크립트 (ssh, ntp, sysctl 등)
+│       ├── os/                   # OS별 세부 설정 (ubuntu20/22/24, rocky8/9 등)
+│       ├── utils/                # 여러 스크립트에서 공유되는 함수(common.sh)
+│       ├── validation/           # 빌드 결과를 검증하는 쉘 스크립트
+│       └── security/             # 보안 관련 스크립트 (서버 패치/서비스 관리)
 ```
-* aws/, gcp/: 프로젝트 개념. module 호출 및 변수 입력
-* module: build, source block & variable block
-* provisioners: OS 내부에서 실행될 스크립트
-* script: Packer를 실행하기기 위한 실행파일
+
+## 핵심 흐름
+1. `entrypoint.sh`에 `<CLOUD> <OS_NAME> <ARCH_TYPE>` (예: `aws ubuntu22 x86_64`) 를 전달하여 실행
+2. `entrypoint.sh`가 해당 클라우드 디렉토리의 템플릿과 변수 파일(`variables/<os>-<arch>.pkrvars.hcl`, `variables/common.pkrvars.hcl`)을 조합
+3. 공통 `provisioners/` 디렉토리의 스크립트와 설정을 포함한 Packer 빌드가 실행됨
+4. 빌드 로그는 `packer_<cloud>_<os>_<arch>_<timestamp>.log`로 남고, 후속 S3 업로드용 변수(`s3_bucket`, `s3_path`)가 함께 적용
+
+## entrypoint.sh 사용법
+```bash
+./entrypoint.sh <CLOUD> <OS_NAME> <ARCH_TYPE>
+```
+- `CLOUD`: `aws`, `gcp`, `kc` 중 하나
+- `OS_NAME`: 지원되는 OS 이름 (예: `ubuntu20`, `ubuntu22`, `rocky8`, `rocky9`, `amazon2023`)
+- `ARCH_TYPE`: `x86_64` 또는 `arm64`
+
+예시:
+```bash
+./entrypoint.sh aws ubuntu22 x86_64
+```
+
+`entrypoint.sh`의 주요 작업:
+1. 실행 파라미터 조합으로 템플릿/변수 경로(`aws`, `aws/variables`) 설정
+2. `nohup packer build`를 호출하며 내부적으로 `ssh_username`, `ssh_password`, 로그/S3 관련 변수들을 함께 주입
+3. `tee`로 로그를 파일(`packer_<cloud>_<os>_<arch>_<timestamp>.log`)로 남기면서 stdout에도 출력
+4. 종료 상태를 확인하여 성공/실패 메시지를 출력하고 필요시 종료 코드 반환
+
+이 구조를 참고하여 원하는 클라우드-OS 조합에 맞는 `*.pkrvars.hcl`을 편집하거나 새로운 provisioner를 추가하면 됩니다.
