@@ -27,7 +27,7 @@ apply_aws_cli() {
     echo "[INFO] AWS CLI 설치 중..."
     if [[ "$ARCH" == "x86_64" ]]; then
         sudo cp "$FILE_DIR/aws-cli/awscli-exe-linux-x86_64.zip" /tmp/awscliv2.zip
-    elif [[ "$ARCH" == "aarch64" ]]; then
+    elif [[ "$ARCH" == "arm64" ]]; then
         sudo cp "$FILE_DIR/aws-cli/awscli-exe-linux-aarch64.zip" /tmp/awscliv2.zip
     else
         echo "[ERROR] Unsupported architecture: $ARCH"
