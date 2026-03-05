@@ -18,12 +18,22 @@ enable_psi_bootparam() {
     echo 'GRUB_ENABLE_BLSCFG=false' | sudo tee -a "$GRUB_CFG" >/dev/null
   fi
 
-  # psi=1 추가
+  # psi=1 추가 (psi=0 -> psi=1 변경 또는 새로 추가)
   if grep -q "psi=1" "$GRUB_CFG"; then
     echo "[INFO] psi=1 already configured in GRUB."
+  elif grep -q "psi=0" "$GRUB_CFG"; then
+    echo "[INFO] Changing psi=0 to psi=1..."
+    sudo sed -i 's/psi=0/psi=1/' "$GRUB_CFG"
   else
     echo "[INFO] Adding psi=1 to GRUB kernel params..."
-    sudo sed -i 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 psi=1"/' "$GRUB_CFG"
+    # GRUB_CMDLINE_LINUX 라인 존재 확인
+    if ! grep -q '^GRUB_CMDLINE_LINUX=' "$GRUB_CFG"; then
+      # 기존 GRUB_CMDLINE_LINUX에 psi=1 추가 (끝에서 닫는 따옴표 전에 추가)
+      sudo sed -i 's/^\(GRUB_CMDLINE_LINUX=".*\)"/\1 psi=1"/' "$GRUB_CFG"
+    else
+      echo "[INFO] GRUB_CMDLINE_LINUX not found, createing new entry..."
+      echo 'GRUB_CMDLINE_LINUX="psi=1"' | sudo tee -a "$GRUB_CFG" >/dev/null
+    fi
   fi
 
   # grub.cfg 재생성

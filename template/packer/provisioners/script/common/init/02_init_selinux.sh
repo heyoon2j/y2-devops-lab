@@ -65,3 +65,5 @@ main() {
   echo "[OK] 저장소 초기화 및 재설정 완료"
   exit 0
 }
+
+main
