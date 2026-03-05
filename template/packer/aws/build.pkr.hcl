@@ -59,6 +59,7 @@ build {
       "sudo /opt/packer/script/common/init/07_set_auth.sh",
       "sudo /opt/packer/script/common/init/08_set_bootstrap.sh",
       "sudo cp -r /opt/packer/files/bootstrap/* /opt/",
+      "sudo chmod +x /opt/bootstrap/*",
       "sudo /opt/packer/script/common/init/09_sysctl.sh",
       "sudo /opt/packer/script/common/init/10_rsyslog.sh ${var.os_name} ${var.arch_type}",
       "sudo /opt/packer/script/common/init/11_log.sh",
