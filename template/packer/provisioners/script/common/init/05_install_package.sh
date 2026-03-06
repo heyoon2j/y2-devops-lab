@@ -8,8 +8,8 @@ set -e
 OS_ID=$1
 
 # 기본 패키지 목록
-UBUNTU_DEFAULT_PACKAGES="jq git chrony net-tools nmap build-essential libssl-dev pkg-config bind-utils uzip"
-ROCKY_DEFAULT_PACKAGES="jq git wget bc bind-utils chrony net-tools nc uzip"
+UBUNTU_DEFAULT_PACKAGES="jq git chrony net-tools nmap build-essential libssl-dev pkg-config bind-utils"
+ROCKY_DEFAULT_PACKAGES="jq git wget bc bind-utils chrony net-tools nc"
 
 # 설치되지 않은 패키지 목록을 담을 변수
 NEED_PACKAGES=""
