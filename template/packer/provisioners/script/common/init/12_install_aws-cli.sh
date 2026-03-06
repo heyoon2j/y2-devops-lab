@@ -36,6 +36,10 @@ apply_aws_cli() {
     sudo unzip -q /tmp/awscliv2.zip -d /tmp
     sudo /tmp/aws/install -i /usr/local/aws-cli -b /usr/local/bin
     sudo rm -rf /tmp/aws /tmp/awscliv2.zip
+
+    echo "export PATH=/usr/local/bin:\$PATH" | sudo tee -a /etc/profile
+    source /etc/profile
+
     if command -v aws >/dev/null 2>&1; then
         aws --version
     else
