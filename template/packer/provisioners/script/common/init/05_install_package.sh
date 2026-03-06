@@ -8,8 +8,8 @@ set -e
 OS_ID=$1
 
 # 기본 패키지 목록
-UBUNTU_DEFAULT_PACKAGES="jq git chrony net-tools nmap build-essential libssl-dev pkg-config bind-utils"
-ROCKY_DEFAULT_PACKAGES="jq git wget bc bind-utils chrony net-tools nc"
+UBUNTU_DEFAULT_PACKAGES="jq git chrony net-tools nmap build-essential libssl-dev pkg-config bind-utils unzip"
+ROCKY_DEFAULT_PACKAGES="jq git wget bc bind-utils chrony net-tools nc unzip"
 
 # 설치되지 않은 패키지 목록을 담을 변수
 NEED_PACKAGES=""
@@ -41,7 +41,9 @@ apply_ubuntu() {
 #         Rocky Linux (RHEL系)         #
 ########################################
 apply_rocky() {
-    sudo yum update -y
+    sudo dnf clean all -y
+    sudo dnf makecache -y
+    sudo dnf update -y
 
     echo "🔍 설치되지 않은 패키지 확인 중..."
     for pkg in $ROCKY_DEFAULT_PACKAGES; do
