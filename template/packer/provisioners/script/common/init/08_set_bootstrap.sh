@@ -21,7 +21,7 @@ PYTHON_BIN="/usr/local/bin/python${PYTHON_SHORT_VERSION}"
 # PIP_TRUST_HOST="pypi.yourcompany.com"
 
 # # 설치할 pip 패키지 목록 (필요 시 수정)
-PIP_PACKAGES="requests urllib3 psutil pyyaml ipaddress typing_extensions" # "requests flask"
+PIP_PACKAGES="requests urllib3 psutil pyyaml ipaddress typing_extensions boto3" # "requests flask"
 
 # #######################################################
 # #####               Function - Git Clone          #####
