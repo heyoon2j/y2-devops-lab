@@ -150,7 +150,7 @@ main() {
     *) echo "[ERROR] 지원되지 않는 OS: $OS_ID" ; exit 1;;
   esac
 
-  extit 0
+  exit 0
 }
 
 main
