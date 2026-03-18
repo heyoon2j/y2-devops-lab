@@ -28,9 +28,9 @@ application / kernel / journal
 
 | OS | 기본 로그 관리 | rsyslog 설치 후 로그 파일 | logrotate 설정 파일 |
 |----|----|----|----|
-| Ubuntu | rsyslog + journal | /var/log/syslog | /etc/logrotate.d/rsyslog |
-| Rocky Linux | rsyslog + journal | /var/log/messages | /etc/logrotate.d/syslog |
-| Amazon Linux 2023 | journal 중심 | /var/log/messages (rsyslog 설치 시) | /etc/logrotate.d/rsyslog |
+| Ubuntu | /var/log/syslog | /var/log/syslog | /etc/logrotate.d/rsyslog |
+| Rocky Linux | /var/log/logmessages | /var/log/messages | /etc/logrotate.d/syslog |
+| Amazon Linux 2023 | journal 중심 | /var/log/messages | /etc/logrotate.d/rsyslog |
 
 ---
 
