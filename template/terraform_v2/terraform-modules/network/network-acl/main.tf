@@ -1,0 +1,4 @@
+resource "aws_network_acl" "this" {
+  vpc_id = var.vpc_id
+  tags = merge(var.tags, { Name = var.name })
+}
