@@ -1,5 +1,5 @@
 module "network" {
-  source = "../../interfaces/network/vpc-three-tier"
+  source = "../../interfaces/vpc-three-tier"
 
   vpc_cidr = "192.168.10.0/24"
   vpc_name = "dev-vpc"
