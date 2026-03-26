@@ -22,6 +22,10 @@ module "network" {
     }
   }
 
+  nacl_ingress_rule ={
+
+  }
+
   tags = {
     Environment = "dev"
   }

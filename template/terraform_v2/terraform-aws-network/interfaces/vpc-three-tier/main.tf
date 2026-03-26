@@ -41,7 +41,7 @@ module "nacl_ingress_rule" {
 
   source = "../../../terraform-modules/network/network-acl/nacl-rule"
 
-  network_acl_id = module.nacl.nacl_id
+  network_acl_id = module.nacl[0].nacl_id
   rule_number    = each.value.rule_number
   egress         = false
   protocol       = each.value.protocol
@@ -52,18 +52,18 @@ module "nacl_ingress_rule" {
   to_port   = each.value.to_port
 }
 
-module "nacl_egress_rule" {
-  count = var.features.nacl ? 1 : 0
+# module "nacl_egress_rule" {
+# count = var.features.nacl ? 1 : 0
 
-  source = "../../../terraform-modules/network/network-acl/nacl-rule"
+#  source = "../../../terraform-modules/network/network-acl/nacl-rule"
 
-  network_acl_id = module.nacl.nacl_id
-  rule_number    = var.rule_number
-  egress         = true
-  protocol       = var.protocol
-  rule_action    = var.rule_action
-  cidr_block     = var.cidr_block
+#  network_acl_id = module.nacl[0].nacl_id
+#  rule_number    = var.rule_number
+#  egress         = true
+#  protocol       = var.protocol
+#  rule_action    = var.rule_action
+#  cidr_block     = var.cidr_block
 
-  from_port = var.from_port
-  to_port   = var.to_port
-}
+#  from_port = var.from_port
+#  to_port   = var.to_port
+#}

@@ -71,7 +71,7 @@ main() {
   cat <<EOF | sudo tee -a "$SSHD_CONFIG" > /dev/null
 PermitRootLogin no
 Match Address $ALLOW_ROOT_IPS
-    PermitRootLogin yes
+  PermitRootLogin yes
 EOF
   echo "[OK] PermitRootLogin 설정이 완료되었습니다. (특정 IP만 허용)"
 

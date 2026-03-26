@@ -1,4 +1,4 @@
-variable "nacl_id" {
+variable "network_acl_id" {
   type = string
 }
 

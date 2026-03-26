@@ -2,6 +2,6 @@ variable "subnet_id" {
   type = string
 }
 
-variable "nacl_id" {
+variable "network_acl_id" {
   type = string
 }

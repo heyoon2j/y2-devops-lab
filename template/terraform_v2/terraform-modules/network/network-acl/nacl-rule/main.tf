@@ -1,5 +1,5 @@
 resource "aws_network_acl_rule" "this" {
-  network_acl_id = var.nacl_id
+  network_acl_id = var.network_acl_id
   rule_number    = var.rule_number
   egress         = var.egress
   protocol       = var.protocol
