@@ -1,1 +1,0 @@
-variable "service_account_name" {}

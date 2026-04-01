@@ -1,0 +1,25 @@
+variable "name" {}
+variable "role_arn" {}
+variable "subnets" { type = list(string) }
+
+variable "endpoint_private" { type = bool }
+variable "endpoint_public"  { type = bool }
+
+variable "ip_family" {}
+variable "service_cidr" {}
+
+variable "auth_mode" {
+  type = 
+}
+
+variable "kms_key_arn" {
+  type = string
+}
+
+variable "log_types" {
+  type = list(string)
+}
+
+variable "prevent_destroy" {
+  type = bool
+}
