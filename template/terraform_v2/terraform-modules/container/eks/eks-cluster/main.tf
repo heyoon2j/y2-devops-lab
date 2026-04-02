@@ -17,12 +17,12 @@ resource "aws_eks_cluster" "this" {
     authentication_mode = var.auth_mode
   }
 
-  encryption_config {
-    provider {
-      key_arn = var.kms_key_arn
-    }
-    resources = ["secrets"]
-  }
+#  encryption_config {
+#    provider {
+#      key_arn = var.kms_key_arn
+#    }
+#    resources = ["secrets"]
+#  }
 
   enabled_cluster_log_types = var.log_types
 
