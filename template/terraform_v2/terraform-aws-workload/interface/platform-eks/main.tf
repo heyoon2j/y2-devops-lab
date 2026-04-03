@@ -5,6 +5,7 @@ module "cluster" {
   cluster_version  = var.cluster.version
   role_arn         = var.cluster.role_arn
   subnets          = var.cluster.subnets
+  security_group_ids = var.cluster.security_group_ids
   endpoint_private = true
   endpoint_public  = false
   ip_family        = "ipv4"

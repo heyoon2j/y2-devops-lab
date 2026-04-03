@@ -6,6 +6,7 @@ module "platform_eks" {
     version          = "1.35"
     role_arn         = "arn:aws:iam::123456789012:role/eks-cluster-role"
     subnets          = ["subnet-aaa", "subnet-bbb"]
+    security_group_ids = ["sg-12345678", "sg-abcdef12" ]
     kms_key_arn = "arn:aws:kms:ap-northeast-2:123456789012:key/xxxx"
   }
 
