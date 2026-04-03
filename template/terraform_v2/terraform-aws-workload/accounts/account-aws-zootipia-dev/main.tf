@@ -13,7 +13,8 @@ module "platform_eks" {
     vpc_cni = {
       enabled = true
       version = "v1.21.1-eksbuild.1"
-
+      resolve_conflicts_on_create = "OVERWRITE"
+      resolve_conflicts_on_update = "OVERWRITE"
       config = {
         env = {
           ENABLE_PREFIX_DELEGATION = "true"
@@ -24,24 +25,32 @@ module "platform_eks" {
     coredns = {
       enabled = true
       version = "v1.13.2-eksbuild.3"
+      resolve_conflicts_on_create = "OVERWRITE"
+      resolve_conflicts_on_update = "OVERWRITE"
       config  = {}
     }
 
     kube_proxy = {
       enabled = true
       version = "v1.35.0-eksbuild.2"
+      resolve_conflicts_on_create = "OVERWRITE"
+      resolve_conflicts_on_update = "OVERWRITE"
       config  = {}
     }
 
     ebs_csi = {
       enabled = true
       version = "v1.35.0-eksbuild.1"
+      resolve_conflicts_on_create = "OVERWRITE"
+      resolve_conflicts_on_update = "OVERWRITE"
       config  = {}
     }
 
     metrics_server = {
       enabled = true
       version = "v0.8.1-eksbuild.5"
+      resolve_conflicts_on_create = "OVERWRITE"
+      resolve_conflicts_on_update = "OVERWRITE"
       config  = {}
     }
   }

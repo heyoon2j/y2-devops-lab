@@ -15,6 +15,8 @@ variable "aws_addons" {
   type = map(object({
     enabled = bool
     version = string
+    resolve_conflicts_on_create = string
+    resolve_conflicts_on_update = string
     config  = optional(any)
   }))
 }

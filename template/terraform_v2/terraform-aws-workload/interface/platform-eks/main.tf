@@ -36,6 +36,8 @@ module "aws_addons" {
   name         = replace(each.key, "_", "-")
 
   addon_version = each.value.version
+  resolve_conflicts_on_create = each.value.resolve_conflicts_on_create
+  resolve_conflicts_on_update = each.value.resolve_conflicts_on_update
   config  = try(each.value.config, null)
 }
 
