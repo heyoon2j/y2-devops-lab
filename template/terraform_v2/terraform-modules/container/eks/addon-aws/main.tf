@@ -7,7 +7,7 @@ locals {
 resource "aws_eks_addon" "this" {
   cluster_name  = var.cluster_name
   addon_name    = var.name
-  addon_version = var.version
+  addon_version = var.addon_version
 
   configuration_values = local.configuration_values
 

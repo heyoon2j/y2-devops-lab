@@ -6,7 +6,7 @@ variable "name" {
   type = string
 }
 
-variable "version" {
+variable "addon_version" {
   type = string
 }
 

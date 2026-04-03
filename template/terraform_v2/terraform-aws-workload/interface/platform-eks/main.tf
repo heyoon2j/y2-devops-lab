@@ -36,7 +36,7 @@ module "aws_addons" {
   cluster_name = var.cluster.name
   name         = replace(each.key, "_", "-")
 
-  version = each.value.version
+  addon_version = each.value.version
   config  = try(each.value.config, null)
 }
 
