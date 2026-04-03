@@ -3,6 +3,7 @@ module "platform_eks" {
 
   cluster = {
     name             = "prd-savanna-eks-cluster"
+    version          = "1.35"
     role_arn         = "arn:aws:iam::123456789012:role/eks-cluster-role"
     subnets          = ["subnet-aaa", "subnet-bbb"]
     kms_key_arn = "arn:aws:kms:ap-northeast-2:123456789012:key/xxxx"
@@ -11,7 +12,7 @@ module "platform_eks" {
   aws_addons = {
     vpc_cni = {
       enabled = true
-      version = "v1.15.4-eksbuild.1"
+      version = "v1.21.1-eksbuild.1"
 
       config = {
         env = {
@@ -22,27 +23,26 @@ module "platform_eks" {
 
     coredns = {
       enabled = true
-      version = "v1.10.1-eksbuild.2"
+      version = "v1.13.2-eksbuild.3"
     }
 
     kube_proxy = {
       enabled = true
-      version = "v1.29.0-eksbuild.1"
+      version = "v1.35.0-eksbuild.2"
     }
 
     ebs_csi = {
       enabled = true
-      version = "v1.26.0-eksbuild.1"
+      version = "v1.35.0-eksbuild.1"
+    }
+
+    metrics_server = {
+      enabled    = true
+      version = "v0.8.1-eksbuild.5"
     }
   }
 
   helm_addons = {
-    metrics_server = {
-      enabled    = true
-      repository = "https://kubernetes-sigs.github.io/metrics-server"
-      chart      = "metrics-server"
-    }
-
     aws_load_balancer_controller = {
       enabled    = true
       repository = "https://aws.github.io/eks-charts"

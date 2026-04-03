@@ -1,6 +1,9 @@
 variable "name" {}
 variable "role_arn" {}
 variable "subnets" { type = list(string) }
+variable "version" {
+  type = string
+}
 
 variable "endpoint_private" { type = bool }
 variable "endpoint_public"  { type = bool }
