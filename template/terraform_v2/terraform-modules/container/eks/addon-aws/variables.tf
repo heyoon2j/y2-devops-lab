@@ -10,11 +10,11 @@ variable "addon_version" {
   type = string
 }
 
-resolve_conflicts_on_create {
+variable "resolve_conflicts_on_create" {
   type = string
 }
 
-resolve_conflicts_on_update {
+variable "resolve_conflicts_on_update" {
   type = string
 }
 
