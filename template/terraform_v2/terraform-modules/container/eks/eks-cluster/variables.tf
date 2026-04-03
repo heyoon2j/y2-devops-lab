@@ -1,7 +1,7 @@
 variable "name" {}
 variable "role_arn" {}
 variable "subnets" { type = list(string) }
-variable "version" {
+variable "cluster_version" {
   type = string
 }
 

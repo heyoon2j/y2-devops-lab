@@ -2,7 +2,7 @@ module "cluster" {
   source = "../../../terraform-modules/container/eks/eks-cluster"
 
   name             = var.cluster.name
-  version          = var.cluster.version
+  cluster_version  = var.cluster.version
   role_arn         = var.cluster.role_arn
   subnets          = var.cluster.subnets
   endpoint_private = true

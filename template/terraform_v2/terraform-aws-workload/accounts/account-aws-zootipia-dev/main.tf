@@ -1,5 +1,5 @@
 module "platform_eks" {
-  source = "../../../interface/platform-eks"
+  source = "../../interface/platform-eks"
 
   cluster = {
     name             = "prd-savanna-eks-cluster"
