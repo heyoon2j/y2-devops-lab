@@ -24,21 +24,25 @@ module "platform_eks" {
     coredns = {
       enabled = true
       version = "v1.13.2-eksbuild.3"
+      config  = {}
     }
 
     kube_proxy = {
       enabled = true
       version = "v1.35.0-eksbuild.2"
+      config  = {}
     }
 
     ebs_csi = {
       enabled = true
       version = "v1.35.0-eksbuild.1"
+      config  = {}
     }
 
     metrics_server = {
-      enabled    = true
+      enabled = true
       version = "v0.8.1-eksbuild.5"
+      config  = {}
     }
   }
 
