@@ -12,7 +12,7 @@ variable "ip_family" {}
 variable "service_cidr" {}
 
 variable "auth_mode" {
-  type = 
+  type = string
 }
 
 variable "kms_key_arn" {
@@ -21,8 +21,4 @@ variable "kms_key_arn" {
 
 variable "log_types" {
   type = list(string)
-}
-
-variable "prevent_destroy" {
-  type = bool
 }

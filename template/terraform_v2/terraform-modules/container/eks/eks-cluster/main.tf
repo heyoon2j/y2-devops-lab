@@ -28,6 +28,6 @@ resource "aws_eks_cluster" "this" {
   enabled_cluster_log_types = var.log_types
 
   lifecycle {
-    prevent_destroy = var.prevent_destroy
+    prevent_destroy = false # can't use variable, only static var
   }
 }

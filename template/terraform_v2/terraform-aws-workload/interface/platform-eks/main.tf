@@ -18,7 +18,6 @@ module "cluster" {
     "controllerManager",
     "scheduler"
   ]
-  prevent_destroy  = false
 }
 
 
