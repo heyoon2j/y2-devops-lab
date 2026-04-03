@@ -1,5 +1,5 @@
 module "cluster" {
-  source = "../../../terraform-modules/container/eks/eks-cluster"
+  source = "../../../terraform-aws-modules/container/eks/eks-cluster"
 
   name             = var.cluster.name
   cluster_version  = var.cluster.version
@@ -30,7 +30,7 @@ module "aws_addons" {
     k => v if v.enabled
   }
 
-  source = "../../../terraform-modules/container/eks/addon-aws"
+  source = "../../../terraform-aws-modules/container/eks/addon-aws"
 
   cluster_name = var.cluster.name
   name         = replace(each.key, "_", "-")
@@ -50,7 +50,7 @@ module "helm_addons" {
     k => v if v.enabled
   }
 
-  source = "../../../terraform-modules/container/eks/addon-helm"
+  source = "../../../terraform-aws-modules/container/eks/addon-helm"
 
   name       = replace(each.key, "_", "-")
   repository = each.value.repository
@@ -65,7 +65,7 @@ module "helm_addons" {
 module "service_account" {
   for_each = var.irsa
 
-  source = "../../../terraform-modules/containe/eks/service-account"
+  source = "../../../terraform-aws-modules/containe/eks/service-account"
 
   name      = each.value.name
   namespace = each.value.namespace

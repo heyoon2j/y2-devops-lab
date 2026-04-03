@@ -1,5 +1,5 @@
 module "vpc" {
-  source = "../../../terraform-modules/network/vpc"
+  source = "../../../terraform-aws-modules/network/vpc"
 
   cidr_block = var.vpc_cidr
   name       = var.vpc_name
@@ -14,7 +14,7 @@ module "vpc" {
 module "subnet" {
   for_each = var.features.subnet ? var.subnets : {}
 
-  source = "../../../terraform-modules/network/subnet"
+  source = "../../../terraform-aws-modules/network/subnet"
 
   vpc_id = module.vpc.vpc_id
   name   = each.key
@@ -28,7 +28,7 @@ module "subnet" {
 module "nacl" {
   count = var.features.nacl ? 1 : 0
 
-  source = "../../../terraform-modules/network/network-acl/nacl"
+  source = "../../../terraform-aws-modules/network/network-acl/nacl"
 
   vpc_id  = module.vpc.vpc_id
   name    = "${var.vpc_name}-nacl"
@@ -39,7 +39,7 @@ module "nacl" {
 module "nacl_ingress_rule" {
   for_each = var.features.nacl ? var.nacl_ingress_rule : {}
 
-  source = "../../../terraform-modules/network/network-acl/nacl-rule"
+  source = "../../../terraform-aws-modules/network/network-acl/nacl-rule"
 
   network_acl_id = module.nacl[0].nacl_id
   rule_number    = each.value.rule_number
@@ -55,7 +55,7 @@ module "nacl_ingress_rule" {
 # module "nacl_egress_rule" {
 # count = var.features.nacl ? 1 : 0
 
-#  source = "../../../terraform-modules/network/network-acl/nacl-rule"
+#  source = "../../../terraform-aws-modules/network/network-acl/nacl-rule"
 
 #  network_acl_id = module.nacl[0].nacl_id
 #  rule_number    = var.rule_number
