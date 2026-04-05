@@ -82,4 +82,26 @@ module "platform_eks" {
       role_arn = "arn:aws:iam::123456789012:role/ebs-csi-role"
     }
   }
+
+  node_groups = {
+    default = {
+      instance_types = ["t4g.medium"]
+      capacity_type  = "ON_DEMAND"
+
+      desired_size = 2
+      min_size     = 1
+      max_size     = 3
+
+      subnet_ids = ["subnet-aaa","subnet-bbb"]
+
+      ##################################
+      # 🔥 핵심
+      ##################################
+      node_role_arn = "arn:aws:iam::123456789012:role/eks-node-role"
+
+      labels = {
+        role = "general"
+      }
+    }
+  }
 }

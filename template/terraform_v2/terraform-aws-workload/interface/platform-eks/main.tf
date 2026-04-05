@@ -72,3 +72,29 @@ module "service_account" {
 
   role_arn = each.value.role_arn
 }
+
+
+module "node_groups" {
+  for_each = var.node_groups
+
+  source = "../../../terraform-aws-modules/containe/eks/nodegroup"
+
+  cluster_name = module.cluster.name
+  name         = each.key
+
+  ##################################
+  # 🔥 바로 사용
+  ##################################
+  node_role_arn = each.value.node_role_arn
+
+  subnet_ids     = each.value.subnet_ids
+  instance_types = each.value.instance_types
+  capacity_type  = each.value.capacity_type
+
+  desired_size = each.value.desired_size
+  min_size     = each.value.min_size
+  max_size     = each.value.max_size
+
+  labels = try(each.value.labels, {})
+  taints = try(each.value.taints, null)
+}

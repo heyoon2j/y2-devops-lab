@@ -43,3 +43,29 @@ variable "irsa" {
     role_arn = string   # 🔥 직접 입력 (또는 data lookup)
   }))
 }
+
+
+variable "node_groups" {
+  type = map(object({
+    instance_types = list(string)
+    capacity_type  = string
+
+    desired_size = number
+    min_size     = number
+    max_size     = number
+
+    subnet_ids = list(string)
+
+    ##################################
+    # 🔥 변경
+    ##################################
+    node_role_arn = string
+
+    labels = optional(map(string))
+    taints = optional(list(object({
+      key    = string
+      value  = string
+      effect = string
+    })))
+  }))
+}
