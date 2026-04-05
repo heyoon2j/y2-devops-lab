@@ -5,6 +5,11 @@ variable "cluster_version" {
   type = string
 }
 
+variable "security_group_ids" {
+  type    = list(string)
+  default = null
+}
+
 variable "endpoint_private" { type = bool }
 variable "endpoint_public"  { type = bool }
 

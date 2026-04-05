@@ -3,6 +3,7 @@ variable "cluster" {
     name             = string
     version          = string
     subnets          = list(string)
+    security_group_ids = optional(list(string))
     role_arn         = string
     kms_key_arn      = string
   })
