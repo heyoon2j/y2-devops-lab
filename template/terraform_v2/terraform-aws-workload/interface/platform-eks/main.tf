@@ -66,7 +66,7 @@ module "helm_addons" {
 module "service_account" {
   for_each = var.irsa
 
-  source = "../../../terraform-aws-modules/containe/eks/service-account"
+  source = "../../../terraform-aws-modules/container/eks/service-account"
 
   name      = each.value.name
   namespace = each.value.namespace
@@ -78,7 +78,7 @@ module "service_account" {
 module "node_groups" {
   for_each = var.node_groups
 
-  source = "../../../terraform-aws-modules/containe/eks/nodegroup"
+  source = "../../../terraform-aws-modules/container/eks/nodegroup"
 
   cluster_name = module.cluster.name
   name         = each.key
