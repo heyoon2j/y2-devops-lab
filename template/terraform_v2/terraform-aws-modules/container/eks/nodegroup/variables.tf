@@ -3,7 +3,7 @@ variable "name" {}
 
 variable "node_role_arn" {}
 variable "subnet_ids" {}
-variable "instance_types" {
+variable "ami_type" {
   type = string
 }
 variable "instance_types" {

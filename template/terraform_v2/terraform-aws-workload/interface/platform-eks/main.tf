@@ -83,9 +83,6 @@ module "node_groups" {
   cluster_name = module.cluster.name
   name         = each.key
 
-  ##################################
-  # 🔥 바로 사용
-  ##################################
   node_role_arn = each.value.node_role_arn
 
   subnet_ids     = each.value.subnet_ids

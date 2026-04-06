@@ -39,9 +39,9 @@ module "platform_eks" {
       config  = {}
     }
 
-    ebs_csi = {
+    aws_ebs_csi_driver = {
       enabled = true
-      version = "v1.35.0-eksbuild.1"
+      version = "v1.57.1-eksbuild.1"
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
       config  = {}
@@ -50,6 +50,14 @@ module "platform_eks" {
     metrics_server = {
       enabled = true
       version = "v0.8.1-eksbuild.5"
+      resolve_conflicts_on_create = "OVERWRITE"
+      resolve_conflicts_on_update = "OVERWRITE"
+      config  = {}
+    }
+
+    eks_pod_identity_agent = {
+      enabled = true
+      version = "v1.3.10-eksbuild.2"
       resolve_conflicts_on_create = "OVERWRITE"
       resolve_conflicts_on_update = "OVERWRITE"
       config  = {}
@@ -76,7 +84,7 @@ module "platform_eks" {
       role_arn = "arn:aws:iam::123456789012:role/alb-controller-role"
     }
 
-    ebs_csi = {
+    aws_ebs_csi_driver = {
       namespace = "kube-system"
       name      = "ebs-csi-controller-sa"
 
