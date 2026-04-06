@@ -17,6 +17,7 @@ resource "aws_eks_node_group" "this" {
   ##################################
   # compute
   ##################################
+  ami_type       = var.ami_type
   instance_types = var.instance_types
   capacity_type  = var.capacity_type
 

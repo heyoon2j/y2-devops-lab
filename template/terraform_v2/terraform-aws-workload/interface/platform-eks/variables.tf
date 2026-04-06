@@ -48,6 +48,7 @@ variable "irsa" {
 
 variable "node_groups" {
   type = map(object({
+    ami_type       = string
     instance_types = list(string)
     capacity_type  = string
 

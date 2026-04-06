@@ -86,6 +86,7 @@ module "platform_eks" {
 
   node_groups = {
     default = {
+      ami_type       = "AL2023_ARM_64_STANDARD"
       instance_types = ["t4g.medium"]
       capacity_type  = "ON_DEMAND"
 

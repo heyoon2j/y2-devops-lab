@@ -89,6 +89,7 @@ module "node_groups" {
   node_role_arn = each.value.node_role_arn
 
   subnet_ids     = each.value.subnet_ids
+  ami_type       = each.value.ami_type
   instance_types = each.value.instance_types
   capacity_type  = each.value.capacity_type
 
