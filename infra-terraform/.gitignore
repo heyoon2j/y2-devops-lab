@@ -1,0 +1,21 @@
+# Terraform local state and caches
+**/.terraform/*
+*.tfstate
+*.tfstate.*
+*.tfplan
+crash.log
+crash.*.log
+*.tfvars
+*.tfvars.json
+!*.tfvars.example
+!*.tfvars.json.example
+override.tf
+override.tf.json
+*_override.tf
+*_override.tf.json
+.terraformrc
+terraform.rc
+# Local provider binaries (keep directory documentation)
+tf-plugins/*
+!tf-plugins/README.md
+# Commit .terraform.lock.hcl for each deployment root.
