@@ -1,0 +1,10 @@
+---
+version: 5
+defaults:
+  datadir: data
+  data_hash: yaml_data
+hierarchy:
+  - name: Deployment environment
+    path: "deploy_env/%{facts.deploy_env}.yaml"
+  - name: Common
+    path: common.yaml

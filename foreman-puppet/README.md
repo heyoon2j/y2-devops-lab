@@ -6,8 +6,9 @@ Foreman으로 노드의 등록·분류·상태를 관리하고, Puppet으로 서
 AWS, GCP, KC의 공통 구조와 Ubuntu 24.04 관리 대상 노드를 기준으로 설계한다.
 KC는 이 프로젝트의 CSP 식별자이며 구체적인 공급자 연동은 별도로 확정한다.
 
-이 문서는 설계 기준이다. Foreman/Puppet 설치, 등록 템플릿, Custom Fact 구현 및
-실제 클라우드 배포가 완료되었음을 의미하지 않는다.
+이 디렉터리는 아키텍처 문서와 초기 Puppet 코드 환경을 포함한다.
+Foreman/Puppet 설치, 등록 템플릿, MIG Custom Fact 수집기 및 실제 클라우드 배포는 후속 단계다.
+코드 구성과 적용 절차는 [Puppet 코드 구성](docs/PUPPET_CODE.md)을 참고한다.
 
 ## 분류 원칙
 
@@ -154,9 +155,10 @@ Ubuntu 24.04/Puppet 지원을 먼저 확인하고 생성된 등록 명령을 활
 
 ## Class와 환경 사용
 
-초기 공통 설정은 `profile::base`, `profile::ssh`, `profile::time` 등의 Class로 구성할 수 있다.
-이는 제안하는 코드 구조이며 아직 구현된 Class가 아니다.
-역할별 설정이 필요하면 Foreman의 호스트별 Class 또는 향후 별도 역할 분류를 추가한다.
+초기 공통 Role은 `role::base`이며, 세 CSP Host Group에 동일하게 배정한다.
+`role::base` → `profile::base` → `profile::packages`, `profile::node_info` 순서로 구성한다.
+기본 패키지와 노드 식별 파일을 관리하고, Hiera에서 환경별 패키지 목록을 선택한다.
+역할별 설정이 필요하면 향후 별도 Role과 Profile을 추가한다.
 
 Host Group이 CSP만 표현하므로, 같은 CSP에서 모든 노드에 적용할 수 있는 Class만
 그룹에 공통 배정한다. OS·Arch·MIG Facts만 전송해도 Class가 자동 배정되는 것은 아니다.
@@ -206,4 +208,5 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
 7. 변경 없는 두 번째 Puppet 실행에서 의도하지 않은 변경이 발생하지 않는다.
 8. user-data 재실행이나 재부팅으로 중복 호스트·인증서 충돌이 생기지 않는다.
 
-현재 단계에서는 문서만 추가하며 위 런타임 검증은 수행하지 않았다.
+초기 코드는 Puppet 8.10.0에서 Catalog 컴파일로 검증했다.
+실제 Foreman 연동, Agent 적용과 멱등성 검증은 아직 수행하지 않았다.

@@ -1,0 +1,6 @@
+---
+# Example development baseline; keep the complete list when overriding.
+profile::packages::packages:
+  - ca-certificates
+  - curl
+  - jq

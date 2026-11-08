@@ -1,0 +1,5 @@
+---
+# Arrays use first-found lookup: an environment replaces the entire list.
+profile::packages::packages:
+  - ca-certificates
+  - curl
