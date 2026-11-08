@@ -1,6 +1,7 @@
-<%- | String $deploy_env, String $os_name, String $os_release, String $arch | -%>
+<%- | String $deploy_env, String $puppet_env, String $os_name, String $os_release, String $arch | -%>
 # Managed by Puppet. Local changes will be overwritten.
 deploy_env=<%= $deploy_env %>
+puppet_env=<%= $puppet_env %>
 os_name=<%= $os_name %>
 os_release=<%= $os_release %>
 arch=<%= $arch %>

@@ -14,6 +14,7 @@ class profile::node_info {
     mode    => '0644',
     content => epp('profile/node.conf.epp', {
       'deploy_env' => $facts['deploy_env'],
+      'puppet_env' => $environment,
       'os_name'    => $facts['os']['name'],
       'os_release' => $facts['os']['release']['full'],
       'arch'       => $facts['os']['architecture'],

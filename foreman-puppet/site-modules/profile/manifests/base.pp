@@ -4,6 +4,15 @@ class profile::base {
     fail('deploy_env must be dev or prd; create the external fact before the first Puppet run')
   }
 
+  $expected_deploy_env = $environment ? {
+    'development' => 'dev',
+    'production'  => 'prd',
+    default       => fail('role::base supports Puppet environments development or production only'),
+  }
+  if $facts['deploy_env'] != $expected_deploy_env {
+    fail('deploy_env does not match the Puppet code environment assigned to this node')
+  }
+
   if $facts['os']['name'] != 'Ubuntu' or $facts['os']['release']['full'] !~ /^24[.]04([.]|$)/ {
     fail('role::base supports Ubuntu 24.04 only')
   }

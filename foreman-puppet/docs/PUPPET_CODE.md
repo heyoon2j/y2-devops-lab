@@ -26,10 +26,12 @@ foreman-puppet/
 ```
 
 `foreman-puppet/`의 내용이 Puppet 코드 환경 하나의 루트다.
-예를 들어 Puppet Server의 `/etc/puppetlabs/code/environments/production/`에 배포한다.
+Puppet Server의 `/etc/puppetlabs/code/environments/development/`와
+`/etc/puppetlabs/code/environments/production/`에 각각 검증할 코드와 승인된 코드를 배포한다.
 저장소 전체를 이 경로에 복사하지 않고 이 하위 디렉터리의 내용만 배포한다.
-`production`은 Puppet 코드 환경 이름이며 서버 용도인 `deploy_env=prd`와 독립적이다.
-개발·운영 관리 서버가 분리되어도 양쪽에서 같은 환경 이름을 사용할 수 있다.
+Puppet Environment는 코드 버전 선택이고 `deploy_env`는 호스트의 환경 Fact다.
+등록 단계에서 두 값을 함께 지정하고, 공통 Role이 매핑 일치 여부를 검증한다.
+상세 매핑은 [Host Group과 코드 환경](ENVIRONMENTS.md)을 참고한다.
 
 ## Site와 Foreman 분류
 
@@ -37,11 +39,11 @@ foreman-puppet/
 Foreman에서 `aws`, `gcp`, `kc` 각각에 공통 Role인 `role::base`를 배정한다.
 Class가 배정되지 않은 호스트의 Catalog에는 이 프로젝트의 관리 리소스가 없다.
 
-| Host Group | Foreman에 배정할 Class | 환경 구분 |
+| Host Group | Foreman에 배정할 Class | Puppet Environment |
 | --- | --- | --- |
-| `aws` | `role::base` | `deploy_env` Fact |
-| `gcp` | `role::base` | `deploy_env` Fact |
-| `kc` | `role::base` | `deploy_env` Fact |
+| `aws` | `role::base` | 호스트별 `development` 또는 `production` |
+| `gcp` | `role::base` | 호스트별 `development` 또는 `production` |
+| `kc` | `role::base` | 호스트별 `development` 또는 `production` |
 
 CSP 이름을 Fact로 추가하거나 `deploy_env`로부터 Host Group을 추정하지 않는다.
 현재 Hiera는 CSP별 데이터를 선택하지 않는다. CSP별 정책이 필요하면 Foreman의 신뢰할 수
@@ -54,13 +56,14 @@ CSP 이름을 Fact로 추가하거나 `deploy_env`로부터 Host Group을 추정
 | `role::base` | Foreman에서 배정하는 공통 서버 역할. `profile::base` 포함 |
 | `profile::base` | 환경·OS·아키텍처 검증 및 하위 Profile 포함 |
 | `profile::packages` | Hiera의 패키지 목록을 `ensure => installed`로 관리 |
-| `profile::node_info` | `/etc/foreman-puppet/node.conf`에 환경·OS·아키텍처 기록 |
+| `profile::node_info` | `/etc/foreman-puppet/node.conf`에 환경·Puppet 코드 환경·OS·아키텍처 기록 |
 
 `deploy_env`가 `dev/prd`가 아니거나, Ubuntu 24.04가 아니거나,
 `os.architecture`가 `amd64/arm64`가 아니면 공통 Role의 Catalog 컴파일을 실패시킨다.
+또한 `development ↔ dev`, `production ↔ prd` 매핑이 맞지 않거나 다른 코드 환경이면 실패한다.
 이로써 잘못된 환경 Fact가 공통값으로 조용히 대체되는 것을 방지한다.
 
-`gpu.mig.configured`는 Foreman의 관측 정보다. 기본 Role은 이 Fact의 유무와 값에
+`gpu.present`와 `gpu.mig.configured`는 Foreman의 관측 정보다. 기본 Role은 이 Fact의 유무와 값에
 따라 MIG를 생성·삭제하거나 GPU 드라이버를 변경하지 않는다. 수집기는 후속 단계에서 구현한다.
 `deploy_env` Fact 파일도 user-data 소유로 유지한다.
 
@@ -88,10 +91,12 @@ Hiera 데이터에 등록 토큰이나 비밀번호를 저장하지 않는다.
 ## Foreman 연결 순서
 
 1. 이 코드 환경을 Puppet Server에 배포하고 ENC/Facts/Report 연동을 준비한다.
-2. Foreman에서 해당 Puppet Environment의 Classes를 가져온다.
-3. `aws/gcp/kc` Host Group에 동일하게 `role::base`를 배정한다.
+2. Foreman에서 두 Puppet Environment의 Classes를 가져온다.
+3. `aws/gcp/kc` Host Group에 공통 `role::base`를 배정한다.
+   Host Group의 Puppet Environment는 비워 두고 등록 시 호스트별로 명시한다.
 4. Profile Class는 Role을 통해 포함한다. Hiera로 관리할 파라미터의 Foreman override는 비워 둔다.
-5. user-data로 호스트 등록, 환경 Fact 생성, Agent 설치와 인증서 승인 절차를 진행한다.
+5. 등록 절차에서 호스트의 Puppet Environment와 Agent 코드 환경을 맞추고,
+   user-data로 환경 Fact 생성, Agent 설치와 인증서 승인 절차를 진행한다.
 6. 개발 노드에서 첫 적용 및 두 번째 적용의 멱등성을 확인한 뒤 운영에 적용한다.
 
 ## 로컬 검증
@@ -108,10 +113,11 @@ bundle exec ruby tests/catalog_test.rb
 검증은 임시 코드 환경을 만들고 Catalog만 컴파일한다. 로컬 OS의 패키지나 `/etc`는 변경하지 않는다.
 다음 항목을 확인한다.
 
-- `dev/prd`, `amd64/arm64`, MIG `true/false/null` 조합에서 Hiera와 EPP 렌더링
-- MIG Fact가 없는 초기 노드의 컴파일
+- `dev/prd`, `amd64/arm64`, GPU 존재·MIG 구성 상태 조합에서 Hiera와 EPP 렌더링
+- GPU/MIG Facts가 없는 초기 노드의 컴파일
 - Foreman Class가 배정되지 않은 노드의 무변경 Catalog
 - 환경 Fact 누락·잘못된 값·경로 형태 값, 지원하지 않는 OS·버전·아키텍처의 컴파일 거부
+- Fact와 Puppet 코드 환경의 불일치 및 지원하지 않는 코드 환경 거부
 
-실제 Foreman API 등록, MIG 하드웨어 탐지, Ubuntu Agent의 리소스 적용·멱등성은
+실제 Foreman API 등록, GPU/MIG 하드웨어 탐지, Ubuntu Agent의 리소스 적용·멱등성은
 이 컴파일 검증에 포함되지 않는다.

@@ -7,15 +7,16 @@ AWS, GCP, KC의 공통 구조와 Ubuntu 24.04 관리 대상 노드를 기준으�
 KC는 이 프로젝트의 CSP 식별자이며 구체적인 공급자 연동은 별도로 확정한다.
 
 이 디렉터리는 아키텍처 문서와 초기 Puppet 코드 환경을 포함한다.
-Foreman/Puppet 설치, 등록 템플릿, MIG Custom Fact 수집기 및 실제 클라우드 배포는 후속 단계다.
+Foreman/Puppet 설치, 등록 템플릿, GPU/MIG Custom Fact 수집기 및 실제 클라우드 배포는 후속 단계다.
 코드 구성과 적용 절차는 [Puppet 코드 구성](docs/PUPPET_CODE.md)을 참고한다.
+[Host Group과 코드 환경](docs/ENVIRONMENTS.md), [이중화와 인증서](docs/HA_AND_CERTIFICATES.md)에 운영 설계를 정리한다.
 
 ## 분류 원칙
 
 - Host Group은 CSP만 구분한다. 최상위 그룹으로 `aws`, `gcp`, `kc`를 만든다.
 - 개발·운영은 `deploy_env` Custom Fact의 `dev`, `prd` 값으로 표시한다.
 - OS와 아키텍처는 Facter 기본 Facts를 사용한다.
-- GPU 관련 정보는 실제 MIG 인스턴스 구성 여부인 `gpu.mig.configured` Custom Fact만 수집한다.
+- GPU 관련 정보는 GPU 존재 여부인 `gpu.present`와 실제 MIG 인스턴스 구성 여부인 `gpu.mig.configured` Custom Facts로 수집한다.
 - Puppet Environment는 코드 선택 기준이다. 환경 Fact와 자동으로 연결하지 않는다.
 - 적용할 Puppet Class는 Foreman의 Host Group 또는 개별 호스트에서 명시적으로 배정한다.
 
@@ -29,6 +30,7 @@ Host Groups
 ├── deploy_env: dev 또는 prd
 ├── os: Facter 기본 Fact
 ├── os.architecture: Facter 기본 Fact
+├── gpu.present: Custom Fact
 └── gpu.mig.configured: Custom Fact
 ```
 
@@ -43,15 +45,18 @@ Foreman API나 등록 명령의 실제 인자 이름은 아니다.
 | --- | --- | --- | --- |
 | `HOST_GROUP` | 필수 | `aws`, `gcp`, `kc` | Foreman 등록 시 지정한다. Fact로 보내는 값이 아니다. |
 | `DEPLOY_ENV` | 필수 | `dev`, `prd` | `deploy_env` 외부 Fact 파일을 만든다. |
+| `PUPPET_ENV` | 필수 | `development`, `production` | `dev/development`, `prd/production` 매핑으로 Foreman 호스트와 Agent의 코드 환경을 설정한다. Fact는 아니다. |
 | `FOREMAN_URL` | 필수 | `https://foreman.example.internal` | 등록 요청 대상. 개발·운영 관리 서버가 분리되면 환경에 맞는 주소를 전달한다. |
 | `PUPPET_SERVER` | 필수 | `puppet.example.internal` | Agent의 Puppet Server 연결 대상이다. |
+| `PUPPET_CA_SERVER` | 필수 | `puppet-ca.example.internal` | HA 구성에서 Compiler와 분리한 CA endpoint다. |
 | `CERTNAME` | 필수 | `aws-dev-node-001.example.internal` | Foreman 호스트 식별자와 일관되게 사용할 고유한 Puppet 노드 이름이다. |
 | 등록 인증정보 | 등록 방식에 따라 필수 | 만료·권한이 제한된 등록 토큰 등 | 선택한 Foreman 등록 방식에 맞춰 제공하며 Facts에 저장하지 않는다. |
 
 `HOST_GROUP`은 배포 시 해당 Foreman 인스턴스의 Host Group ID 등 실제 등록 인자로
 변환한다. 개발용과 운영용 Foreman의 숫자 ID가 같다고 가정하지 않는다.
 
-Puppet Environment는 중앙 등록 템플릿/Foreman 분류 설정에서 명시한다.
+Puppet Environment는 등록 시 Foreman 호스트와 Agent에 명시한다.
+`dev → development`, `prd → production`으로 지정하며 코드에서 매핑을 검증한다.
 `DEPLOY_ENV` 값만으로 코드 환경이 선택되지는 않는다.
 
 ### Puppet을 통해 수집할 Facts
@@ -62,9 +67,13 @@ Puppet Environment는 중앙 등록 템플릿/Foreman 분류 설정에서 명시
 | `os.name` | Facter 기본 Fact | 직접 지정하지 않음 | `Ubuntu` |
 | `os.release.full` | Facter 기본 Fact | 직접 지정하지 않음 | `24.04` 또는 해당 이미지에서 수집된 패치 버전 |
 | `os.architecture` | Facter 기본 Fact | 직접 지정하지 않음 | Ubuntu에서 `amd64`, `arm64` 등 실제 수집값 사용 |
+| `gpu.present` | 구조화된 Custom Fact | GPU 수집기 배치/설치 준비 | GPU 확인 시 `true`, GPU가 없음을 확인하면 `false`, 판별 불가 시 `null` |
 | `gpu.mig.configured` | 구조화된 Custom Fact | MIG 수집기 배치/설치 준비 | 하나 이상의 GPU Instance(GI)가 있으면 `true`, 정상 조회 결과 GI가 없으면 `false`, 판별 불가 시 `null` |
 
-MIG Fact는 향후 구현할 데이터 계약이다. Facter 기본 Fact라고 가정하지 않는다.
+GPU/MIG Facts는 향후 구현할 데이터 계약이다. Facter 기본 Facts라고 가정하지 않는다.
+`gpu.present`는 드라이버 활성 여부와 구분해 장치 존재 여부를 실측한다.
+GPU 장치는 확인했지만 MIG 조회에 실패했다면 `present: true`, `mig.configured: null`이다.
+GPU가 없음을 확인했다면 두 값 모두 `false`이다. MIG 구성이 확인되면 GPU 존재도 `true`다.
 노드 전체에서 하나 이상의 MIG GPU Instance(GI)가 실제로 생성되었는지 실측한다.
 MIG 모드만 활성화하고 GI를 생성하지 않은 상태는 `false`이다.
 이 값은 Compute Instance(CI)의 준비 상태나 워크로드 실행 가능 여부를 보장하지 않는다.
@@ -78,6 +87,7 @@ GPU 개수·모델·MIG 모드·InfiniBand 정보는 수집 항목에 포함하�
 
 ```yaml
 gpu:
+  present: true
   mig:
     configured: true
 ```
@@ -139,7 +149,7 @@ Facts와 Report는 일반적인 Puppet 연동에서 Agent → Puppet Server → 
 2. Puppet Server의 ENC, Facts 업로드, Report 업로드 연동을 구성한다.
 3. 클라우드 생성 단계에서 Host Group, 환경, 접속 대상과 고유한 certname을 결정한다.
 4. user-data가 입력값을 검증하고 환경 Fact 파일을 생성한다.
-5. 검증된 Agent 패키지와 MIG Fact 수집기를 설치하고 Puppet Server·certname을 설정한다.
+5. 검증된 Agent 패키지와 GPU/MIG Fact 수집기를 설치하고 Puppet Server·certname을 설정한다.
 6. Foreman 등록 절차를 실행하여 지정한 Host Group으로 호스트를 등록한다.
 7. Agent가 인증서를 요청하고 승인 정책에 따라 서명받는다.
 8. 첫 Agent 실행에서 Facts를 전송하고, Server가 Foreman의 분류 정보를 조회해 Catalog를 컴파일한다.
@@ -161,14 +171,15 @@ Ubuntu 24.04/Puppet 지원을 먼저 확인하고 생성된 등록 명령을 활
 역할별 설정이 필요하면 향후 별도 Role과 Profile을 추가한다.
 
 Host Group이 CSP만 표현하므로, 같은 CSP에서 모든 노드에 적용할 수 있는 Class만
-그룹에 공통 배정한다. OS·Arch·MIG Facts만 전송해도 Class가 자동 배정되는 것은 아니다.
+그룹에 공통 배정한다. OS·Arch·GPU/MIG Facts만 전송해도 Class가 자동 배정되는 것은 아니다.
 지원하지 않는 OS/Arch는 Catalog 컴파일 또는 사전 검증 단계에서 명시적으로 차단한다.
 
 `deploy_env`는 Foreman에서 개발·운영 호스트를 검색·표시하는 기준이다.
 목록에 해당 Fact를 표시하는 방법과 검색 문법은 선택한 Foreman 버전에서 확인한다.
 필요하면 Puppet/Hiera 조건에도 활용할 수 있지만 환경에 따른 설정 차이는 코드에 명시한다.
 
-개발·운영 Foreman/Puppet 서버를 분리해도 각 인스턴스의 Host Group 이름은 동일하게 유지할 수 있다.
+기본 제안은 공통 HA 관리 클러스터에서 Puppet 코드 환경을 개발·운영으로 분리하는 것이다.
+관리 서버까지 분리할 경우에도 각 인스턴스의 Host Group 이름은 동일하게 유지한다.
 user-data에는 환경에 맞는 접속 대상을 전달한다. 노드가 보낸 환경 Fact 자체는
 등록 권한이나 운영 인증서 발급을 허가하는 근거로 사용하지 않는다.
 
@@ -195,7 +206,7 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
 - 관리 서버 OS 지원과 관리 대상 Ubuntu 24.04 Agent 지원을 별도로 확인한다.
 - 등록 템플릿의 Host Group 지정 및 기존 호스트 재등록 동작을 확인한다.
 - 개발·운영 관리 서버 분리 여부, DNS, 인증서 승인 정책을 확정한다.
-- MIG 구성 탐지 구현과 구조화된 Facts의 Foreman 저장·검색 동작을 확인한다.
+- GPU 존재 및 MIG 구성 탐지 구현과 구조화된 Facts의 Foreman 저장·검색 동작을 확인한다.
 
 ## 도입 검증 기준
 
@@ -203,7 +214,7 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
 2. 동일 Host Group 안에서 환경 Fact로 `dev`, `prd` 노드를 구분할 수 있다.
 3. `facter os`로 Ubuntu 24.04 및 실제 아키텍처를 확인한다.
 4. `facter deploy_env`로 환경 값이 입력과 일치하는지 확인한다.
-5. MIG GI 구성·미구성(모드만 활성화 포함)·미지원·다중 GPU 부분 조회 실패 사례가 `true`/`false`/`null` 규약대로 수집된다.
+5. GPU 유무와 MIG GI 구성·미구성(모드만 활성화 포함)·미지원·다중 GPU 부분 조회 실패 사례가 `true`/`false`/`null` 규약대로 수집된다.
 6. Foreman에 Facts와 Report가 도착하고, 선택한 Class의 설정이 실제로 적용된다.
 7. 변경 없는 두 번째 Puppet 실행에서 의도하지 않은 변경이 발생하지 않는다.
 8. user-data 재실행이나 재부팅으로 중복 호스트·인증서 충돌이 생기지 않는다.
