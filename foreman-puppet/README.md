@@ -12,7 +12,7 @@ KC는 이 프로젝트의 CSP 식별자이며 구체적인 공급자 연동은 �
 ## 분류 원칙
 
 - Host Group은 CSP만 구분한다. 최상위 그룹으로 `aws`, `gcp`, `kc`를 만든다.
-- 개발·운영은 `deployment_environment` Custom Fact의 `dev`, `prd` 값으로 표시한다.
+- 개발·운영은 `deploy_env` Custom Fact의 `dev`, `prd` 값으로 표시한다.
 - OS와 아키텍처는 Facter 기본 Facts를 사용한다.
 - GPU는 장비에서 수집하는 Custom Fact로 관리한다.
 - Puppet Environment는 코드 선택 기준이다. 환경 Fact와 자동으로 연결하지 않는다.
@@ -25,7 +25,7 @@ Host Groups
 └── kc
 
 각 그룹의 호스트
-├── deployment_environment: dev 또는 prd
+├── deploy_env: dev 또는 prd
 ├── os: Facter 기본 Fact
 ├── os.architecture: Facter 기본 Fact
 └── gpu: Custom Fact
@@ -41,7 +41,7 @@ Foreman API나 등록 명령의 실제 인자 이름은 아니다.
 | 입력값 | 필수 | 예시 / 허용값 | 용도 및 처리 |
 | --- | --- | --- | --- |
 | `HOST_GROUP` | 필수 | `aws`, `gcp`, `kc` | Foreman 등록 시 지정한다. Fact로 보내는 값이 아니다. |
-| `DEPLOYMENT_ENVIRONMENT` | 필수 | `dev`, `prd` | `deployment_environment` 외부 Fact 파일을 만든다. |
+| `DEPLOY_ENV` | 필수 | `dev`, `prd` | `deploy_env` 외부 Fact 파일을 만든다. |
 | `FOREMAN_URL` | 필수 | `https://foreman.example.internal` | 등록 요청 대상. 개발·운영 관리 서버가 분리되면 환경에 맞는 주소를 전달한다. |
 | `PUPPET_SERVER` | 필수 | `puppet.example.internal` | Agent의 Puppet Server 연결 대상이다. |
 | `CERTNAME` | 필수 | `aws-dev-node-001.example.internal` | Foreman 호스트 식별자와 일관되게 사용할 고유한 Puppet 노드 이름이다. |
@@ -51,13 +51,13 @@ Foreman API나 등록 명령의 실제 인자 이름은 아니다.
 변환한다. 개발용과 운영용 Foreman의 숫자 ID가 같다고 가정하지 않는다.
 
 Puppet Environment는 중앙 등록 템플릿/Foreman 분류 설정에서 명시한다.
-`DEPLOYMENT_ENVIRONMENT` 값만으로 코드 환경이 선택되지는 않는다.
+`DEPLOY_ENV` 값만으로 코드 환경이 선택되지는 않는다.
 
 ### Puppet을 통해 수집할 Facts
 
 | Fact 경로 | 출처 | user-data의 역할 | 예시 / 데이터 규약 |
 | --- | --- | --- | --- |
-| `deployment_environment` | 외부 Custom Fact | 필수 입력값을 파일로 생성 | 문자열 `dev` 또는 `prd` |
+| `deploy_env` | 외부 Custom Fact | 필수 입력값을 파일로 생성 | 문자열 `dev` 또는 `prd` |
 | `os.name` | Facter 기본 Fact | 직접 지정하지 않음 | `Ubuntu` |
 | `os.release.full` | Facter 기본 Fact | 직접 지정하지 않음 | `24.04` 또는 해당 이미지에서 수집된 패치 버전 |
 | `os.architecture` | Facter 기본 Fact | 직접 지정하지 않음 | Ubuntu에서 `amd64`, `arm64` 등 실제 수집값 사용 |
@@ -86,10 +86,10 @@ write_files:
     owner: root:root
     permissions: '0644'
     content: |
-      deployment_environment: dev
+      deploy_env: dev
 ```
 
-이 노드의 등록 입력은 `HOST_GROUP=aws`, `DEPLOYMENT_ENVIRONMENT=dev`이다.
+이 노드의 등록 입력은 `HOST_GROUP=aws`, `DEPLOY_ENV=dev`이다.
 운영 노드는 Host Group을 그대로 두고 Fact 값을 `prd`로 바꾼다.
 GCP와 KC도 동일한 Fact 구조를 사용하고 Host Group만 각각 `gcp`, `kc`로 지정한다.
 환경 Fact는 첫 Puppet 실행 전에 생성하며 재부팅 시에도 유지한다.
@@ -152,7 +152,7 @@ Host Group이 CSP만 표현하므로, 같은 CSP에서 모든 노드에 적용�
 그룹에 공통 배정한다. OS·Arch·GPU Facts만 전송해도 Class가 자동 배정되는 것은 아니다.
 지원하지 않는 OS/Arch는 Catalog 컴파일 또는 사전 검증 단계에서 명시적으로 차단한다.
 
-`deployment_environment`는 Foreman에서 개발·운영 호스트를 검색·표시하는 기준이다.
+`deploy_env`는 Foreman에서 개발·운영 호스트를 검색·표시하는 기준이다.
 목록에 해당 Fact를 표시하는 방법과 검색 문법은 선택한 Foreman 버전에서 확인한다.
 필요하면 Puppet/Hiera 조건에도 활용할 수 있지만 환경에 따른 설정 차이는 코드에 명시한다.
 
@@ -190,7 +190,7 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
 1. 각 CSP의 테스트 노드가 지정된 Host Group에 한 번만 등록된다.
 2. 동일 Host Group 안에서 환경 Fact로 `dev`, `prd` 노드를 구분할 수 있다.
 3. `facter os`로 Ubuntu 24.04 및 실제 아키텍처를 확인한다.
-4. `facter deployment_environment`로 환경 값이 입력과 일치하는지 확인한다.
+4. `facter deploy_env`로 환경 값이 입력과 일치하는지 확인한다.
 5. GPU 유무·다중 장치·탐지 불가 사례가 데이터 규약대로 수집된다.
 6. Foreman에 Facts와 Report가 도착하고, 선택한 Class의 설정이 실제로 적용된다.
 7. 변경 없는 두 번째 Puppet 실행에서 의도하지 않은 변경이 발생하지 않는다.
