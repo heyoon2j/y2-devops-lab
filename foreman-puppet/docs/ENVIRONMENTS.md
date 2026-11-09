@@ -11,19 +11,21 @@ Host Group은 CSP만 표현하며, 개발·운영 표시는 계속 `deploy_env` 
 아래는 최종 개발·운영 매핑이다. 첫 개발 구축에서 운영 리소스까지 생성하지 않는다.
 운영 관리 구성의 세부 배치는 HA 문서에 따른다.
 
-| Host Group | `deploy_env` Fact | 호스트의 Puppet Environment | 공통 Class |
+| Host Group | `deploy_env` Fact | 호스트의 Puppet Environment | 호스트별 Role |
 | --- | --- | --- | --- |
-| `aws` | `dev` | `development` | `role::base` |
-| `aws` | `prd` | `production` | `role::base` |
-| `gcp` | `dev` | `development` | `role::base` |
-| `gcp` | `prd` | `production` | `role::base` |
-| `kc` | `dev` | `development` | `role::base` |
-| `kc` | `prd` | `production` | `role::base` |
+| `aws` | `dev` | `development` | `role::base` 또는 `role::gpu_svr` |
+| `aws` | `prd` | `production` | `role::base` 또는 `role::gpu_svr` |
+| `gcp` | `dev` | `development` | `role::base` 또는 `role::gpu_svr` |
+| `gcp` | `prd` | `production` | `role::base` 또는 `role::gpu_svr` |
+| `kc` | `dev` | `development` | `role::base` 또는 `role::gpu_svr` |
+| `kc` | `prd` | `production` | `role::base` 또는 `role::gpu_svr` |
 
 Host Group은 3개이며 개발·운영별 하위 그룹은 만들지 않는다.
 Host Group에 코드 환경을 강하게 결합하지 않고 호스트 등록 시 명시한다.
 개발에서는 development의 Classes를 가져오고, 운영 배포 시 production에서도
-`role::base`가 연결되어 있는지 확인한다.
+두 Role이 연결되어 있는지 확인한다. CSP Host Group에는 Role을 배정하지 않고
+각 호스트에 일반 서버 `role::base`, GPU 서버 `role::gpu_svr` 중 하나를 명시한다.
+GPU Fact가 들어왔다고 Role을 자동 변경하지 않는다.
 
 ## 등록 입력
 
@@ -57,7 +59,7 @@ environment = development
 ```
 
 Foreman ENC가 반환하는 코드 환경과 Agent 설정을 일치시킨다.
-공통 Role은 `development/dev`, `production/prd`만 허용한다.
+두 Role이 포함하는 공통 Profile은 `development/dev`, `production/prd`만 허용한다.
 개발 단일 서버에서는 Foreman·Puppet·CA의 논리 DNS 이름들이 같은 서버를 가리킬 수 있다.
 사내 인증서의 SAN에 실제 사용하는 접속 이름을 포함하고 개발/운영 endpoint는 구분한다.
 이 검증은 잘못된 배정을 차단하기 위한 것이며 노드가 보낸 Fact를 인증 근거로 삼지 않는다.

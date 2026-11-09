@@ -51,14 +51,16 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   }
 
   gpu_states = [[true, true], [true, false], [true, nil], [false, false], [nil, nil]]
-  %w[dev prd].product(%w[amd64 arm64], gpu_states).each do |env, arch, gpu|
+  %w[dev prd].product(%w[amd64 arm64], gpu_states, %w[role::base role::gpu_svr]).each do |env, arch, gpu, role|
     present, mig = gpu
     facts = {
       'deploy_env' => env,
       'os' => os.merge('architecture' => arch),
       'gpu' => { 'present' => present, 'mig' => { 'configured' => mig } },
     }
-    catalog = compile_catalog(facts)
+    catalog = compile_catalog(facts, [role])
+    gpu_profile = catalog.resource('Class', 'Profile::Gpu_system')
+    assert(!gpu_profile.nil? == (role == 'role::gpu_svr'), 'Wrong GPU Profile selection')
     packages = catalog.resources.select { |r| r.type == 'Package' }.map(&:title).sort
     expected = env == 'dev' ? %w[ca-certificates curl jq] : %w[ca-certificates curl]
     assert(packages == expected, "Wrong Hiera packages for #{env}: #{packages}")
@@ -89,5 +91,5 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   expect_failure(valid, 'deploy_env does not match', environment: 'production')
   expect_failure(valid.merge('deploy_env' => 'prd'), 'deploy_env does not match', environment: 'development')
   expect_failure(valid, 'supports Puppet environments development or production only', environment: 'unsupported')
-  puts 'Passed: 20 environment/architecture/GPU combinations, missing GPU facts, unclassified node, 9 rejection cases.'
+  puts 'Passed: 40 role/environment/architecture/GPU combinations, missing GPU facts, unclassified node, 9 rejection cases.'
 end

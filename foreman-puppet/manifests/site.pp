@@ -1,4 +1,5 @@
-# Foreman ENC owns class assignment. Assign role::base to aws, gcp and kc.
+# Foreman ENC assigns one host-level role: role::base or role::gpu_svr.
+# Host Groups classify CSP only; they must not assign either role by default.
 # An unclassified node intentionally receives no managed resources.
 node default {
 }

@@ -145,7 +145,7 @@ Facts와 Report는 일반적인 Puppet 연동에서 Agent → Puppet Server → 
 
 ## 등록 및 적용 순서
 
-1. Foreman에 `aws`, `gcp`, `kc` Host Group을 생성하고 필요한 Puppet Classes를 가져와 배정한다.
+1. Foreman에 `aws`, `gcp`, `kc` Host Group을 생성하고 Classes를 가져온다. 각 호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
 2. Puppet Server의 ENC, Facts 업로드, Report 업로드 연동을 구성한다.
 3. 클라우드 생성 단계에서 Host Group, 환경, 접속 대상과 고유한 certname을 결정한다.
 4. user-data가 입력값을 검증하고 환경 Fact 파일을 생성한다.
@@ -165,13 +165,22 @@ Ubuntu 24.04/Puppet 지원을 먼저 확인하고 생성된 등록 명령을 활
 
 ## Class와 환경 사용
 
-초기 공통 Role은 `role::base`이며, 세 CSP Host Group에 동일하게 배정한다.
-`role::base` → `profile::base` → `profile::packages`, `profile::node_info` 순서로 구성한다.
-기본 패키지와 노드 식별 파일을 관리하고, Hiera에서 환경별 패키지 목록을 선택한다.
-역할별 설정이 필요하면 향후 별도 Role과 Profile을 추가한다.
+Role은 `role::base`, `role::gpu_svr` 두 개다. Foreman 호스트별로 하나를 배정한다.
+CSP Host Group에는 Role을 배정하지 않아 상속으로 두 Role이 동시에 붙지 않도록 한다.
+
+```text
+role::base                         role::gpu_svr
+└── profile::base                   ├── profile::base
+    ├── profile::packages          └── profile::gpu_system
+    └── profile::node_info
+```
+
+`profile::gpu_system`은 GPU용 시스템 설정 확장 지점이다. 구체적인 정책 확정 전에는
+드라이버·커널·MIG를 변경하지 않는다. DB·Hadoop 등 추가 시스템 정책은 필요할 때
+별도 Profile로 만들고 해당 Role에서 조합한다.
 
 Host Group이 CSP만 표현하므로, 같은 CSP에서 모든 노드에 적용할 수 있는 Class만
-그룹에 공통 배정한다. OS·Arch·GPU/MIG Facts만 전송해도 Class가 자동 배정되는 것은 아니다.
+그룹에 공통 배정할 수 있다. 현재 그룹에는 Class를 배정하지 않는다. OS·Arch·GPU/MIG Facts만 전송해도 Class가 자동 배정되는 것은 아니다.
 지원하지 않는 OS/Arch는 Catalog 컴파일 또는 사전 검증 단계에서 명시적으로 차단한다.
 
 `deploy_env`는 Foreman에서 개발·운영 호스트를 검색·표시하는 기준이다.
