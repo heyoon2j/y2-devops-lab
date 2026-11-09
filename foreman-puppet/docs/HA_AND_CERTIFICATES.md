@@ -4,37 +4,71 @@
 IaC나 서버 설정 파일은 아직 포함하지 않는다. Foreman 단독 + Puppet 연동을 대상으로 하며
 Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 않는다.
 
-## 인증서 선택
+## 확정한 구축 단계
 
-| 구간 | 기본 선택 | 다른 인증서 사용 | 인증서 생략 |
-| --- | --- | --- | --- |
-| 사용자 / 등록 스크립트 → Foreman HTTPS | 조직에서 신뢰하는 웹 서버 인증서 | 사내 CA 또는 접속 이름에 맞는 공인 인증서 가능 | 운영에서는 HTTPS 유지 |
-| Agent ↔ Puppet Server | Puppet CA가 발급한 노드별 인증서로 mTLS | 외부 CA로 발급한 호환 인증서 또는 사내 CA 아래의 Puppet 중간 CA 가능 | 일반적인 Agent/Server 구성에서는 생략하지 않음 |
-| Foreman ↔ Smart Proxy, Puppet → Foreman 연동 | 연동 구간의 서버·클라이언트 인증서 및 신뢰 체인 | 각 서비스의 인증 요구사항을 충족하는 외부 CA 구성 가능 | 선택한 연동 방식의 TLS/클라이언트 인증 조건 유지 |
+| 단계 | 관리 서버 구성 | 검증 대상 |
+| --- | --- | --- |
+| 1. 개발 | 관리 서버 1대에 Foreman·Puppet Server/CA·Smart Proxy·PostgreSQL을 함께 배치. Redis 등은 사용하는 기능에 따라 추가 | 사내 인증서, 등록, Facts, ENC, Catalog 적용과 멱등성 |
+| 2. 운영 | Foreman·Compiler·DB·CA를 아래 HA 설계대로 분리·이중화 | 정상 운영, 한 대 장애, DB·CA 전환, 복구 |
 
-인증서를 다른 CA에서 발급받는 것과 노드 인증을 없애는 것은 다른 문제다.
-Puppet Agent/Server의 표준 운영은 서버 인증과 노드별 클라이언트 인증을 사용한다.
-등록 토큰이나 SSH 키는 이 mTLS 인증서를 대신하지 않는다.
+개발 1대는 관리 서버 수이며 관리 대상 Agent 노드는 별도다.
+이 개발 서버는 단일 장애점이 있는 검증 환경이고, 운영 서비스에 대한 HA를 제공하지 않는다.
+관리 서버 OS는 선택한 Foreman/Puppet 버전의 지원 목록에 따라 정한다.
+이 저장소의 Ubuntu 24.04 기준은 관리 대상 Agent 노드의 기준이다.
 
-외부 CA를 사용하려면 노드 certname에 맞는 고유한 식별자, 서버 접속 이름을 포함한 SAN,
-필요한 서버/클라이언트 인증 용도(EKU), 인증서 체인, CRL 및 갱신·폐기 절차를 맞춰야 한다.
-일반 웹 서버용 인증서 하나를 모든 Agent에 복사해서 사용하지 않는다.
-Smart Proxy와 Foreman의 클라이언트 인증 신뢰 설정도 함께 검증한다.
+```text
+개발 관리 서버 1대
+├── Foreman                  # UI, 호스트 분류, Facts/Report 조회
+├── Puppet Server            # Catalog 컴파일과 Agent 통신
+├── Puppet Intermediate CA   # 사내 CA에서 위임받는 발급 방식 사용 시
+├── Smart Proxy              # Puppet/CA 관리 연동
+└── PostgreSQL               # Foreman 데이터 저장
+        ↑
+AWS / GCP / KC의 개발 Agent 노드
+```
 
-초기 권장안은 다음과 같다.
+처음부터 Foreman·Puppet·CA에 각각 논리 DNS 이름을 정한다. 개발에서는 같은 IP를
+가리켜도 된다. 이후 운영 LB/CA endpoint에는 운영용 이름을 사용한다.
+개발·운영의 CA 키와 Agent 인증서는 별도로 관리하고, 개발 CA 개인키를 운영에 복제하지 않는다.
+사내 Root CA는 공통이어도 별도 발급 CA와 허용 정책으로 개발·운영 신원을 구분한다.
 
-- Foreman UI/등록 HTTPS: 사내 CA 또는 공인 웹 인증서
-- Puppet Server·Agent: Puppet CA가 발급하는 노드별 인증서
-- 기존 조직 PKI 통합이 필요하면 사내 Root CA 아래의 Puppet Intermediate CA 검토
+## 인증서: 사내 CA 사용
 
-`puppet apply`로 로컬 코드만 실행하면 Puppet Server와의 mTLS는 필요하지 않지만,
-이는 현재 목표인 Foreman ENC + Agent/Server 운영과 다른 구성이다.
-TLS 검증 해제는 이 아키텍처의 대안으로 사용하지 않는다.
+Foreman·Puppet Server·Agent 모두 사내 CA 신뢰 체계를 사용하는 것으로 정한다.
+실제 인증서·개인키·CA 키는 Git에 저장하지 않고 서버별로 안전하게 배포한다.
 
-## HA 구성 단위
+| 구간 | 사용할 인증서 | 조건 |
+| --- | --- | --- |
+| 사용자 / 등록 스크립트 → Foreman HTTPS | 사내 CA 발급 웹 서버 인증서 | 접속 DNS 이름의 SAN 및 CA 신뢰 체인 배포 |
+| Agent ↔ Puppet Server | 사내 CA 신뢰 체계 아래의 노드별 인증서 | certname, SAN, mTLS 용도, 체인·CRL·갱신·폐기 절차 일치 |
+| Foreman ↔ Smart Proxy, Puppet → Foreman | 사내 CA 신뢰 체계 아래의 서비스별 인증서 | 서버/클라이언트 인증 용도와 상대 서비스의 허용 목록 일치 |
 
-관리 클러스터 하나를 다음 구조로 구성한다. 관리 클러스터를 개발·운영으로 물리 분리할
-경우에는 각 클러스터에 같은 원칙을 적용하고 DB·CA·인증정보를 별도로 관리한다.
+Puppet용 기본 제안은 **사내 Root/발급 CA → 전용 Puppet Intermediate CA → 노드별 인증서**다.
+이 방식이면 사내 CA가 위임한 중간 CA로 Puppet의 CSR·발급 수명 주기를 유지할 수 있다.
+사내 PKI의 중간 CA 위임 정책과 인증서 프로파일을 먼저 확인한다.
+중간 CA 위임이 불가능하면 사내 CA가 모든 Puppet 노드 인증서를 직접 발급하는 방식으로
+구성할 수 있지만, 아래와 같이 부트스트랩과 인증서 관리 절차가 달라진다.
+
+| 발급 방식 | Agent 등록·갱신 | Puppet/Foreman CA 관리 |
+| --- | --- | --- |
+| 사내 CA 아래의 Puppet Intermediate CA | Agent가 Puppet CA endpoint에 CSR을 보내고 승인 정책에 따라 발급 | Puppet CA와 Smart Proxy를 통한 인증서 관리 흐름 유지 |
+| 사내 CA 직접 발급 | 외부 발급 절차로 인증서·개인키·신뢰 체인·CRL을 미리 배치하고 갱신 | 내장 Puppet CA는 비활성화. 사내 CA가 Puppet CA API를 제공한다고 가정하지 않으며 Foreman의 기존 CA 서명 UI로 직접 관리하지 않음 |
+
+`PUPPET_CA_SERVER`와 아래 CA Active/Standby 설계는 Puppet Intermediate CA 방식에 해당한다.
+사내 CA 직접 발급 방식은 외부 PKI의 HA·등록·갱신 절차로 대체하고, 일반 Puppet CSR 요청을
+`ca_server` 주소만 바꿔 사내 발급 서비스에 보내는 방식으로 구현하지 않는다.
+발급 방식 확정 전 실제 서버 인증서/CA 설정은 생성하지 않는다.
+
+Agent마다 고유한 인증서·개인키를 사용한다. 공통 웹 인증서 하나를 모든 Agent에 공유하지 않는다.
+등록 토큰이나 SSH 키는 Agent/Server mTLS 인증서를 대신하지 않는다.
+`puppet apply` 로컬 실행에는 Server와의 mTLS가 필요하지 않지만 현재 중앙 관리 방식과 다르다.
+TLS 검증은 유지한다.
+
+## 운영 HA 구성 단위
+
+개발 검증 이후 운영 관리 구성을 다음 구조로 구축한다.
+아래 구성은 운영 목표이며 개발 단일 서버에 먼저 적용하지 않는다.
+CA 부분은 사내 CA 아래의 Puppet Intermediate CA 발급 방식에 대한 설계다.
 
 ```mermaid
 flowchart TB
@@ -110,7 +144,7 @@ CA 키·체인 외에도 서명 인증서, CSR, serial, inventory, CRL 등 선�
 | CA | 신규 등록·서명·갱신·폐기에 영향. 유효한 기존 인증서의 일반 Catalog 요청은 다른 의존성이 정상이고 CRL 검증 조건을 충족하면 계속 가능 |
 | 관리 클러스터 전체 | 새 설정 전달 중단. Agent의 기존 캐시 사용 여부는 Agent 정책에 따름 |
 
-먼저 한 CSP의 서로 다른 AZ/장애 도메인에 관리 서버를 분산하고 AWS/GCP/KC 노드가
+운영 단계에서는 한 CSP의 서로 다른 AZ/장애 도메인에 관리 서버를 분산하고 AWS/GCP/KC 노드가
 VPN/사설 연결로 접근하도록 설계한다. CSP 전체 장애까지 대응해야 하면 다른 리전/CSP에
 복구 가능한 별도 관리 클러스터와 DNS 전환 절차를 추가한다.
 여러 CSP 사이에 DB 쓰기를 분산하는 구성을 초기 전제로 삼지 않는다.
