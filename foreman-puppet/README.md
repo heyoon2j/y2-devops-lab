@@ -1,5 +1,7 @@
 # Foreman / Puppet 아키텍처
 
+그림으로 읽는 순서는 [파일 따라가기](docs/WALKTHROUGH.md)를 참고한다.
+
 ## 목적과 범위
 
 Foreman으로 노드의 등록·분류·상태를 관리하고, Puppet으로 서버 설정을 적용한다.
@@ -44,6 +46,7 @@ Foreman API나 등록 명령의 실제 인자 이름은 아니다.
 | 입력값 | 필수 | 예시 / 허용값 | 용도 및 처리 |
 | --- | --- | --- | --- |
 | `HOST_GROUP` | 필수 | `aws`, `gcp`, `kc` | Foreman 등록 시 지정한다. Fact로 보내는 값이 아니다. |
+| `PUPPET_ROLE` | 필수 | `role::base`, `role::gpu_svr` | user-data 등록 자동화가 Foreman 호스트에 Role Class 하나를 배정한다. Fact는 아니다. |
 | `DEPLOY_ENV` | 필수 | `dev`, `prd` | `deploy_env` 외부 Fact 파일을 만든다. |
 | `PUPPET_ENV` | 필수 | `development`, `production` | `dev/development`, `prd/production` 매핑으로 Foreman 호스트와 Agent의 코드 환경을 설정한다. Fact는 아니다. |
 | `FOREMAN_URL` | 필수 | `https://foreman.example.internal` | 등록 요청 대상. 개발·운영 관리 서버가 분리되면 환경에 맞는 주소를 전달한다. |

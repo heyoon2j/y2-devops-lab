@@ -33,12 +33,17 @@ GPU Fact가 들어왔다고 Role을 자동 변경하지 않는다.
 
 ```text
 HOST_GROUP=aws
+PUPPET_ROLE=role::gpu_svr
 DEPLOY_ENV=dev
 PUPPET_ENV=development
 PUPPET_SERVER=puppet.example.internal
 PUPPET_CA_SERVER=puppet-ca.example.internal
 CERTNAME=aws-dev-node-001.example.internal
 ```
+
+`PUPPET_ROLE`은 user-data 등록 자동화의 입력이다. 등록 자동화가 해당 Role Class를
+Foreman 호스트에 배정하도록 구현한다. 변수 선언만으로 배정되지 않으며 등록 스크립트는
+아직 구현하지 않았다. GPU Facts로 Role을 자동 선택하지 않는다.
 
 `PUPPET_ENV`는 별도 Fact로 추가하지 않는다. Foreman 호스트 분류와 Agent 설정에 사용하는
 코드 환경 입력값이다. `PUPPET_CA_SERVER`는 CA를 Compiler에서 분리하기 위한 접속값이다.
