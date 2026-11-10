@@ -24,7 +24,7 @@ foreman-puppet/                         # Puppet 코드 환경 하나의 루트
 │       │   ├── base.pp                 # 환경·OS·아키텍처 검증 및 하위 Profile 포함
 │       │   ├── gpu_system.pp           # GPU 시스템 설정 확장 지점; 현재 변경 리소스 없음
 │       │   ├── packages.pp             # Hiera에서 받은 패키지 설치 목록 적용
-│       │   └── node_info.pp            # /etc/foreman-puppet/node.conf 관리
+│       │   └── node_info.pp            # 노드 식별 파일과 Hiera 예시 파일 관리
 │       └── templates/                  # 노드별 값으로 렌더링할 파일 원본
 │           └── node.conf.epp           # 환경·OS·아키텍처를 기록하는 템플릿
 ├── docs/                               # 상세 운영·설계 설명
@@ -71,7 +71,7 @@ CSP 이름을 Fact로 추가하거나 `deploy_env`로부터 Host Group을 추정
 | `profile::gpu_system` | GPU용 OS 정책 확장 지점. 현재 변경 리소스 없음 |
 | `profile::base` | 환경·OS·아키텍처 검증 및 하위 Profile 포함 |
 | `profile::packages` | Hiera의 패키지 목록을 `ensure => installed`로 관리 |
-| `profile::node_info` | `/etc/foreman-puppet/node.conf`에 환경·Puppet 코드 환경·OS·아키텍처 기록 |
+| `profile::node_info` | 노드 식별 파일과 Hiera에서 내용을 받는 예시 파일 관리 |
 
 `deploy_env`가 `dev/prd`가 아니거나, Ubuntu 24.04가 아니거나,
 `os.architecture`가 `amd64/arm64`가 아니면 공통 Role의 Catalog 컴파일을 실패시킨다.
@@ -127,10 +127,18 @@ Class의 자동 파라미터 조회(APL)로 `profile::packages::packages`를 주
 동일한 키는 첫 번째로 발견한 값을 사용한다. 배열도 통째로 교체하므로,
 환경별 파일에서 패키지 목록을 덮어쓸 때는 필요한 공통 패키지를 모두 포함한다.
 
-| `deploy_env` | 최종 패키지 목록 | 출처 |
-| --- | --- | --- |
-| `dev` | `ca-certificates`, `curl`, `jq` | `dev.yaml`의 초기 예시 정책 |
-| `prd` | `ca-certificates`, `curl` | 비어 있는 `prd.yaml`을 지나 `common.yaml` 조회 |
+개발·운영 모두 공통 패키지 `ca-certificates`, `curl`을 사용한다.
+`dev.yaml`, `prd.yaml`은 현재 빈 매핑이며 공통값을 상속한다.
+
+파일 생성 예시는 `common.yaml`에 다음과 같이 둔다.
+
+```yaml
+profile::node_info::example_content: "echo xxx\n"
+```
+
+두 Role 모두 `/etc/foreman-puppet/example.txt`를 `root:root`, `0644`로 관리한다.
+파일 내용은 줄바꿈으로 끝나는 `echo xxx` 문자열이다. 셸 명령을 실행하지 않는다.
+이 값을 환경별 YAML에 정의하면 해당 환경에서만 공통값을 덮어쓴다.
 
 패키지 버전은 고정하지 않으며 패키지 저장소 접근은 배포 환경에서 준비한다.
 이미 설치된 패키지를 최신 버전으로 강제 업그레이드하거나, 목록 밖의 패키지를 제거하지 않는다.

@@ -62,7 +62,7 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
     gpu_profile = catalog.resource('Class', 'Profile::Gpu_system')
     assert(!gpu_profile.nil? == (role == 'role::gpu_svr'), 'Wrong GPU Profile selection')
     packages = catalog.resources.select { |r| r.type == 'Package' }.map(&:title).sort
-    expected = env == 'dev' ? %w[ca-certificates curl jq] : %w[ca-certificates curl]
+    expected = %w[ca-certificates curl]
     assert(packages == expected, "Wrong Hiera packages for #{env}: #{packages}")
 
     info = catalog.resource('File', '/etc/foreman-puppet/node.conf')
@@ -70,6 +70,8 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
     puppet_env = env == 'dev' ? 'development' : 'production'
     assert(info[:content].include?("puppet_env=#{puppet_env}\n"), 'Wrong Puppet code environment')
     assert(info[:content].include?("arch=#{arch}\n"), 'Wrong architecture in node.conf')
+    example = catalog.resource('File', '/etc/foreman-puppet/example.txt')
+    assert(example && example[:content] == "echo xxx\n", 'Wrong literal example file content')
     assert(catalog.resources.none? { |r| r.type == 'Exec' }, 'Unexpected executable resource')
   end
 

@@ -1,5 +1,7 @@
 # Do not write back into facts.d: deploy_env remains owned by user-data.
-class profile::node_info {
+class profile::node_info (
+  String[1] $example_content,
+) {
   file { '/etc/foreman-puppet':
     ensure => directory,
     owner  => 'root',
@@ -19,6 +21,16 @@ class profile::node_info {
       'os_release' => $facts['os']['release']['full'],
       'arch'       => $facts['os']['architecture'],
     }),
+    require => File['/etc/foreman-puppet'],
+  }
+
+  # Hiera example: manage literal text without executing a shell command.
+  file { '/etc/foreman-puppet/example.txt':
+    ensure  => file,
+    owner   => 'root',
+    group   => 'root',
+    mode    => '0644',
+    content => $example_content,
     require => File['/etc/foreman-puppet'],
   }
 }

@@ -3,3 +3,6 @@
 profile::packages::packages:
   - ca-certificates
   - curl
+
+# Literal file contents, including the final newline. This is not executed.
+profile::node_info::example_content: "echo xxx\n"

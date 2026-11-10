@@ -1,6 +1,3 @@
 ---
-# Example development baseline; keep the complete list when overriding.
-profile::packages::packages:
-  - ca-certificates
-  - curl
-  - jq
+# Development currently inherits the common baseline and example file content.
+{}
