@@ -64,6 +64,35 @@ Agent마다 고유한 인증서·개인키를 사용한다. 공통 웹 인증서
 `puppet apply` 로컬 실행에는 Server와의 mTLS가 필요하지 않지만 현재 중앙 관리 방식과 다르다.
 TLS 검증은 유지한다.
 
+## 인증서 없이 통신한다는 옵션의 구분
+
+표준 Agent/Server 구성은 mTLS이며 현재 프로젝트는 사내 인증서 사용 결정을 유지한다.
+다만 인증서가 없는 요청을 허용하거나 특정 구간에서 TLS를 종료하는 옵션 자체는 존재한다.
+아래는 기능 설명이며 해당 설정을 적용한 것은 아니다.
+
+| 옵션 / 방식 | 실제 의미 | 인증서 없는 전체 Agent 운영인가 |
+| --- | --- | --- |
+| `auth.conf`의 `allow-unauthenticated: true` | 일치하는 API 규칙에서 인증된 이름을 확인할 수 없는 요청도 허용 | API 인가 규칙이다. TLS 수립·클라이언트 인증서 요구·Agent 부트스트랩을 모두 끄는 단일 옵션이 아님 |
+| External SSL Termination | 프록시가 Agent 인증서를 검증하고 신원을 헤더로 전달. Puppet Server 백엔드는 HTTP 사용 가능 | 백엔드 구간에서 TLS를 생략하는 것이며 Agent↔프록시의 인증서가 없어지는 것은 아님 |
+| `certificate_revocation = false` | 인증서 폐기 목록(CRL) 확인을 끔 | 인증서 자체나 서버/클라이언트 인증을 제거하지 않음 |
+| `puppet apply` | 로컬에서 코드로 Catalog를 구성·적용 | Puppet Server 통신 인증서는 필요 없지만 현재 ENC/Agent-Server 흐름과 다름 |
+
+따라서 “인증서 없이”가 HTTP 전송, 서버 인증서 검증 해제, 클라이언트 인증서 생략,
+CA 서명 자동화 중 무엇을 뜻하는지 구분해야 한다. 일부 endpoint에서 인증서가 필요 없는 것과
+Catalog·Facts·파일 다운로드·Report를 포함한 전체 Agent 실행이 동작하는 것도 다르다.
+최초 CSR/CA 인증서 조회 등 부트스트랩 요청 역시 전체 관리 API의 무인증 운영과 구분한다.
+
+미인증 관리 API를 열면 노드 신원과 권한을 보호할 별도 설계가 필요하다.
+외부 TLS 종료의 인증 헤더는 프록시가 검증 결과로 생성하고 사용자 제공 헤더는 신뢰하지 않는다.
+Puppet 백엔드에는 그 프록시만 접근하도록 제한한다.
+현재는 무인증 API 허용이나 TLS 종료 방식으로 변경하지 않는다.
+
+공식 문서:
+
+- [Puppet Server auth.conf](https://help.puppet.com/core/current/content/puppetcore/server/config_file_auth.htm)
+- [External SSL termination](https://help.puppet.com/core/current/content/puppetcore/server/external_ssl_termination.htm)
+- [Configuration Reference: certificate_revocation](https://help.puppet.com/core/current/Content/PuppetCore/Markdown/configuration.htm#certificate_revocation)
+
 ## 운영 HA 구성 단위
 
 개발 검증 이후 운영 관리 구성을 다음 구조로 구축한다.

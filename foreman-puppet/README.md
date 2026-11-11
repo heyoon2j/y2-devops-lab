@@ -1,6 +1,7 @@
 # Foreman / Puppet 아키텍처
 
 그림으로 읽는 순서는 [파일 따라가기](docs/WALKTHROUGH.md)를 참고한다.
+[설정 조회·등록 확인 관계도](docs/LOOKUP_AND_REGISTRATION.md)는 Facts·Role·Hiera·Report와 로컬 진단 파일의 차이를 설명한다.
 
 ## 목적과 범위
 
