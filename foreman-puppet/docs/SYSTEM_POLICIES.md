@@ -99,6 +99,9 @@ DNS는 Ubuntu의 systemd-resolved/netplan 및 Rocky의 NetworkManager 등 실제
 최초 등록 전 필요한 Puppet 접속값과 `deploy_env/team` Fact는 이미지/user-data에서 준비한다.
 Puppet의 사후 관리 Profile에만 넣어 첫 접속 자체가 불가능해지는 순환 의존을 만들지 않는다.
 DB/Hadoop/GPU용 추가 시스템 정책은 필요할 때 별도 Profile로 조합한다.
+모든 서비스 설정 Profile은 [서비스 설정 변경 정책](SERVICE_CHANGE_POLICY.md)에 따라
+검증 후 실제 변경 시에만 필요한 reload/restart를 수행한다. 주기적인 서비스 자동 시작과
+상태 알림은 Puppet의 기본 책임으로 넣지 않고 Zabbix의 감시와 구분한다.
 
 ## 검증
 

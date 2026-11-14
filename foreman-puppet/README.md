@@ -4,6 +4,8 @@
 [설정 조회·등록 확인 관계도](docs/LOOKUP_AND_REGISTRATION.md)는 Facts·Role·Hiera·Report와 로컬 진단 파일의 차이를 설명한다.
 
 이미지 빌드·user-data·지속 관리의 구분과 코드 배포 순서는 [배포·지속 관리](docs/DEPLOYMENT_MODEL.md)를 참고한다.
+서비스는 [설정 변경 시 검증·반영](docs/SERVICE_CHANGE_POLICY.md)을 Puppet이 담당하고,
+상시 생존·응답 감시와 알림은 Zabbix에 맡긴다.
 
 ## 목적과 범위
 
