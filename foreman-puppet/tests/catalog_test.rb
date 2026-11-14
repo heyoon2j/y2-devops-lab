@@ -65,11 +65,8 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
     expected = %w[ca-certificates curl]
     assert(packages == expected, "Wrong Hiera packages for #{env}: #{packages}")
 
-    info = catalog.resource('File', '/etc/foreman-puppet/node.conf')
-    assert(info && info[:content].include?("deploy_env=#{env}\n"), 'Missing environment in node.conf')
-    puppet_env = env == 'dev' ? 'development' : 'production'
-    assert(info[:content].include?("puppet_env=#{puppet_env}\n"), 'Wrong Puppet code environment')
-    assert(info[:content].include?("arch=#{arch}\n"), 'Wrong architecture in node.conf')
+    old_info = catalog.resource('File', '/etc/foreman-puppet/node.conf')
+    assert(old_info && old_info[:ensure].to_s == 'absent', 'Old diagnostic file must be removed')
     example = catalog.resource('File', '/etc/foreman-puppet/example.txt')
     assert(example && example[:content] == "echo xxx\n", 'Wrong literal example file content')
     assert(catalog.resources.none? { |r| r.type == 'Exec' }, 'Unexpected executable resource')

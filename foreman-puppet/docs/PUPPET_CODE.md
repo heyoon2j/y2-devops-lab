@@ -20,17 +20,18 @@ foreman-puppet/                         # Puppet 코드 환경 하나의 루트
 │   │       ├── base.pp                 # role::base: 일반 서버
 │   │       └── gpu_svr.pp              # role::gpu_svr: 공통 + GPU 시스템 Profile
 │   └── profile/                        # 패키지 등 기능별 설정을 묶는 모듈
-│       ├── manifests/                  # 실제 Puppet Class 정의(.pp)
-│       │   ├── base.pp                 # 환경·OS·아키텍처 검증 및 하위 Profile 포함
-│       │   ├── gpu_system.pp           # GPU 시스템 설정 확장 지점; 현재 변경 리소스 없음
-│       │   ├── packages.pp             # Hiera에서 받은 패키지 설치 목록 적용
-│       │   └── node_info.pp            # 노드 식별 파일과 Hiera 예시 파일 관리
-│       └── templates/                  # 노드별 값으로 렌더링할 파일 원본
-│           └── node.conf.epp           # 환경·OS·아키텍처를 기록하는 템플릿
+│       └── manifests/                  # 실제 Puppet Class 정의(.pp)
+│           ├── base.pp                 # 환경·OS·아키텍처 검증 및 하위 Profile 포함
+│           ├── gpu_system.pp           # GPU 시스템 설정 확장 지점; 현재 변경 리소스 없음
+│           ├── packages.pp             # Hiera에서 받은 패키지 설치 목록 적용
+│           └── example_file.pp         # Hiera 예시 파일 생성·이전 진단 파일 삭제
 ├── docs/                               # 상세 운영·설계 설명
 │   ├── PUPPET_CODE.md                  # 이 문서: 디렉터리·Class·Hiera 사용법
 │   ├── ENVIRONMENTS.md                 # Host Group과 Puppet 코드 환경 매핑
-│   └── HA_AND_CERTIFICATES.md          # 개발 단일 서버 → 운영 HA 및 사내 인증서
+│   ├── HA_AND_CERTIFICATES.md          # 개발 단일 서버 → 운영 HA 및 사내 인증서
+│   ├── WALKTHROUGH.md                  # 실제 파일과 흐름을 연결한 그림
+│   ├── LOOKUP_AND_REGISTRATION.md      # 조회 관계와 등록 성공 판정 기준
+│   └── DEPLOYMENT_MODEL.md             # 이미지·user-data·Puppet·Ansible 역할
 ├── Gemfile                             # 로컬 검증에 필요한 Ruby gem 목록
 ├── Gemfile.lock                        # 검증용 gem 버전 고정
 └── tests/                              # 실제 설정 적용 없이 코드 검증
@@ -71,7 +72,7 @@ CSP 이름을 Fact로 추가하거나 `deploy_env`로부터 Host Group을 추정
 | `profile::gpu_system` | GPU용 OS 정책 확장 지점. 현재 변경 리소스 없음 |
 | `profile::base` | 환경·OS·아키텍처 검증 및 하위 Profile 포함 |
 | `profile::packages` | Hiera의 패키지 목록을 `ensure => installed`로 관리 |
-| `profile::node_info` | 노드 식별 파일과 Hiera에서 내용을 받는 예시 파일 관리 |
+| `profile::example_file` | Hiera 예시 파일 생성·이전 진단 파일 삭제 |
 
 `deploy_env`가 `dev/prd`가 아니거나, Ubuntu 24.04가 아니거나,
 `os.architecture`가 `amd64/arm64`가 아니면 공통 Role의 Catalog 컴파일을 실패시킨다.
@@ -133,7 +134,7 @@ Class의 자동 파라미터 조회(APL)로 `profile::packages::packages`를 주
 파일 생성 예시는 `common.yaml`에 다음과 같이 둔다.
 
 ```yaml
-profile::node_info::example_content: "echo xxx\n"
+profile::example_file::content: "echo xxx\n"
 ```
 
 두 Role 모두 `/etc/foreman-puppet/example.txt`를 `root:root`, `0644`로 관리한다.
@@ -173,8 +174,8 @@ bundle exec ruby tests/catalog_test.rb
 검증은 임시 코드 환경을 만들고 Catalog만 컴파일한다. 로컬 OS의 패키지나 `/etc`는 변경하지 않는다.
 다음 항목을 확인한다.
 
-- 두 Role 각각에 대해 `dev/prd`, `amd64/arm64`, GPU 존재·MIG 구성 상태 조합에서 Hiera와 EPP 렌더링
-- `role::gpu_svr`에만 GPU Profile이 포함되고 공통 패키지·노드 파일이 중복 없이 생성되는지 확인
+- 두 Role 각각에 대해 `dev/prd`, `amd64/arm64`, GPU 존재·MIG 구성 상태 조합에서 Hiera와 예시 파일 생성
+- `role::gpu_svr`에만 GPU Profile이 포함되고 공통 패키지·예시 파일이 중복 없이 생성되는지 확인
 - GPU/MIG Facts가 없는 초기 노드의 컴파일
 - Foreman Class가 배정되지 않은 노드의 무변경 Catalog
 - 환경 Fact 누락·잘못된 값·경로 형태 값, 지원하지 않는 OS·버전·아키텍처의 컴파일 거부

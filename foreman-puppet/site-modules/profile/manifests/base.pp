@@ -22,5 +22,5 @@ class profile::base {
   }
 
   include profile::packages
-  include profile::node_info
+  include profile::example_file
 }

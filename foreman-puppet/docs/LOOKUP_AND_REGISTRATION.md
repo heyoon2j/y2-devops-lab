@@ -43,44 +43,37 @@ Facts/Report 업로드, Foreman ENC, 등록 자동화는 실제 배포 시 연�
 현재 Profile 선언:
 
 ```puppet
-class profile::node_info (
-  String[1] $example_content,
+class profile::example_file (
+  String[1] $content,
 ) {
-  # File 리소스의 content에 $example_content를 사용
+  # File 리소스의 content에 $content를 사용
 }
 ```
 
 ```mermaid
 flowchart LR
-    K["찾을 키\nClass + 파라미터\nprofile::node_info::example_content"] --> L["Hiera: 키별 조회"]
+    K["찾을 키\nClass + 파라미터\nprofile::example_file::content"] --> L["Hiera: 키별 조회"]
     F["이번 Agent 요청의 Fact\ndeploy_env=dev"] --> T["hiera.yaml\ndeploy_env/%{facts.deploy_env}.yaml"]
     T --> D["data/deploy_env/dev.yaml"]
     L --> D
     D -->|"키가 없음"| C["data/common.yaml"]
-    C -->|"echo xxx + 줄바꿈"| V["$example_content"]
+    C -->|"echo xxx + 줄바꿈"| V["$content"]
     V --> O["Catalog의 File 리소스\nAgent가 example.txt 적용"]
 ```
 
 `name`은 계층 이름, `path`는 `datadir: data` 기준의 상대 파일 경로다.
-`example_content`가 `deploy_env`를 찾는 것이 아니다. 파라미터는 조회할 키를 정하고,
+`content`가 `deploy_env`를 찾는 것이 아니다. 파라미터는 조회할 키를 정하고,
 Fact와 경로 규칙은 조회할 파일을 정한다. Hiera가 Role을 선택하지 않는다.
 
-## 3. node.conf는 필요한가
+## 3. 로컬 진단 파일 제거
 
-`site-modules/profile/templates/node.conf.epp`는 Puppet Server 코드에 있는 양식이고,
-Agent에 생성되는 결과 파일은 `/etc/foreman-puppet/node.conf`다.
-현재는 환경·코드 환경·OS·Arch를 기록하며 다른 프로그램에서 읽지 않는 진단용 파일이다.
-GPU·클라우드 리소스 전체를 동기화하는 파일이나 등록 성공 확인 파일이 아니다.
+`node.conf` 생성과 `node.conf.epp` 양식은 제거했다. 현재는 `profile::example_file`이
+예시 파일 `example.txt`를 관리하며, 과거 Catalog가 만든 `/etc/foreman-puppet/node.conf`는
+다음 Puppet 적용에서 `ensure => absent`로 삭제한다.
 
-Puppet이 새 Catalog를 받아 해당 리소스를 적용할 때 값이 갱신된다.
-중간에 로컬 파일이 수정되면 다음 적용에서 복구된다. Agent가 중단되거나 적용에 실패하면
-최신 상태가 아닐 수 있고, 같은 리소스를 계속 관리해도 내용이 같으면 변경하지 않는다.
-실시간 업데이트나 클라우드 리소스 수명 주기 동기화를 보장하지 않는다.
-
-동적 클라우드 인벤토리와 등록 성공 여부는 Foreman API와 최신 Facts/Report로 확인하는 것을
-권장한다. 이 파일은 필수가 아니지만 현재 학습·현장 진단 예시로 유지하며,
-제거하거나 선택적으로 관리하는 변경은 아직 하지 않았다. `example.txt`는 별도 예시 파일이다.
-인증정보나 토큰은 이 파일에 기록하지 않는다.
+클라우드 상태나 등록 성공 여부는 로컬 파일의 존재로 판단하지 않는다.
+Foreman의 최신 Facts/Report와 Agent 실행 결과를 기준으로 확인한다.
+인스턴스 생성·삭제는 클라우드 인벤토리와 별도로 대조한다.
 
 ## 4. 부트스트랩 성공 판정 설계
 

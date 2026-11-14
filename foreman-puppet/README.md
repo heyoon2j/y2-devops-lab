@@ -3,6 +3,8 @@
 그림으로 읽는 순서는 [파일 따라가기](docs/WALKTHROUGH.md)를 참고한다.
 [설정 조회·등록 확인 관계도](docs/LOOKUP_AND_REGISTRATION.md)는 Facts·Role·Hiera·Report와 로컬 진단 파일의 차이를 설명한다.
 
+이미지 빌드·user-data·지속 관리의 구분과 코드 배포 순서는 [배포·지속 관리](docs/DEPLOYMENT_MODEL.md)를 참고한다.
+
 ## 목적과 범위
 
 Foreman으로 노드의 등록·분류·상태를 관리하고, Puppet으로 서버 설정을 적용한다.
@@ -176,7 +178,7 @@ CSP Host Group에는 Role을 배정하지 않아 상속으로 두 Role이 동시
 role::base                         role::gpu_svr
 └── profile::base                   ├── profile::base
     ├── profile::packages          └── profile::gpu_system
-    └── profile::node_info
+    └── profile::example_file
 ```
 
 `profile::gpu_system`은 GPU용 시스템 설정 확장 지점이다. 구체적인 정책 확정 전에는

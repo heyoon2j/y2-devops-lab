@@ -5,4 +5,4 @@ profile::packages::packages:
   - curl
 
 # Literal file contents, including the final newline. This is not executed.
-profile::node_info::example_content: "echo xxx\n"
+profile::example_file::content: "echo xxx\n"

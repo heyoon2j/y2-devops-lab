@@ -41,12 +41,11 @@ foreman-puppet/
 │   │   ├── base.pp                   # 일반 서버: 공통 Profile 포함
 │   │   └── gpu_svr.pp                # GPU 서버: 공통 + GPU Profile 포함
 │   └── profile/
-│       ├── manifests/
-│       │   ├── base.pp               # 환경·OS·Arch 검사 후 공통 기능 포함
-│       │   ├── packages.pp           # Hiera의 목록으로 패키지 설치
-│       │   ├── node_info.pp          # 노드 정보·예시 파일 생성
-│       │   └── gpu_system.pp         # GPU용 확장 지점; 현재 변경 리소스 없음
-│       └── templates/node.conf.epp   # 노드 정보 파일의 양식
+│       └── manifests/
+│           ├── base.pp               # 환경·OS·Arch 검사 후 공통 기능 포함
+│           ├── packages.pp           # Hiera의 목록으로 패키지 설치
+│           ├── example_file.pp       # 예시 파일 생성·이전 진단 파일 삭제
+│           └── gpu_system.pp         # GPU용 확장 지점; 현재 변경 리소스 없음
 ├── hiera.yaml                        # 필요한 설정값의 조회 순서
 └── data/
     ├── deploy_env/dev.yaml           # 개발 환경 우선 조회; 현재 비어 있음
@@ -64,14 +63,13 @@ flowchart TD
     G --> B["profile/manifests/base.pp\n환경·OS·Arch 검사"]
     G --> GPU["profile/manifests/gpu_system.pp\n현재 빈 확장 지점"]
     B --> PK["profile/manifests/packages.pp\npackages 값 필요"]
-    B --> NI["profile/manifests/node_info.pp\nexample_content 값 필요"]
+    B --> NI["profile/manifests/example_file.pp\ncontent 값 필요"]
     PK -.->|"값 조회"| H["hiera.yaml"]
     NI -.->|"값 조회"| H
     H --> D["data/deploy_env/dev.yaml\n현재 키 없음"]
-    D --> C["data/common.yaml\npackages / example_content"]
+    D --> C["data/common.yaml\npackages / content"]
     C -.->|"패키지 목록 반환"| PK
     C -.->|"echo xxx + 줄바꿈 반환"| NI
-    T["templates/node.conf.epp"] --> NI
     PK --> CAT["Puppet Server가 Catalog 생성"]
     NI --> CAT
     GPU --> CAT
@@ -99,11 +97,11 @@ class role::gpu_svr {
 profile::packages::packages:
   - ca-certificates
   - curl
-profile::node_info::example_content: "echo xxx\n"
+profile::example_file::content: "echo xxx\n"
 ```
 
-`profile::node_info::example_content`는 `profile::node_info` Class의
-`$example_content` 파라미터로 자동 조회되어 `File` 리소스의 `content`로 들어간다.
+`profile::example_file::content`는 `profile::example_file` Class의
+`$content` 파라미터로 자동 조회되어 `File` 리소스의 `content`로 들어간다.
 
 ## 5. Agent 적용 후 기대 결과
 
@@ -111,7 +109,6 @@ profile::node_info::example_content: "echo xxx\n"
 Ubuntu 24.04 개발 GPU 서버
 ├── ca-certificates, curl 설치 상태 유지
 └── /etc/foreman-puppet/
-    ├── node.conf       # dev / development / Ubuntu 버전 / Arch 기록
     └── example.txt     # 내용: echo xxx + 줄바꿈
 ```
 
@@ -122,5 +119,5 @@ Ubuntu 24.04 개발 GPU 서버
 
 검증은 Catalog 컴파일까지 수행했으며, 위 결과는 실제 노드 적용 후 확인할 기대 상태다.
 
-`node.conf`는 로컬 진단용이며 등록 성공이나 현재 클라우드 상태의 판정 기준이 아니다.
-현재는 Puppet 적용 때 갱신되는 예시로 유지한다. 자세한 운영 기준은 위 관계도를 참고한다.
+`node.conf`와 EPP 양식은 제거했다. 이전 Catalog로 생성된 파일도 다음 적용에서 삭제한다.
+등록 성공은 Foreman의 최신 Facts/Report와 Puppet 실행 결과로 확인한다.
