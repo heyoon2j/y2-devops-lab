@@ -4,8 +4,8 @@
 
 | 구분 | 출처 | 예시 | 사용하는 곳 |
 | --- | --- | --- | --- |
-| 적용 의도 | IaC/user-data → 등록 자동화 → Foreman | Host Group, Role, Puppet 코드 환경 | ENC의 노드 분류 |
-| 관측 정보 | Agent의 Facter 및 외부/Custom Facts | deploy_env, OS, Arch, GPU/MIG | Catalog 컴파일, Hiera 파일 경로, Foreman 조회 |
+| 적용 의도 | IaC/user-data → 등록 자동화 → Foreman | Host Group, csp ENC 파라미터, Role, Puppet 코드 환경 | ENC의 노드 분류 |
+| 관측 정보 | Agent의 Facter 및 외부/Custom Facts | deploy_env, team, OS, Arch, GPU/MIG | Catalog 컴파일, Hiera 파일 경로, Foreman 조회 |
 | 설정 데이터 | Git의 Hiera YAML | 패키지 목록, 예시 파일 내용 | Profile의 파라미터 |
 
 `deploy_env`는 user-data가 파일로 준비하는 환경 정보다. GPU/MIG는 장비에서 수집할
@@ -25,7 +25,8 @@ flowchart TD
     P --> R["배정된 Role → 포함된 Profile"]
     R -->|"필요한 파라미터 키"| H["Hiera 조회"]
     Q -->|"facts.deploy_env로 경로 치환"| H
-    H --> D["환경별 YAML → 공통 YAML"]
+    F -->|"csp ENC 파라미터"| H
+    H --> D["CSP+환경 → CSP → 환경 → 공통 YAML"]
     D -->|"값 반환"| R
     R --> C["Catalog"]
     C -->|"Agent 적용"| A
@@ -39,6 +40,10 @@ flowchart TD
 Facts/Report 업로드, Foreman ENC, 등록 자동화는 실제 배포 시 연결해야 한다.
 
 ## 2. Hiera에서 무엇을 어디서 찾는가
+
+전체 우선순위는 CSP+환경 → CSP → 환경 → 공통이다. 아래 그림은 해당 CSP 상위 계층에
+키가 없을 때 환경·공통 계층으로 넘어온 조회를 확대해서 보여준다. 전체 경로는
+[CSP별 시스템 정책](SYSTEM_POLICIES.md)을 참고한다.
 
 현재 Profile 선언:
 

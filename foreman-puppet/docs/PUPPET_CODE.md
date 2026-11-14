@@ -11,6 +11,7 @@ foreman-puppet/                         # Puppet 코드 환경 하나의 루트
 ├── hiera.yaml                          # 설정 데이터 조회 순서 정의
 ├── data/                               # 코드에서 분리한 설정값(YAML)
 │   ├── common.yaml                     # 모든 환경에 공통인 기본값
+│   ├── csp/                           # CSP별 데이터: aws.yaml, gcp.yaml, kc.yaml
 │   └── deploy_env/                     # deploy_env Fact에 따른 환경별 데이터
 │       ├── dev.yaml                    # 개발 환경의 덮어쓰기 값
 │       └── prd.yaml                    # 운영 환경의 덮어쓰기 값; 현재 공통값 상속
@@ -60,8 +61,8 @@ Class가 배정되지 않은 호스트의 Catalog에는 이 프로젝트의 관�
 | `kc` | `role::base` 또는 `role::gpu_svr` | 호스트별 `development` 또는 `production` |
 
 CSP 이름을 Fact로 추가하거나 `deploy_env`로부터 Host Group을 추정하지 않는다.
-현재 Hiera는 CSP별 데이터를 선택하지 않는다. CSP별 정책이 필요하면 Foreman의 신뢰할 수
-있는 분류 정보를 코드에 전달하는 규약을 먼저 확정한다.
+Foreman Host Group의 `csp=aws/gcp/kc` 파라미터를 ENC로 전달한다.
+Hiera는 이 최상위 파라미터로 CSP별 데이터를 선택한다. 노드의 CSP Fact를 요구하지 않는다.
 
 ## Classes
 
@@ -74,10 +75,10 @@ CSP 이름을 Fact로 추가하거나 `deploy_env`로부터 Host Group을 추정
 | `profile::packages` | Hiera의 패키지 목록을 `ensure => installed`로 관리 |
 | `profile::example_file` | Hiera 예시 파일 생성·이전 진단 파일 삭제 |
 
-`deploy_env`가 `dev/prd`가 아니거나, Ubuntu 24.04가 아니거나,
-`os.architecture`가 `amd64/arm64`가 아니면 공통 Role의 Catalog 컴파일을 실패시킨다.
-또한 `development ↔ dev`, `production ↔ prd` 매핑이 맞지 않거나 다른 코드 환경이면 실패한다.
-이로써 잘못된 환경 Fact가 공통값으로 조용히 대체되는 것을 방지한다.
+`csp` ENC 파라미터는 `aws/gcp/kc`, `deploy_env` Fact는 `dev/prd`만 허용한다.
+지원 OS는 Ubuntu 20.04·24.04·26.04(`amd64/arm64`), Rocky 8·9(`x86_64/aarch64`)다.
+`development ↔ dev`, `production ↔ prd` 매핑도 검증한다.
+지원하지 않는 조합은 컴파일을 거부한다. 실제 Agent의 OS 지원은 설치 단계에서 별도 검증한다.
 
 `gpu.present`와 `gpu.mig.configured`는 Foreman의 관측 정보다. 기본 Role은 이 Fact의 유무와 값에
 따라 MIG를 생성·삭제하거나 GPU 드라이버를 변경하지 않는다. 수집기는 후속 단계에서 구현한다.
@@ -121,8 +122,10 @@ DB·Hadoop 등 필요가 생기면 기능별 Profile을 추가하고 필요한 R
 
 조회 우선순위는 다음과 같다.
 
-1. `data/deploy_env/%{facts.deploy_env}.yaml`
-2. `data/common.yaml`
+1. `data/csp/%{::csp}/%{facts.deploy_env}.yaml` (필요할 때 생성)
+2. `data/csp/%{::csp}.yaml`
+3. `data/deploy_env/%{facts.deploy_env}.yaml`
+4. `data/common.yaml`
 
 Class의 자동 파라미터 조회(APL)로 `profile::packages::packages`를 주입한다.
 동일한 키는 첫 번째로 발견한 값을 사용한다. 배열도 통째로 교체하므로,
@@ -152,7 +155,7 @@ Hiera 데이터에 등록 토큰이나 비밀번호를 저장하지 않는다.
    사내 인증서 신뢰와 ENC/Facts/Report 연동을 준비한다.
 2. 개발 단계에서는 development 코드를 배포하고 Classes를 가져온다.
    운영 HA 구축 시 production을 배포하고 해당 환경의 Classes도 가져온다.
-3. `aws/gcp/kc` Host Group에는 Class를 배정하지 않는다.
+3. `aws/gcp/kc` Host Group에 같은 값의 `csp` 파라미터를 설정하고, Class는 배정하지 않는다.
    호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
    Host Group의 Puppet Environment는 비워 두고 등록 시 호스트별로 명시한다.
 4. Profile Class는 Role을 통해 포함한다. Hiera로 관리할 파라미터의 Foreman override는 비워 둔다.
@@ -174,7 +177,8 @@ bundle exec ruby tests/catalog_test.rb
 검증은 임시 코드 환경을 만들고 Catalog만 컴파일한다. 로컬 OS의 패키지나 `/etc`는 변경하지 않는다.
 다음 항목을 확인한다.
 
-- 두 Role 각각에 대해 `dev/prd`, `amd64/arm64`, GPU 존재·MIG 구성 상태 조합에서 Hiera와 예시 파일 생성
+- 두 Role·두 환경·세 CSP·다섯 OS 버전·OS별 두 아키텍처·GPU 상태의 600개 조합에서 Hiera와 예시 파일 생성
+- 임시 데이터로 CSP+환경 → CSP → 환경 → 공통 우선순위 검증
 - `role::gpu_svr`에만 GPU Profile이 포함되고 공통 패키지·예시 파일이 중복 없이 생성되는지 확인
 - GPU/MIG Facts가 없는 초기 노드의 컴파일
 - Foreman Class가 배정되지 않은 노드의 무변경 Catalog

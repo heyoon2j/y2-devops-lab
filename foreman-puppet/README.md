@@ -8,7 +8,8 @@
 ## 목적과 범위
 
 Foreman으로 노드의 등록·분류·상태를 관리하고, Puppet으로 서버 설정을 적용한다.
-AWS, GCP, KC의 공통 구조와 Ubuntu 24.04 관리 대상 노드를 기준으로 설계한다.
+AWS, GCP, KC와 Ubuntu 20.04·24.04·26.04, Rocky 8·9 관리 대상 노드를 기준으로 구성한다.
+현재 OS 지원은 Catalog 컴파일 기준이며 실제 Agent 패키지/이미지 동작은 별도 검증한다.
 KC는 이 프로젝트의 CSP 식별자이며 구체적인 공급자 연동은 별도로 확정한다.
 
 이 디렉터리는 아키텍처 문서와 초기 Puppet 코드 환경을 포함한다.
@@ -16,9 +17,13 @@ Foreman/Puppet 설치, 등록 템플릿, GPU/MIG Custom Fact 수집기 및 실�
 코드 구성과 적용 절차는 [Puppet 코드 구성](docs/PUPPET_CODE.md)을 참고한다.
 [Host Group과 코드 환경](docs/ENVIRONMENTS.md), [이중화와 인증서](docs/HA_AND_CERTIFICATES.md)에 운영 설계를 정리한다.
 
+[CSP별 시스템 정책](docs/SYSTEM_POLICIES.md)에 OS 범위·팀 Fact·KC 전용 DNS/NTP와 후속 Profile 계획을 정리한다.
+
 ## 분류 원칙
 
 - Host Group은 CSP만 구분한다. 최상위 그룹으로 `aws`, `gcp`, `kc`를 만든다.
+- Host Group의 `csp` 파라미터를 ENC로 전달해 CSP별 Hiera 데이터를 선택한다.
+- 팀 표시는 선택적 `team` Fact(예: `devops`)를 사용한다.
 - 개발·운영은 `deploy_env` Custom Fact의 `dev`, `prd` 값으로 표시한다.
 - OS와 아키텍처는 Facter 기본 Facts를 사용한다.
 - GPU 관련 정보는 GPU 존재 여부인 `gpu.present`와 실제 MIG 인스턴스 구성 여부인 `gpu.mig.configured` Custom Facts로 수집한다.
@@ -33,6 +38,7 @@ Host Groups
 
 각 그룹의 호스트
 ├── deploy_env: dev 또는 prd
+├── team: devops (선택적 Fact)
 ├── os: Facter 기본 Fact
 ├── os.architecture: Facter 기본 Fact
 ├── gpu.present: Custom Fact
@@ -50,6 +56,7 @@ Foreman API나 등록 명령의 실제 인자 이름은 아니다.
 | --- | --- | --- | --- |
 | `HOST_GROUP` | 필수 | `aws`, `gcp`, `kc` | Foreman 등록 시 지정한다. Fact로 보내는 값이 아니다. |
 | `PUPPET_ROLE` | 필수 | `role::base`, `role::gpu_svr` | user-data 등록 자동화가 Foreman 호스트에 Role Class 하나를 배정한다. Fact는 아니다. |
+| `TEAM` | 선택 | `devops` | 표시·검색용 `team` 외부 Fact를 생성한다. 인증/권한 근거로 사용하지 않는다. |
 | `DEPLOY_ENV` | 필수 | `dev`, `prd` | `deploy_env` 외부 Fact 파일을 만든다. |
 | `PUPPET_ENV` | 필수 | `development`, `production` | `dev/development`, `prd/production` 매핑으로 Foreman 호스트와 Agent의 코드 환경을 설정한다. Fact는 아니다. |
 | `FOREMAN_URL` | 필수 | `https://foreman.example.internal` | 등록 요청 대상. 개발·운영 관리 서버가 분리되면 환경에 맞는 주소를 전달한다. |
@@ -70,9 +77,10 @@ Puppet Environment는 등록 시 Foreman 호스트와 Agent에 명시한다.
 | Fact 경로 | 출처 | user-data의 역할 | 예시 / 데이터 규약 |
 | --- | --- | --- | --- |
 | `deploy_env` | 외부 Custom Fact | 필수 입력값을 파일로 생성 | 문자열 `dev` 또는 `prd` |
-| `os.name` | Facter 기본 Fact | 직접 지정하지 않음 | `Ubuntu` |
-| `os.release.full` | Facter 기본 Fact | 직접 지정하지 않음 | `24.04` 또는 해당 이미지에서 수집된 패치 버전 |
-| `os.architecture` | Facter 기본 Fact | 직접 지정하지 않음 | Ubuntu에서 `amd64`, `arm64` 등 실제 수집값 사용 |
+| `team` | 외부 Custom Fact | 선택 입력값을 파일에 기록 | 문자열 `devops` 등 |
+| `os.name` | Facter 기본 Fact | 직접 지정하지 않음 | `Ubuntu`, `Rocky` |
+| `os.release.full` | Facter 기본 Fact | 직접 지정하지 않음 | `20.04`, `24.04`, `26.04`, Rocky `8.x/9.x`의 실제 수집값 |
+| `os.architecture` | Facter 기본 Fact | 직접 지정하지 않음 | Ubuntu `amd64/arm64`, Rocky `x86_64/aarch64`의 실제 수집값 확인 |
 | `gpu.present` | 구조화된 Custom Fact | GPU 수집기 배치/설치 준비 | GPU 확인 시 `true`, GPU가 없음을 확인하면 `false`, 판별 불가 시 `null` |
 | `gpu.mig.configured` | 구조화된 Custom Fact | MIG 수집기 배치/설치 준비 | 하나 이상의 GPU Instance(GI)가 있으면 `true`, 정상 조회 결과 GI가 없으면 `false`, 판별 불가 시 `null` |
 
@@ -114,6 +122,7 @@ write_files:
     permissions: '0644'
     content: |
       deploy_env: dev
+      team: devops
 ```
 
 이 노드의 등록 입력은 `HOST_GROUP=aws`, `DEPLOY_ENV=dev`이다.
@@ -151,7 +160,7 @@ Facts와 Report는 일반적인 Puppet 연동에서 Agent → Puppet Server → 
 
 ## 등록 및 적용 순서
 
-1. Foreman에 `aws`, `gcp`, `kc` Host Group을 생성하고 Classes를 가져온다. 각 호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
+1. Foreman에 `aws`, `gcp`, `kc` Host Group을 생성하고 각각 같은 이름의 `csp` 파라미터를 설정한 뒤 Classes를 가져온다. 각 호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
 2. Puppet Server의 ENC, Facts 업로드, Report 업로드 연동을 구성한다.
 3. 클라우드 생성 단계에서 Host Group, 환경, 접속 대상과 고유한 certname을 결정한다.
 4. user-data가 입력값을 검증하고 환경 Fact 파일을 생성한다.

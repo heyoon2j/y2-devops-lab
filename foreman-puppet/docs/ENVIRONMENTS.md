@@ -27,6 +27,9 @@ Host Group에 코드 환경을 강하게 결합하지 않고 호스트 등록 �
 각 호스트에 일반 서버 `role::base`, GPU 서버 `role::gpu_svr` 중 하나를 명시한다.
 GPU Fact가 들어왔다고 Role을 자동 변경하지 않는다.
 
+Host Group마다 최상위 ENC 파라미터 `csp`를 각각 `aws/gcp/kc`로 설정한다.
+[CSP별 시스템 정책](SYSTEM_POLICIES.md)을 참고한다.
+
 ## 등록 입력
 
 등록 템플릿/IaC의 논리 입력 예시는 다음과 같다. 실제 Foreman API 인자 이름은 아니다.
@@ -35,6 +38,7 @@ GPU Fact가 들어왔다고 Role을 자동 변경하지 않는다.
 HOST_GROUP=aws
 PUPPET_ROLE=role::gpu_svr
 DEPLOY_ENV=dev
+TEAM=devops
 PUPPET_ENV=development
 PUPPET_SERVER=puppet.example.internal
 PUPPET_CA_SERVER=puppet-ca.example.internal
@@ -44,6 +48,8 @@ CERTNAME=aws-dev-node-001.example.internal
 `PUPPET_ROLE`은 user-data 등록 자동화의 입력이다. 등록 자동화가 해당 Role Class를
 Foreman 호스트에 배정하도록 구현한다. 변수 선언만으로 배정되지 않으며 등록 스크립트는
 아직 구현하지 않았다. GPU Facts로 Role을 자동 선택하지 않는다.
+
+`TEAM`은 선택적 `team` Fact로 기록하며 Role 선택·인증 근거로 사용하지 않는다.
 
 `PUPPET_ENV`는 별도 Fact로 추가하지 않는다. Foreman 호스트 분류와 Agent 설정에 사용하는
 코드 환경 입력값이다. `PUPPET_CA_SERVER`는 CA를 Compiler에서 분리하기 위한 접속값이다.
@@ -86,7 +92,8 @@ Foreman ENC가 반환하는 코드 환경과 Agent 설정을 일치시킨다.
 3. 운영 HA를 구축한 후 승인한 동일 commit을 운영의 모든 Compiler의 `production`에 승격한다.
 4. 문제가 있으면 이전 승인 commit으로 되돌린다.
 
-Hiera는 선택된 코드 환경 안에서 `deploy_env`별 파일 → `common.yaml` 순으로 조회한다.
+Hiera는 선택된 코드 환경 안에서 CSP+환경 → CSP → 환경 → 공통 순으로 조회한다.
+예를 들어 `csp/aws/dev.yaml` → `csp/aws.yaml` → `deploy_env/dev.yaml` → `common.yaml`이다.
 코드 환경은 코드 버전, Fact는 데이터 선택과 표시를 담당한다.
 
 Puppet Environment 분리만으로 개발·운영의 보안 경계가 완성되지는 않는다.

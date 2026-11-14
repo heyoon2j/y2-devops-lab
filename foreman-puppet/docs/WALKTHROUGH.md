@@ -11,6 +11,7 @@
 HOST_GROUP=aws
 PUPPET_ROLE=role::gpu_svr
 DEPLOY_ENV=dev
+TEAM=devops
 PUPPET_ENV=development
 ```
 
@@ -48,6 +49,7 @@ foreman-puppet/
 │           └── gpu_system.pp         # GPU용 확장 지점; 현재 변경 리소스 없음
 ├── hiera.yaml                        # 필요한 설정값의 조회 순서
 └── data/
+    ├── csp/                        # aws.yaml / gcp.yaml / kc.yaml
     ├── deploy_env/dev.yaml           # 개발 환경 우선 조회; 현재 비어 있음
     ├── deploy_env/prd.yaml           # 운영 환경 우선 조회; 현재 비어 있음
     └── common.yaml                   # 환경별 키가 없을 때 공통값 제공
@@ -66,7 +68,7 @@ flowchart TD
     B --> NI["profile/manifests/example_file.pp\ncontent 값 필요"]
     PK -.->|"값 조회"| H["hiera.yaml"]
     NI -.->|"값 조회"| H
-    H --> D["data/deploy_env/dev.yaml\n현재 키 없음"]
+    H --> D["CSP+환경 → CSP → dev.yaml\n현재 예시 키 없음"]
     D --> C["data/common.yaml\npackages / content"]
     C -.->|"패키지 목록 반환"| PK
     C -.->|"echo xxx + 줄바꿈 반환"| NI
@@ -114,8 +116,9 @@ Ubuntu 24.04 개발 GPU 서버
 
 현재 GPU Profile은 비어 있어 GPU 드라이버나 MIG를 변경하지 않는다.
 일반 서버도 같은 공통 설정을 받지만 GPU Profile을 포함하지 않는다.
-운영 노드는 `production` 코드 환경에서 `prd.yaml`을 우선 조회한다.
-현재 두 환경 파일 모두 비어 있으므로 같은 공통값을 사용한다.
+운영 노드는 `production` 코드 환경에서 CSP+환경 → CSP → `prd.yaml` → 공통 순으로 조회한다.
+현재 환경별 파일과 CSP별 파일에 예시 파일 내용을 덮어쓰는 값이 없어 같은 공통값을 사용한다.
+Foreman Host Group은 `csp=aws`를 ENC로 전달해야 하며, 상세 계층은 [CSP별 정책](SYSTEM_POLICIES.md)을 참고한다.
 
 검증은 Catalog 컴파일까지 수행했으며, 위 결과는 실제 노드 적용 후 확인할 기대 상태다.
 
