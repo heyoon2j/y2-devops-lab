@@ -1,0 +1,8 @@
+---
+# Arrays use first-found lookup: an environment replaces the entire list.
+profile::packages::packages:
+  - ca-certificates
+  - curl
+
+# Literal file contents, including the final newline. This is not executed.
+profile::example_file::content: "echo xxx\n"

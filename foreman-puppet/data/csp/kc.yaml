@@ -1,0 +1,8 @@
+---
+# Reserved data contract for KC-only DNS/NTP profiles (not implemented yet).
+# Do not enable until real addresses and the OS configuration backend are known.
+profile::dns::manage: false
+profile::dns::servers: []
+profile::dns::search_domains: []
+profile::ntp::manage: false
+profile::ntp::servers: []
