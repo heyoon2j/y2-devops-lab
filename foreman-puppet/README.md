@@ -1,5 +1,7 @@
 # Foreman / Puppet 아키텍처
 
+서버 용어와 배치를 처음 볼 때는 [용어·아키텍처 그림](docs/ARCHITECTURE_GUIDE.md)부터 읽는다.
+
 그림으로 읽는 순서는 [파일 따라가기](docs/WALKTHROUGH.md)를 참고한다.
 구축 전 결정할 서버 배치·설치·네트워크 항목은 [관리 서버 구성](docs/SERVER_TOPOLOGY.md)을 참고한다.
 AWS 개발 1,000~2,000대·운영 약 250대의 단계별 구성은 [규모와 용량 계획](docs/CAPACITY_PLAN.md)을 참고한다.

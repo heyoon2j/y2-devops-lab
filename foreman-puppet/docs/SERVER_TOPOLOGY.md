@@ -2,6 +2,7 @@
 
 상태: 구현 전 구성안. 확정한 단계와 권장안·미정 사항을 구분한다.
 실제 VM·네트워크·서버 패키지·인증서를 생성하지 않는다.
+Foreman·Compiler·Smart Proxy 용어는 [그림 설명](ARCHITECTURE_GUIDE.md)을 참고한다.
 
 ## 1. 확정한 방향
 
