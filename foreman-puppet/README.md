@@ -9,6 +9,9 @@ AWS 개발 1,000~2,000대·운영 약 250대의 단계별 구성은 [규모와 �
 서비스는 [설정 변경 시 검증·반영](docs/SERVICE_CHANGE_POLICY.md)을 Puppet이 담당하고,
 상시 생존·응답 감시와 알림은 Zabbix에 맡긴다.
 
+[개발·운영 공통 LB/확장 경계](docs/LB_AND_SCALING.md)와
+[Agent 실행 옵션](docs/AGENT_OPERATIONS.md)은 서버 구축 전 운영 정책 초안이다.
+
 ## 목적과 범위
 
 Foreman으로 노드의 등록·분류·상태를 관리하고, Puppet으로 서버 설정을 적용한다.

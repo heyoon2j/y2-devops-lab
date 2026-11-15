@@ -7,7 +7,7 @@
 
 | 구분 | 내용 |
 | --- | --- |
-| 개발 | 관리 서버 1대로 먼저 구성·검증 |
+| 개발 | LB를 초기부터 사용하고 대상 관리 서버 1대로 먼저 구성·검증 |
 | 개발 관리 서버 위치 | AWS. 리전·VPC·CSP 간 접속 경로는 미정 |
 | 관리 노드 수 | 개발 1,000~2,000대, 운영 약 250대 |
 | 운영 | 개발 검증 후 별도 운영 HA 구성 |
@@ -30,7 +30,7 @@
 
 ```mermaid
 flowchart LR
-    U["운영자 / 등록 자동화"] -->|"443"| F
+    U["운영자 / 등록 자동화"]
     subgraph M["개발 관리 VM 1대"]
       F["Foreman\nUI / API / ENC"]
       P["Puppet 계열 Server\nCatalog 컴파일 / Report 처리"]
@@ -41,16 +41,18 @@ flowchart LR
       F --> S
       P -->|"ENC / Facts / Report 연동"| F
     end
-    A["AWS / GCP / KC\n개발 Agent 노드"] -->|"8140"| P
-    A -->|"최초 등록 443"| F
+    L["개발 내부 NLB"] -->|"TCP 443"| F
+    L -->|"TCP 8140"| P
+    U --> L
+    A["AWS / GCP / KC\n개발 Agent 노드"] --> L
     A -.->|"Puppet CA 방식일 때 인증서 요청"| CA
 ```
 
 CA는 사내 CA 아래에 Puppet Intermediate CA를 두는 방식일 때 관리 VM에서 운영할 수 있다.
 사내 CA 직접 발급 방식을 선택하면 외부 발급/배포 절차를 사용하고 내장 CA를 끈다.
 Redis/작업 실행 계층은 선택한 Foreman 플러그인과 기능의 요구에 맞춰 추가한다.
-개발 초기에는 별도 LB·외부 DB·PuppetDB·DHCP/TFTP/PXE·Katello를 범위에 넣지 않는 것을
-권장한다. 관리 대상의 DNS 설정을 Puppet으로 관리하는 것과 Foreman에 DNS 서버 기능을
+개발 초기에도 LB를 사용해 운영과 같은 접속 방식을 검증한다. 외부 DB·PuppetDB·
+DHCP/TFTP/PXE·Katello는 초기 기능 검증 범위에 넣지 않는 것을 권장한다. 관리 대상의 DNS 설정을 Puppet으로 관리하는 것과 Foreman에 DNS 서버 기능을
 추가하는 것은 서로 다른 결정이다.
 
 VM 수 1대는 관리 서버 수다. Agent 시험 노드는 별도로 필요하며 관리 서버 자체에
@@ -62,8 +64,8 @@ VM 수 1대는 관리 서버 수다. Agent 시험 노드는 별도로 필요하�
 
 | 논리 이름 | 용도 | 개발 단계 |
 | --- | --- | --- |
-| `foreman-dev.example.internal` | 웹·등록 API·ENC·Facts/Report 연동 | 같은 관리 VM |
-| `puppet-dev.example.internal` | Agent Catalog 통신 | 같은 관리 VM |
+| `foreman-dev.example.internal` | 웹·등록 API·ENC·Facts/Report 연동 | 개발 LB의 Foreman target group |
+| `puppet-dev.example.internal` | Agent Catalog 통신 | 개발 LB의 Compiler target group |
 | `puppet-ca-dev.example.internal` | Puppet CA 방식의 인증서 요청 | 같은 관리 VM 또는 선택한 CA 구성 |
 
 실제 호스트 FQDN과 DNS·인증서 SAN을 일치시킨다. 처음부터 논리 접속 이름을 사용하면
@@ -118,6 +120,7 @@ CA 발급 모델과 실제 설치 구성에 따라 포트/endpoint는 재검증�
 3. Agent 실행 주기·분산과 Report/Facts 보존 기간
 4. 관리 VM 사양·디스크·FQDN·고정 접속 주소
 5. Foreman 및 실제 Puppet/OpenVox Server·Agent 버전과 패키지 공급 경로
+   개발·운영 LB 및 확장 경계는 [LB/Scaling](LB_AND_SCALING.md), 실행 옵션은 [Agent 운영](AGENT_OPERATIONS.md) 참조
 6. 사내 CA 직접 발급/중간 CA 위임, DNS/SAN, 등록 인증과 갱신 절차
 7. 설치·서버 구성·코드 승격 자동화의 실행 위치와 인증 방식
 

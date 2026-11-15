@@ -9,7 +9,7 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 
 | 단계 | 관리 서버 구성 | 검증 대상 |
 | --- | --- | --- |
-| 1. 개발 기능 검증 | 관리 서버 1대에 Foreman·Puppet Server/CA·Smart Proxy·PostgreSQL을 함께 배치. 소수 노드부터 시작 | 사내 인증서, 등록, Facts, ENC, Catalog 적용과 멱등성 |
+| 1. 개발 기능 검증 | 개발 LB 뒤의 관리 서버 1대에 Foreman·Puppet Server/CA·Smart Proxy·PostgreSQL을 함께 배치. 소수 노드부터 시작 | 사내 인증서, 등록, Facts, ENC, Catalog 적용과 멱등성 |
 | 2. 개발 전체 규모 | AWS에서 1,000~2,000대 수용을 위해 Controller·Compiler·DB 분리 및 부하 시험 | 실제 Profile의 처리량·DB·Report/Facts 부하 |
 | 3. 운영 약 250대 | Foreman·Compiler·DB·CA를 아래 HA 설계대로 분리·이중화 | 정상 운영, 한 대 장애, DB·CA 전환, 복구 |
 
@@ -101,6 +101,8 @@ Puppet 백엔드에는 그 프록시만 접근하도록 제한한다.
 개발 검증 이후 운영 관리 구성을 다음 구조로 구축한다.
 아래 구성은 운영 목표이며 개발 단일 서버에 먼저 적용하지 않는다.
 CA 부분은 사내 CA 아래의 Puppet Intermediate CA 발급 방식에 대한 설계다.
+개발도 같은 LB 접속 구조를 사용하되 초기 대상은 한 대다. 세부 HA 복제/전환은 후속으로
+정하고, 지금은 논리 endpoint와 상태 저장 경계를 분리한다. [LB/Scaling](LB_AND_SCALING.md) 참조.
 
 ```mermaid
 flowchart TB
