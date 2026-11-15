@@ -17,6 +17,27 @@
 | PostgreSQL / RDS | Foreman의 공용 데이터 저장소 | 두 Foreman이 같은 호스트·Facts·Report·분류 데이터를 읽고 씀 |
 | CA | 인증서 발급·폐기 담당 | 노드 신원을 위한 인증서 발급 수명 주기. 별도 PKI/장애 전환 설계 필요 |
 
+## Compiler와 Class/Profile의 구분
+
+**Compiler는 Puppet Server 측에서 Catalog를 컴파일하는 역할을 뜻한다.**
+Foreman이 Class/Profile을 부르는 이름이 아니다. 확장 구성에서 Catalog 컴파일을 담당하는
+Puppet Server를 전용 Compiler 서버라고 부르기도 하며, 별도의 추가 제품이라는 뜻은 아니다.
+
+- Foreman: 이 호스트에 배정할 Role Class·Parameters·코드 환경을 ENC로 전달한다.
+- Role/Profile: 적용할 설정을 정의한 Puppet Classes다. 이 프로젝트에서는 `.pp` 파일에 있다.
+- Compiler: 그 코드와 Facts·Hiera 조회 결과·Foreman 분류를 조합해 노드별 Catalog를 만든다.
+- Agent: 받은 Catalog와 실제 상태를 비교해 필요한 변경을 적용한다.
+
+```mermaid
+flowchart TB
+    F["Foreman ENC\nRole Class·Parameters·코드 환경"] --> P["Puppet Server의 Compiler\n노드별 설정서 생성"]
+    K["Puppet 코드\nRole/Profile Class"] --> P
+    A["Agent가 전달한 Facts"] --> P
+    H["Hiera 조회 결과\n패키지 목록·파일 내용 등"] --> P
+    P --> C["Catalog\n해당 노드의 리소스와 의존 관계"]
+    C --> N["Agent\n실제 파일·패키지·설정 적용"]
+```
+
 ## 1. 서버 배치와 입구
 
 ```mermaid
