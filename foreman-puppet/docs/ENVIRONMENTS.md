@@ -31,12 +31,17 @@ GPU Fact가 들어왔다고 Role을 자동 변경하지 않는다.
 Host Group마다 최상위 ENC 파라미터 `csp`를 각각 `aws/gcp/kc`로 설정한다.
 [CSP별 시스템 정책](SYSTEM_POLICIES.md)을 참고한다.
 
+전체 적용 여부는 Foreman Boolean `puppet_managed`로 지정한다.
+전역 true를 준비하고 제외 호스트에 false를 배정한다. Role을 유지해도 본 프로젝트의
+리소스 적용은 건너뛴다. [관리 제어](MANAGEMENT_CONTROLS.md) 참조.
+
 ## 등록 입력
 
 등록 템플릿/IaC의 논리 입력 예시는 다음과 같다. 실제 Foreman API 인자 이름은 아니다.
 
 ```text
 HOST_GROUP=aws
+PUPPET_MANAGED=true
 PUPPET_ROLE=role::gpu_svr
 DEPLOY_ENV=dev
 TEAM=devops

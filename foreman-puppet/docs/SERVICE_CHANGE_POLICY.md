@@ -10,8 +10,8 @@ Puppet의 주기 실행은 유지하지만, 모든 서비스에 `ensure => runni
 매번 시작하는 정책은 사용하지 않는다. Agent가 주기적으로 설정을 적용하는 것과 각 서비스의
 생존 상태를 지속적으로 보장하는 것은 구분한다. 별도의 승인 없이 자동 복구 기능을 추가하지 않는다.
 서비스별 명시적 예외는 허용한다. `state_policy`는 `preserve`(기본)/`running`/`stopped`,
-`change_action`은 `none`/`reload`/`restart`로 분리하는 파라미터 규약을 제안한다.
-`running`을 명시한 서비스만 주기적인 실행 보장 대상으로 두며, 이 규약은 아직 코드 구현 전이다.
+`change_action`은 `none`/`reload`/`restart`로 분리하며 [관리 제어](MANAGEMENT_CONTROLS.md)의 공통 기능으로 구현했다.
+`running`을 명시한 서비스만 주기적인 실행 보장 대상으로 둔다. 기본 units는 비어 있어 실제 서비스는 아직 제어하지 않는다.
 
 ## 설정 변경 흐름
 
@@ -31,7 +31,8 @@ flowchart TD
     O -->|"실패"| I["알림 연동 / 원인 확인\n무한 재시도·임의 restart 전환 없음"]
 ```
 
-이 문서는 후속 Profile의 구현 규칙이다. 현재 실제 서비스 설정·반영 리소스는 구현하지 않았다.
+이 문서는 후속 서비스 설정 Profile의 규칙이다. 공통 service_control은 구현했으며,
+실제 서비스 설정 파일 Profile과 연동은 후속 단계다.
 
 ## 항목별로 다른 반영 방식
 
@@ -71,6 +72,7 @@ flowchart TD
 
 ## 현재 코드 상태
 
-현재 Catalog에는 패키지·예시 파일·이전 진단 파일 삭제만 있으며 `Service` 리소스는 없다.
+기본 Catalog에는 패키지·예시 파일·이전 진단 파일 삭제만 있다. 전체/Profile 제외 시에는
+해당 리소스도 생략한다. services.units를 지정할 때만 시간 제한이 있는 systemctl Exec을 만든다.
 DNS/NTP 키는 비활성 예약 데이터이고 SSH/Zabbix 등 서비스 Profile은 후속 구현이다.
 실제 Profile을 만들 때 이 정책을 함께 적용하고 실제 OS에서 검증한다.

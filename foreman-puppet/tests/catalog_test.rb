@@ -11,18 +11,19 @@ def assert(condition, message)
   raise message unless condition
 end
 
-def compile_catalog(facts, classes = ['role::base'], environment: nil, csp: 'aws')
+def compile_catalog(facts, classes = ['role::base'], environment: nil, csp: 'aws', managed: true)
   name = 'test.example.internal'
   environment ||= facts['deploy_env'] == 'dev' ? 'development' : 'production'
   parameters = csp.nil? ? {} : { 'csp' => csp }
+  parameters['puppet_managed'] = managed unless managed == :absent
   node = Puppet::Node.new(name, environment: environment, classes: classes, parameters: parameters,
                           facts: Puppet::Node::Facts.new(name, facts))
   Puppet::Parser::Compiler.compile(node)
 end
 
-def expect_failure(facts, message, environment: nil, csp: 'aws')
+def expect_failure(facts, message, environment: nil, csp: 'aws', managed: true)
   begin
-    compile_catalog(facts, environment: environment, csp: csp)
+    compile_catalog(facts, environment: environment, csp: csp, managed: managed)
   rescue Puppet::Error => e
     assert(e.message.include?(message), "Unexpected compilation failure: #{e.message}")
     return
@@ -116,6 +117,48 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   expect_failure(valid, 'csp ENC parameter must be', csp: 'unknown')
   expect_failure(valid, 'csp ENC parameter must be', csp: '../common')
 
+  %w[role::base role::gpu_svr profile::base profile::packages profile::example_file profile::gpu_system profile::services].each do |klass|
+    catalog = compile_catalog(valid, [klass], managed: false)
+    assert(catalog.resources.none? { |r| %w[Package File Exec Service].include?(r.type) },
+           "Excluded node must not get managed resources from #{klass}")
+  end
+  %w[role::base role::gpu_svr].each do |role|
+    compile_catalog({}, [role], csp: nil, managed: false)
+  end
+  expect_failure(valid, 'puppet_managed must be a Boolean', managed: :absent)
+  expect_failure(valid, 'puppet_managed must be a Boolean', managed: 'false')
+  expect_failure(valid, 'puppet_managed must be a Boolean', managed: nil)
+  # A team or puppet_managed Fact is not the central ENC switch.
+  compile_catalog(valid.merge('puppet_managed' => false, 'team' => 'other'), managed: true)
+
+  common_path = File.join(code, 'data', 'common.yaml')
+  common = YAML.safe_load(File.read(common_path))
+  {
+    'profile::packages::manage' => ['Package'],
+    'profile::example_file::manage' => ['File'],
+    'profile::base::manage' => ['Package', 'File', 'Exec', 'Service'],
+  }.each do |key, excluded_types|
+    File.write(common_path, common.merge(key => false).to_yaml)
+    catalog = compile_catalog(valid)
+    assert(catalog.resources.none? { |r| excluded_types.include?(r.type) }, "Profile exclusion failed: #{key}")
+  end
+  File.write(common_path, common.to_yaml)
+
+  policy_data = { 'example.service' => { 'state_policy' => 'running', 'change_action' => 'none' } }
+  File.write(common_path, common.merge('profile::services::units' => policy_data).to_yaml)
+  catalog = compile_catalog(valid)
+  state = catalog.resource('Exec', 'profile-service-example.service-state')
+  assert(state && state[:command].include?('start'), 'Hiera must select the running exception')
+  File.write(common_path, common.merge('profile::services::units' => policy_data,
+                                      'profile::services::manage' => false).to_yaml)
+  catalog = compile_catalog(valid)
+  assert(catalog.resources.none? { |r| r.type == 'Exec' }, 'services manage=false must suppress actions')
+  policy_data['example.service']['manage'] = false
+  File.write(common_path, common.merge('profile::services::units' => policy_data).to_yaml)
+  catalog = compile_catalog(valid)
+  assert(catalog.resources.none? { |r| r.type == 'Exec' }, 'Unit manage=false must suppress actions')
+  File.write(common_path, common.to_yaml)
+
   # Add distinct values at each layer in the isolated test code environment.
   key = 'profile::example_file::content'
   File.write(File.join(code, 'data', 'deploy_env', 'dev.yaml'), { key => "environment\n" }.to_yaml)
@@ -132,6 +175,6 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
     content = catalog.resource('File', '/etc/foreman-puppet/example.txt')[:content]
     assert(content == expected, "Wrong hierarchy precedence for #{csp}/#{env}: #{content.inspect}")
   end
-  puts 'Passed: 600 CSP/role/environment/OS/architecture/GPU combinations, optional facts, unclassified node, 14 rejection cases, 6 hierarchy precedence cases.'
+  puts 'Passed: 600 base combinations; host/profile exclusion and Boolean validation; 14 platform rejection cases; 6 hierarchy precedence cases.'
 
 end

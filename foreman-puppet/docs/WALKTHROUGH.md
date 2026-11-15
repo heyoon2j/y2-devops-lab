@@ -9,13 +9,15 @@
 
 ```text
 HOST_GROUP=aws
+PUPPET_MANAGED=true
 PUPPET_ROLE=role::gpu_svr
 DEPLOY_ENV=dev
 TEAM=devops
 PUPPET_ENV=development
 ```
 
-등록 자동화가 이 입력을 받아 Foreman 호스트에 Host Group·Role Class·코드 환경을
+Foreman Boolean puppet_managed가 true일 때 아래 설정을 적용한다. false이면 Role의 작업을
+건너뛰며, 누락/문자열 값은 오류다. 등록 자동화가 이 입력을 받아 Foreman 호스트에 Host Group·Role Class·코드 환경을
 설정하고, Agent 설정과 `deploy_env` 외부 Fact를 준비하는 방식으로 구현한다.
 `PUPPET_ROLE`은 Fact가 아니며 Foreman 기본 API 인자 이름도 아니다.
 일반 서버에는 `role::base`, GPU 서버에는 `role::gpu_svr` 하나를 지정한다.

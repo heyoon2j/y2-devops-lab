@@ -14,6 +14,8 @@ AWS 개발 1,000~2,000대·운영 약 250대의 단계별 구성은 [규모와 �
 [개발·운영 공통 LB/확장 경계](docs/LB_AND_SCALING.md)와
 [Agent 실행 옵션](docs/AGENT_OPERATIONS.md)은 서버 구축 전 운영 정책 초안이다.
 
+실제 적용·제외 스위치와 서비스별 정책 사용법은 [관리 제어](docs/MANAGEMENT_CONTROLS.md)를 참고한다.
+
 ## 목적과 범위
 
 Foreman으로 노드의 등록·분류·상태를 관리하고, Puppet으로 서버 설정을 적용한다.
@@ -30,6 +32,7 @@ Foreman/Puppet 설치, 등록 템플릿, GPU/MIG Custom Fact 수집기 및 실�
 
 ## 분류 원칙
 
+- Foreman의 Boolean `puppet_managed` 파라미터로 이 프로젝트의 설정 적용/제외를 제어한다.
 - Host Group은 CSP만 구분한다. 최상위 그룹으로 `aws`, `gcp`, `kc`를 만든다.
 - Host Group의 `csp` 파라미터를 ENC로 전달해 CSP별 Hiera 데이터를 선택한다.
 - 팀 표시는 선택적 `team` Fact(예: `devops`)를 사용한다.
@@ -63,6 +66,7 @@ Foreman API나 등록 명령의 실제 인자 이름은 아니다.
 
 | 입력값 | 필수 | 예시 / 허용값 | 용도 및 처리 |
 | --- | --- | --- | --- |
+| `PUPPET_MANAGED` | 필수 | Boolean `true/false` | 등록 자동화가 Foreman ENC 파라미터로 지정한다. 기본 대상은 전역 Boolean true를 준비하며 Fact로 넣지 않는다. |
 | `HOST_GROUP` | 필수 | `aws`, `gcp`, `kc` | Foreman 등록 시 지정한다. Fact로 보내는 값이 아니다. |
 | `PUPPET_ROLE` | 필수 | `role::base`, `role::gpu_svr` | user-data 등록 자동화가 Foreman 호스트에 Role Class 하나를 배정한다. Fact는 아니다. |
 | `TEAM` | 선택 | `devops` | 표시·검색용 `team` 외부 Fact를 생성한다. 인증/권한 근거로 사용하지 않는다. |
@@ -169,7 +173,7 @@ Facts와 Report는 일반적인 Puppet 연동에서 Agent → Puppet Server → 
 
 ## 등록 및 적용 순서
 
-1. Foreman에 `aws`, `gcp`, `kc` Host Group을 생성하고 각각 같은 이름의 `csp` 파라미터를 설정한 뒤 Classes를 가져온다. 각 호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
+1. Foreman 전역 Boolean `puppet_managed=true`를 준비하고, `aws`, `gcp`, `kc` Host Group을 생성하고 각각 같은 이름의 `csp` 파라미터를 설정한 뒤 Classes를 가져온다. 각 호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
 2. Puppet Server의 ENC, Facts 업로드, Report 업로드 연동을 구성한다.
 3. 클라우드 생성 단계에서 Host Group, 환경, 접속 대상과 고유한 certname을 결정한다.
 4. user-data가 입력값을 검증하고 환경 Fact 파일을 생성한다.
@@ -193,10 +197,15 @@ Role은 `role::base`, `role::gpu_svr` 두 개다. Foreman 호스트별로 하나
 CSP Host Group에는 Role을 배정하지 않아 상속으로 두 Role이 동시에 붙지 않도록 한다.
 
 ```text
-role::base                         role::gpu_svr
-└── profile::base                   ├── profile::base
-    ├── profile::packages          └── profile::gpu_system
-    └── profile::example_file
+role::base
+└── profile::base
+    ├── profile::packages
+    ├── profile::example_file
+    └── profile::services
+
+role::gpu_svr
+├── profile::base                  # 위 공통 Profile 조합
+└── profile::gpu_system
 ```
 
 `profile::gpu_system`은 GPU용 시스템 설정 확장 지점이다. 구체적인 정책 확정 전에는

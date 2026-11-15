@@ -23,6 +23,9 @@ foreman-puppet/                         # Puppet 코드 환경 하나의 루트
 │   └── profile/                        # 패키지 등 기능별 설정을 묶는 모듈
 │       └── manifests/                  # 실제 Puppet Class 정의(.pp)
 │           ├── base.pp                 # 환경·OS·아키텍처 검증 및 하위 Profile 포함
+│           ├── management.pp          # Foreman Boolean puppet_managed 검증
+│           ├── services.pp            # Hiera의 서비스별 정책으로 제어 리소스 생성
+│           ├── service_control.pp     # systemd 상태/변경 반영, 시간 제한
 │           ├── gpu_system.pp           # GPU 시스템 설정 확장 지점; 현재 변경 리소스 없음
 │           ├── packages.pp             # Hiera에서 받은 패키지 설치 목록 적용
 │           └── example_file.pp         # Hiera 예시 파일 생성·이전 진단 파일 삭제
@@ -52,6 +55,7 @@ Puppet Environment는 코드 버전 선택이고 `deploy_env`는 호스트의 �
 `manifests/site.pp`에는 기본 노드 선언만 둔다. Foreman ENC가 적용할 Class를 결정한다.
 Foreman의 `aws`, `gcp`, `kc` Host Group은 CSP만 표현한다. 그룹에는 Class를 배정하지 않고
 각 호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
+Foreman Boolean `puppet_managed`가 필수이며 false이면 Role/Profile의 작업 리소스를 건너뛴다.
 Class가 배정되지 않은 호스트의 Catalog에는 이 프로젝트의 관리 리소스가 없다.
 
 | Host Group | 호스트별 배정할 Role | Puppet Environment |
@@ -71,6 +75,9 @@ Hiera는 이 최상위 파라미터로 CSP별 데이터를 선택한다. 노드�
 | `role::base` | 일반 서버 역할. `profile::base` 포함 |
 | `role::gpu_svr` | GPU 서버 역할. `profile::base`, `profile::gpu_system` 포함 |
 | `profile::gpu_system` | GPU용 OS 정책 확장 지점. 현재 변경 리소스 없음 |
+| `profile::management` | 전체 적용·제외를 위한 Boolean ENC 파라미터 검증 |
+| `profile::services` | Hiera units로 명시한 서비스만 제어. 기본 빈 매핑 |
+| `profile::service_control` | 상태 정책과 파일 변경 이벤트를 시간 제한 명령으로 적용하는 정의 리소스 |
 | `profile::base` | 환경·OS·아키텍처 검증 및 하위 Profile 포함 |
 | `profile::packages` | Hiera의 패키지 목록을 `ensure => installed`로 관리 |
 | `profile::example_file` | Hiera 예시 파일 생성·이전 진단 파일 삭제 |
@@ -153,7 +160,7 @@ Hiera 데이터에 등록 토큰이나 비밀번호를 저장하지 않는다.
 
 1. 개발도 고정 EC2 2대에 Foreman·Compiler·Smart Proxy를 설치하고 공용 외부 DB와 LB를 연결한 뒤,
    사내 인증서 신뢰와 ENC/Facts/Report 연동을 준비한다.
-2. 개발 단계에서는 development 코드를 배포하고 Classes를 가져온다.
+2. Foreman 전역 Boolean `puppet_managed=true`를 준비한다. 개발 단계에서는 development 코드를 배포하고 Classes를 가져온다.
    운영 HA 구축 시 production을 배포하고 해당 환경의 Classes도 가져온다.
 3. `aws/gcp/kc` Host Group에 같은 값의 `csp` 파라미터를 설정하고, Class는 배정하지 않는다.
    호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
@@ -172,9 +179,11 @@ Ruby와 Bundler가 있는 개발 환경에서 실행한다. 검증 기준 Puppet
 cd foreman-puppet
 bundle install
 bundle exec ruby tests/catalog_test.rb
+bundle exec ruby tests/service_policy_test.rb
 ```
 
-검증은 임시 코드 환경을 만들고 Catalog만 컴파일한다. 로컬 OS의 패키지나 `/etc`는 변경하지 않는다.
+catalog_test는 임시 코드 환경에서 Catalog를 컴파일한다. service_policy_test는 임시 파일과
+가짜 systemctl에만 적용한다. 실제 패키지나 `/etc`, systemd 서비스는 변경하지 않는다.
 다음 항목을 확인한다.
 
 - 두 Role·두 환경·세 CSP·다섯 OS 버전·OS별 두 아키텍처·GPU 상태의 600개 조합에서 Hiera와 예시 파일 생성
@@ -184,6 +193,8 @@ bundle exec ruby tests/catalog_test.rb
 - Foreman Class가 배정되지 않은 노드의 무변경 Catalog
 - 환경 Fact 누락·잘못된 값·경로 형태 값, 지원하지 않는 OS·버전·아키텍처의 컴파일 거부
 - Fact와 Puppet 코드 환경의 불일치 및 지원하지 않는 코드 환경 거부
+- 전체/Profile/서비스 제외, Boolean 타입, Hiera 정책 전달
+- 파일 변경 이벤트·멱등성·preserve/running/stopped·검증 실패·시간 초과·재시도 없음
 
 실제 Foreman API 등록, GPU/MIG 하드웨어 탐지, Ubuntu Agent의 리소스 적용·멱등성은
 이 컴파일 검증에 포함되지 않는다.

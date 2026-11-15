@@ -81,7 +81,8 @@ noop = false
 이 설정은 Puppet Agent 자체의 실행 정책이다. SSH/Zabbix/NTP 등의 생존을 매 주기
 무조건 보장한다는 의미가 아니다. 각 서비스의 preserve/running/stopped와 변경 시
 none/reload/restart 정책은 별도로 구현하고 상시 감시는 Zabbix에 둔다.
-서비스별 예외 정책은 현재 제안 단계이며 아직 구현하지 않았다.
+서비스별 예외는 [관리 제어](MANAGEMENT_CONTROLS.md)의 공통 코드로 구현했다.
+기본 units는 비어 있고 실제 서비스의 파일·설치·검증 연동은 후속 단계다.
 
 ## 참고
 

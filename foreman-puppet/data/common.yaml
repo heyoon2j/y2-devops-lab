@@ -1,5 +1,12 @@
 ---
 # Arrays use first-found lookup: an environment replaces the entire list.
+profile::base::manage: true
+profile::packages::manage: true
+profile::example_file::manage: true
+profile::gpu_system::manage: true
+profile::services::manage: true
+# Explicit opt-in per unit. The default does not manage any service.
+profile::services::units: {}
 profile::packages::packages:
   - ca-certificates
   - curl
