@@ -1,0 +1,5 @@
+<%- | String $banner, Boolean $password_authentication, String $permit_root_login | -%>
+# Managed by Puppet. Other sshd_config settings remain outside this fragment.
+Banner <%= $banner %>
+PasswordAuthentication <%= $password_authentication ? { true => 'yes', false => 'no' } %>
+PermitRootLogin <%= $permit_root_login %>

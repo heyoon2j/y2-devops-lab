@@ -82,7 +82,7 @@ noop = false
 무조건 보장한다는 의미가 아니다. 각 서비스의 preserve/running/stopped와 변경 시
 none/reload/restart 정책은 별도로 구현하고 상시 감시는 Zabbix에 둔다.
 서비스별 예외는 [관리 제어](MANAGEMENT_CONTROLS.md)의 공통 코드로 구현했다.
-기본 units는 비어 있고 실제 서비스의 파일·설치·검증 연동은 후속 단계다.
+기본 units는 비어 있다. SSH 파일·검증·서비스 연결은 [SSH Profile](SSH_PROFILE.md)로 구현했고 기본 비활성이다. 패키지 설치와 실제 OS 검증은 별도다.
 
 ## 참고
 

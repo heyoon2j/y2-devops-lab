@@ -83,12 +83,12 @@ DNS는 Ubuntu의 systemd-resolved/netplan 및 Rocky의 NetworkManager 등 실제
 
 ## 제공된 설정 목록의 Profile 분리 계획
 
-아래는 계획이며 실제 리소스가 구현된 Class 목록이 아니다.
+SSH는 기본 비활성으로 구현했으며 나머지는 후속 계획이다.
 
 | 항목 | 제안 Profile | 필요한 정책·입력 |
 | --- | --- | --- |
 | cloud.cfg | `profile::cloud_init` | 적용할 키, CSP 차이, 네트워크·키 재생성 등 cloud-init 소유 범위 |
-| sshd_config | `profile::ssh` | 허용 인증 방식·로그인·포트, OS별 include 경로, 문법 검사 및 reload 정책 |
+| sshd_config (기본 비활성 코드 구현) | `profile::ssh` | Banner·패스워드 인증·root 로그인, 조합 검증 및 reload. 포트는 관리하지 않음 |
 | DNS | `profile::dns` | KC 주소·검색 도메인·실제 resolver 백엔드 |
 | NTP | `profile::ntp` | KC 시간 서버·기존 데몬·재시작 정책 |
 | yum/dnf·apt 소스 | `profile::repositories` | OS 버전·CSP별 저장소 주소·서명키·기존 저장소 유지 범위 |
@@ -108,3 +108,5 @@ DB/Hadoop/GPU용 추가 시스템 정책은 필요할 때 별도 Profile로 조�
 Catalog 테스트는 5개 OS 버전·2개 아키텍처·3개 CSP·2개 환경·2개 Role·5개 GPU 상태의
 600개 조합을 확인한다. 별도 임시 데이터에서 4단계 Hiera 우선순위와 CSP 누락/오류도 검증한다.
 실제 DNS/NTP·SSH·저장소·Zabbix 설정 적용 시험을 수행한 것은 아니다.
+
+SSH의 요청값과 구현·검증 범위는 [SSH Profile](SSH_PROFILE.md)을 따른다.

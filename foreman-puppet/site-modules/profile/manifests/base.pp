@@ -48,5 +48,6 @@ class profile::base (
     include profile::packages
     include profile::example_file
     include profile::services
+    include profile::ssh
   }
 }

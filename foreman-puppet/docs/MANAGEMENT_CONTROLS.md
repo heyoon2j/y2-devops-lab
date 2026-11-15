@@ -48,6 +48,7 @@ profile::gpu_system::manage: true
 profile::devops::manage: true
 profile::data_infra::manage: true
 profile::services::manage: true
+profile::ssh::manage: false
 ```
 
 `example_file::manage=false`이면 예시 파일/부모 디렉터리와 이전 node.conf 삭제까지 모두
@@ -93,7 +94,7 @@ config_files는 실제 선언된 `File` 리소스여야 하며 파일 Profile을
 ## 4. 변경 이벤트 연결 예시
 
 실제 서비스 Profile에서 설정 파일의 검증·소유권·값을 정의한 뒤 다음처럼 연결할 수 있다.
-아래는 SSH Profile 구현 시 사용할 설명용 예시이며 현재 Role에 SSH 설정을 추가한 것은 아니다.
+아래는 helper의 설명용 예시다. 실제 [SSH Profile](SSH_PROFILE.md)은 drop-in과 검증기를 관리하며 기본 비활성이다.
 
 ```puppet
 # File['/etc/ssh/sshd_config']는 해당 Profile에서 먼저 선언하고 validate_cmd 등으로 검증한다.

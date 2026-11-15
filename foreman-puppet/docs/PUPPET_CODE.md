@@ -26,9 +26,14 @@ foreman-puppet/                         # Puppet 코드 환경 하나의 루트
 │   │       ├── data_infra.pp           # 공통 + 데이터인프라팀 Profile
 │   │       └── gpu_svr.pp              # role::gpu_svr: 공통 + GPU 시스템 Profile
 │   └── profile/                        # 패키지 등 기능별 설정을 묶는 모듈
+│       ├── files/
+│       │   └── validate-sshd-config.rb  # Agent에서 조합 설정을 검사하는 Ruby 코드
+│       ├── templates/
+│       │   └── sshd.conf.epp            # 세 SSH 옵션의 설정 파일 템플릿
 │       └── manifests/                  # 실제 Puppet Class 정의(.pp)
 │           ├── base.pp                 # 환경·OS·아키텍처 검증 및 하위 Profile 포함
 │           ├── management.pp          # Foreman Boolean puppet_managed 검증
+│           ├── ssh.pp                # SSH drop-in·조합 검증·변경 시 반영, 기본 비활성
 │           ├── services.pp            # Hiera의 서비스별 정책으로 제어 리소스 생성
 │           ├── service_control.pp     # systemd 상태/변경 반영, 시간 제한
 │           ├── devops.pp              # DevOps 시스템 설정 확장 지점
@@ -38,6 +43,7 @@ foreman-puppet/                         # Puppet 코드 환경 하나의 루트
 │           └── example_file.pp         # Hiera 예시 파일 생성·이전 진단 파일 삭제
 ├── docs/                               # 상세 운영·설계 설명
 │   ├── PUPPET_CODE.md                  # 이 문서: 디렉터리·Class·Hiera 사용법
+│   ├── SSH_PROFILE.md                  # SSH 요청값·검증·반영·활성화 전제조건
 │   ├── ENVIRONMENTS.md                 # Host Group과 Puppet 코드 환경 매핑
 │   ├── HA_AND_CERTIFICATES.md          # 개발 단일 서버 → 운영 HA 및 사내 인증서
 │   ├── WALKTHROUGH.md                  # 실제 파일과 흐름을 연결한 그림
@@ -190,6 +196,7 @@ cd foreman-puppet
 bundle install
 bundle exec ruby tests/catalog_test.rb
 bundle exec ruby tests/service_policy_test.rb
+bundle exec ruby tests/ssh_profile_test.rb
 ```
 
 catalog_test는 임시 코드 환경에서 Catalog를 컴파일한다. service_policy_test는 임시 파일과
@@ -208,3 +215,5 @@ catalog_test는 임시 코드 환경에서 Catalog를 컴파일한다. service_p
 
 실제 Foreman API 등록, GPU/MIG 하드웨어 탐지, Ubuntu Agent의 리소스 적용·멱등성은
 이 컴파일 검증에 포함되지 않는다.
+
+[SSH Profile](SSH_PROFILE.md)은 별도 EPP와 Ruby 검증기를 사용한다. 실제 OS에서 접속 검증 전까지 비활성이다.

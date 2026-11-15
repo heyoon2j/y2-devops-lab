@@ -117,7 +117,7 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   expect_failure(valid, 'csp ENC parameter must be', csp: 'unknown')
   expect_failure(valid, 'csp ENC parameter must be', csp: '../common')
 
-  %w[role::base role::gpu_svr profile::base profile::packages profile::example_file profile::gpu_system profile::services].each do |klass|
+  %w[role::base role::gpu_svr profile::base profile::packages profile::example_file profile::gpu_system profile::services profile::ssh].each do |klass|
     catalog = compile_catalog(valid, [klass], managed: false)
     assert(catalog.resources.none? { |r| %w[Package File Exec Service].include?(r.type) },
            "Excluded node must not get managed resources from #{klass}")
@@ -169,6 +169,23 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   end
   File.write(common_path, common.to_yaml)
 
+  # SSH is opt-in: verify enabled OS mapping, validation and state wiring.
+  %w[Ubuntu Rocky].each do |os_name|
+    File.write(common_path, common.merge('profile::ssh::manage' => true).to_yaml)
+    platform = os_name == 'Ubuntu' ? os : { 'name' => 'Rocky', 'release' => { 'full' => '9.6' }, 'architecture' => 'x86_64' }
+    catalog = compile_catalog(valid.merge('os' => platform))
+    config = catalog.resource('File', '/etc/ssh/sshd_config.d/00-foreman-puppet.conf')
+    assert(config && config[:validate_cmd].include?('validate-sshd-config.rb %'), 'SSH candidate validation missing')
+    assert(config[:owner] == 'root' && config[:group] == 'root', 'SSH must be root-owned')
+    assert(config[:content].include?("Banner /etc/issue.net\nPasswordAuthentication yes\nPermitRootLogin yes\n"), 'Requested SSH values missing')
+    unit = os_name == 'Ubuntu' ? 'ssh.service' : 'sshd.service'
+    assert(catalog.resource('Exec', "profile-service-#{unit}-refresh"), 'Wrong OS SSH service name')
+    assert(!catalog.resource('Exec', "profile-service-#{unit}-state"), 'SSH default must preserve stopped state')
+    excluded = compile_catalog({}, ['role::base'], csp: nil, managed: false)
+    assert(!excluded.resource('File', '/etc/ssh/sshd_config.d/00-foreman-puppet.conf'), 'Host exclusion must suppress SSH')
+  end
+  File.write(common_path, common.to_yaml)
+
   policy_data = { 'example.service' => { 'state_policy' => 'running', 'change_action' => 'none' } }
   File.write(common_path, common.merge('profile::services::units' => policy_data).to_yaml)
   catalog = compile_catalog(valid)
@@ -200,6 +217,6 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
     content = catalog.resource('File', '/etc/foreman-puppet/example.txt')[:content]
     assert(content == expected, "Wrong hierarchy precedence for #{csp}/#{env}: #{content.inspect}")
   end
-  puts 'Passed: 600 base combinations; team/unmanaged roles; host/profile exclusion and Boolean validation; 14 platform rejection cases; 6 hierarchy precedence cases.'
+  puts 'Passed: 600 base combinations; team/unmanaged roles; opt-in SSH policy; host/profile exclusion and Boolean validation; 14 platform rejection cases; 6 hierarchy precedence cases.'
 
 end

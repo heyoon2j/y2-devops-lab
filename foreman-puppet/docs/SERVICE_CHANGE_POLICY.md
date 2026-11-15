@@ -32,7 +32,7 @@ flowchart TD
 ```
 
 이 문서는 후속 서비스 설정 Profile의 규칙이다. 공통 service_control은 구현했으며,
-실제 서비스 설정 파일 Profile과 연동은 후속 단계다.
+첫 실제 설정으로 [SSH Profile](SSH_PROFILE.md)을 연결했으며 기본 비활성이다.
 
 ## 항목별로 다른 반영 방식
 
@@ -74,5 +74,5 @@ flowchart TD
 
 기본 Catalog에는 패키지·예시 파일·이전 진단 파일 삭제만 있다. 전체/Profile 제외 시에는
 해당 리소스도 생략한다. services.units를 지정할 때만 시간 제한이 있는 systemctl Exec을 만든다.
-DNS/NTP 키는 비활성 예약 데이터이고 SSH/Zabbix 등 서비스 Profile은 후속 구현이다.
+SSH Profile은 세 옵션의 drop-in·검증·서비스 연결을 구현했고 기본 비활성이다. DNS/NTP는 예약 데이터이며 Zabbix 등은 후속 구현이다.
 실제 Profile을 만들 때 이 정책을 함께 적용하고 실제 OS에서 검증한다.

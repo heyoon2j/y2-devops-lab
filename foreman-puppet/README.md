@@ -20,6 +20,8 @@ AWS 개발 1,000~2,000대·운영 약 250대의 단계별 구성은 [규모와 �
 
 Role별 최초 설정·지속 관리·미관리 전환은 [Role 수명 주기](docs/ROLE_LIFECYCLE.md)를 참고한다.
 
+요청한 Banner·패스워드·root 로그인 설정은 [SSH Profile](docs/SSH_PROFILE.md)에 정리했다. 기본 비활성이다.
+
 ## 목적과 범위
 
 Foreman으로 노드의 등록·분류·상태를 관리하고, Puppet으로 서버 설정을 적용한다.
