@@ -4,7 +4,8 @@
 
 1. 개발 관리 서버 1대에 Foreman·Puppet Server·Smart Proxy·PostgreSQL을 함께 구성한다.
 2. 사내 인증서로 등록·Facts 수집·설정 적용을 검증한다.
-3. 검증한 코드를 이후 운영 HA 관리 구성에 배포한다. 개발의 단일 서버를 운영 HA라고 간주하지 않는다.
+3. AWS 개발 전체 1,000~2,000대 확대 전 [규모별 구성](CAPACITY_PLAN.md)의 부하 시험·분리 시점을 정한다.
+4. 검증한 코드를 이후 약 250대의 운영 HA 관리 구성에 배포한다. 개발의 단일 서버를 운영 HA라고 간주하지 않는다.
 
 개발은 `development`, 운영은 `production` Puppet Environment를 사용한다.
 Host Group은 CSP만 표현하며, 개발·운영 표시는 계속 `deploy_env` Fact를 사용한다.

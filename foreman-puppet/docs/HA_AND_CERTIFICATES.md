@@ -9,8 +9,9 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 
 | 단계 | 관리 서버 구성 | 검증 대상 |
 | --- | --- | --- |
-| 1. 개발 | 관리 서버 1대에 Foreman·Puppet Server/CA·Smart Proxy·PostgreSQL을 함께 배치. Redis 등은 사용하는 기능에 따라 추가 | 사내 인증서, 등록, Facts, ENC, Catalog 적용과 멱등성 |
-| 2. 운영 | Foreman·Compiler·DB·CA를 아래 HA 설계대로 분리·이중화 | 정상 운영, 한 대 장애, DB·CA 전환, 복구 |
+| 1. 개발 기능 검증 | 관리 서버 1대에 Foreman·Puppet Server/CA·Smart Proxy·PostgreSQL을 함께 배치. 소수 노드부터 시작 | 사내 인증서, 등록, Facts, ENC, Catalog 적용과 멱등성 |
+| 2. 개발 전체 규모 | AWS에서 1,000~2,000대 수용을 위해 Controller·Compiler·DB 분리 및 부하 시험 | 실제 Profile의 처리량·DB·Report/Facts 부하 |
+| 3. 운영 약 250대 | Foreman·Compiler·DB·CA를 아래 HA 설계대로 분리·이중화 | 정상 운영, 한 대 장애, DB·CA 전환, 복구 |
 
 개발 1대는 관리 서버 수이며 관리 대상 Agent 노드는 별도다.
 이 개발 서버는 단일 장애점이 있는 검증 환경이고, 운영 서비스에 대한 HA를 제공하지 않는다.
