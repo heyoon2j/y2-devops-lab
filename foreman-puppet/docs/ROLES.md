@@ -33,6 +33,14 @@ site-modules/
 서비스 제어는 기존 Hiera 정책을 사용하며 팀별 정책 데이터 선택 계층은 아직 추가하지 않았다.
 따라서 팀 Role을 만드는 것만으로 Hiera 서비스 정책이 팀별로 달라지지는 않는다.
 
+## 최초 설정과 지속 관리
+
+이 문서의 분류표는 최초 설정 완료 후의 상태다. 기본/팀 Role은 처음부터 해당 Role로 적용하고
+지속 관리한다. 미관리 대상은 최초에 role::base/true로 공통 설정을 적용한 뒤
+성공을 확인하고 role::unmanaged/false로 전환한다.
+[Role별 최초 설정과 지속 관리](ROLE_LIFECYCLE.md)에 단계·실패 처리·공유 설정 구조를 정리했다.
+자동 전환은 아직 구현하지 않았다.
+
 ## 미관리 대상
 
 Foreman 호스트 파라미터에 Boolean puppet_managed=false를 지정하고 role::unmanaged를 배정한다.
