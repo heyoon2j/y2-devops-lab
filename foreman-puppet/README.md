@@ -1,6 +1,7 @@
 # Foreman / Puppet 아키텍처
 
 그림으로 읽는 순서는 [파일 따라가기](docs/WALKTHROUGH.md)를 참고한다.
+구축 전 결정할 서버 배치·설치·네트워크 항목은 [관리 서버 구성](docs/SERVER_TOPOLOGY.md)을 참고한다.
 [설정 조회·등록 확인 관계도](docs/LOOKUP_AND_REGISTRATION.md)는 Facts·Role·Hiera·Report와 로컬 진단 파일의 차이를 설명한다.
 
 이미지 빌드·user-data·지속 관리의 구분과 코드 배포 순서는 [배포·지속 관리](docs/DEPLOYMENT_MODEL.md)를 참고한다.
