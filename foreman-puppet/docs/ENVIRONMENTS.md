@@ -1,5 +1,7 @@
 # Host Group과 Puppet Environment
 
+
+현재 신규 Role 기준은 [서버 Role 구성](ROLES.md)이다. 기존 GPU 흐름은 호환 예제로 유지한다.
 ## 확정한 구축 순서
 
 1. 개발도 LB + 고정 EC2 2대에 Foreman·Compiler·Smart Proxy를 공동 배치하고 공용 외부 DB를 사용한다. RDS PostgreSQL Multi-AZ를 권장한다.
@@ -14,18 +16,18 @@ Host Group은 CSP만 표현하며, 개발·운영 표시는 계속 `deploy_env` 
 
 | Host Group | `deploy_env` Fact | 호스트의 Puppet Environment | 호스트별 Role |
 | --- | --- | --- | --- |
-| `aws` | `dev` | `development` | `role::base` 또는 `role::gpu_svr` |
-| `aws` | `prd` | `production` | `role::base` 또는 `role::gpu_svr` |
-| `gcp` | `dev` | `development` | `role::base` 또는 `role::gpu_svr` |
-| `gcp` | `prd` | `production` | `role::base` 또는 `role::gpu_svr` |
-| `kc` | `dev` | `development` | `role::base` 또는 `role::gpu_svr` |
-| `kc` | `prd` | `production` | `role::base` 또는 `role::gpu_svr` |
+| `aws` | `dev` | `development` | 서버 Role 구성표에서 하나 선택 |
+| `aws` | `prd` | `production` | 서버 Role 구성표에서 하나 선택 |
+| `gcp` | `dev` | `development` | 서버 Role 구성표에서 하나 선택 |
+| `gcp` | `prd` | `production` | 서버 Role 구성표에서 하나 선택 |
+| `kc` | `dev` | `development` | 서버 Role 구성표에서 하나 선택 |
+| `kc` | `prd` | `production` | 서버 Role 구성표에서 하나 선택 |
 
 Host Group은 3개이며 개발·운영별 하위 그룹은 만들지 않는다.
 Host Group에 코드 환경을 강하게 결합하지 않고 호스트 등록 시 명시한다.
 개발에서는 development의 Classes를 가져오고, 운영 배포 시 production에서도
-두 Role이 연결되어 있는지 확인한다. CSP Host Group에는 Role을 배정하지 않고
-각 호스트에 일반 서버 `role::base`, GPU 서버 `role::gpu_svr` 중 하나를 명시한다.
+필요한 Role Classes를 가져왔는지 확인한다. CSP Host Group에는 Role을 배정하지 않고
+각 호스트에 서버 Role 구성표의 Role 하나를 명시한다.
 GPU Fact가 들어왔다고 Role을 자동 변경하지 않는다.
 
 Host Group마다 최상위 ENC 파라미터 `csp`를 각각 `aws/gcp/kc`로 설정한다.
@@ -76,7 +78,7 @@ environment = development
 ```
 
 Foreman ENC가 반환하는 코드 환경과 Agent 설정을 일치시킨다.
-두 Role이 포함하는 공통 Profile은 `development/dev`, `production/prd`만 허용한다.
+관리 대상 Role이 포함하는 공통 Profile은 `development/dev`, `production/prd`만 허용한다.
 Foreman·Puppet 논리 DNS는 LB의 해당 target group을 사용하고 CA는 별도 endpoint로 분리한다.
 사내 인증서의 SAN에 실제 사용하는 접속 이름을 포함하고 개발/운영 endpoint는 구분한다.
 이 검증은 잘못된 배정을 차단하기 위한 것이며 노드가 보낸 Fact를 인증 근거로 삼지 않는다.

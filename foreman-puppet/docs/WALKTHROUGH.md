@@ -1,5 +1,7 @@
 # 파일로 따라가는 개발 GPU 서버 예시
 
+
+현재 신규 Role 기준은 [서버 Role 구성](ROLES.md)이다. 기존 GPU 흐름은 호환 예제로 유지한다.
 [설정 조회·등록 확인 관계도](LOOKUP_AND_REGISTRATION.md)에서 키/경로 조회와 등록 성공 판정 기준을 이어서 확인할 수 있다.
 
 ## 1. 서버 생성과 Foreman 등록
@@ -20,7 +22,7 @@ Foreman Boolean puppet_managed가 true일 때 아래 설정을 적용한다. fal
 건너뛰며, 누락/문자열 값은 오류다. 등록 자동화가 이 입력을 받아 Foreman 호스트에 Host Group·Role Class·코드 환경을
 설정하고, Agent 설정과 `deploy_env` 외부 Fact를 준비하는 방식으로 구현한다.
 `PUPPET_ROLE`은 Fact가 아니며 Foreman 기본 API 인자 이름도 아니다.
-일반 서버에는 `role::base`, GPU 서버에는 `role::gpu_svr` 하나를 지정한다.
+신규 서버에는 서버 Role 구성표의 Role 하나를 지정한다. 아래는 기존 GPU 호환 예제다.
 수집된 GPU Facts로 Role을 자동 변경하지 않는다.
 
 ```mermaid

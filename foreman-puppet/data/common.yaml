@@ -4,6 +4,8 @@ profile::base::manage: true
 profile::packages::manage: true
 profile::example_file::manage: true
 profile::gpu_system::manage: true
+profile::devops::manage: true
+profile::data_infra::manage: true
 profile::services::manage: true
 # Explicit opt-in per unit. The default does not manage any service.
 profile::services::units: {}

@@ -131,6 +131,31 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   # A team or puppet_managed Fact is not the central ENC switch.
   compile_catalog(valid.merge('puppet_managed' => false, 'team' => 'other'), managed: true)
 
+  # Team roles include common settings, but never infer ownership from facts.
+  %w[devops data_infra].each do |team|
+    catalog = compile_catalog(valid.merge('team' => 'other'), ["role::#{team}"])
+    assert(catalog.resource('Class', "Profile::#{team.capitalize}"), "Missing team profile: #{team}")
+    assert(catalog.resource('File', '/etc/foreman-puppet/example.txt'), 'Team role must include base')
+    assert(catalog.resources.count { |r| r.type == 'Package' } == 2, 'Team role duplicates base packages')
+    excluded = compile_catalog({}, ["role::#{team}"], managed: false, csp: nil)
+    assert(excluded.resources.none? { |r| %w[Package File Exec Service].include?(r.type) }, 'Team role bypassed exclusion')
+  end
+  unmanaged = compile_catalog({}, ['role::unmanaged'], managed: false, csp: nil)
+  assert(unmanaged.resources.none? { |r| %w[Package File Exec Service].include?(r.type) }, 'Unmanaged role changes resources')
+  [true, :absent, 'false'].each do |value|
+    begin
+      compile_catalog(valid, ['role::unmanaged'], managed: value)
+      raise "Unmanaged role accepted unsafe management value: #{value}"
+    rescue Puppet::Error => e
+      assert(e.message.include?('puppet_managed'), 'Unexpected unmanaged role failure')
+    end
+  end
+  # A mistakenly retained managed role is also suppressed by the false flag.
+  mixed = compile_catalog({}, ['role::unmanaged', 'role::devops'], managed: false, csp: nil)
+  assert(mixed.resources.none? { |r| %w[Package File Exec Service].include?(r.type) }, 'Mixed roles bypassed exclusion')
+  base_team_fact = compile_catalog(valid.merge('team' => 'devops'))
+  assert(!base_team_fact.resource('Class', 'Profile::Devops'), 'Team fact selected a role')
+
   common_path = File.join(code, 'data', 'common.yaml')
   common = YAML.safe_load(File.read(common_path))
   {
@@ -175,6 +200,6 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
     content = catalog.resource('File', '/etc/foreman-puppet/example.txt')[:content]
     assert(content == expected, "Wrong hierarchy precedence for #{csp}/#{env}: #{content.inspect}")
   end
-  puts 'Passed: 600 base combinations; host/profile exclusion and Boolean validation; 14 platform rejection cases; 6 hierarchy precedence cases.'
+  puts 'Passed: 600 base combinations; team/unmanaged roles; host/profile exclusion and Boolean validation; 14 platform rejection cases; 6 hierarchy precedence cases.'
 
 end

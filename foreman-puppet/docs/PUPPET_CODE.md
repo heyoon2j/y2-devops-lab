@@ -1,5 +1,7 @@
 # Puppet 코드 구성
 
+
+현재 신규 Role 기준은 [서버 Role 구성](ROLES.md)이다. 기존 GPU 흐름은 호환 예제로 유지한다.
 ## 디렉터리
 
 ```text
@@ -19,6 +21,9 @@ foreman-puppet/                         # Puppet 코드 환경 하나의 루트
 │   ├── role/                           # 서버의 목적을 묶는 모듈
 │   │   └── manifests/                  # 호스트에 배정할 최종 Role
 │   │       ├── base.pp                 # role::base: 일반 서버
+│   │       ├── unmanaged.pp            # 미관리 분류; puppet_managed=false 필수
+│   │       ├── devops.pp               # 공통 + DevOps Profile
+│   │       ├── data_infra.pp           # 공통 + 데이터인프라팀 Profile
 │   │       └── gpu_svr.pp              # role::gpu_svr: 공통 + GPU 시스템 Profile
 │   └── profile/                        # 패키지 등 기능별 설정을 묶는 모듈
 │       └── manifests/                  # 실제 Puppet Class 정의(.pp)
@@ -26,6 +31,8 @@ foreman-puppet/                         # Puppet 코드 환경 하나의 루트
 │           ├── management.pp          # Foreman Boolean puppet_managed 검증
 │           ├── services.pp            # Hiera의 서비스별 정책으로 제어 리소스 생성
 │           ├── service_control.pp     # systemd 상태/변경 반영, 시간 제한
+│           ├── devops.pp              # DevOps 시스템 설정 확장 지점
+│           ├── data_infra.pp          # 데이터인프라팀 시스템 설정 확장 지점
 │           ├── gpu_system.pp           # GPU 시스템 설정 확장 지점; 현재 변경 리소스 없음
 │           ├── packages.pp             # Hiera에서 받은 패키지 설치 목록 적용
 │           └── example_file.pp         # Hiera 예시 파일 생성·이전 진단 파일 삭제
@@ -54,15 +61,15 @@ Puppet Environment는 코드 버전 선택이고 `deploy_env`는 호스트의 �
 
 `manifests/site.pp`에는 기본 노드 선언만 둔다. Foreman ENC가 적용할 Class를 결정한다.
 Foreman의 `aws`, `gcp`, `kc` Host Group은 CSP만 표현한다. 그룹에는 Class를 배정하지 않고
-각 호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
+각 호스트에 [서버 Role 구성](ROLES.md)의 Role 하나를 배정한다.
 Foreman Boolean `puppet_managed`가 필수이며 false이면 Role/Profile의 작업 리소스를 건너뛴다.
 Class가 배정되지 않은 호스트의 Catalog에는 이 프로젝트의 관리 리소스가 없다.
 
 | Host Group | 호스트별 배정할 Role | Puppet Environment |
 | --- | --- | --- |
-| `aws` | `role::base` 또는 `role::gpu_svr` | 호스트별 `development` 또는 `production` |
-| `gcp` | `role::base` 또는 `role::gpu_svr` | 호스트별 `development` 또는 `production` |
-| `kc` | `role::base` 또는 `role::gpu_svr` | 호스트별 `development` 또는 `production` |
+| `aws` | 서버 Role 구성표에서 하나 선택 | 호스트별 `development` 또는 `production` |
+| `gcp` | 서버 Role 구성표에서 하나 선택 | 호스트별 `development` 또는 `production` |
+| `kc` | 서버 Role 구성표에서 하나 선택 | 호스트별 `development` 또는 `production` |
 
 CSP 이름을 Fact로 추가하거나 `deploy_env`로부터 Host Group을 추정하지 않는다.
 Foreman Host Group의 `csp=aws/gcp/kc` 파라미터를 ENC로 전달한다.
@@ -73,6 +80,9 @@ Hiera는 이 최상위 파라미터로 CSP별 데이터를 선택한다. 노드�
 | Class | 책임 |
 | --- | --- |
 | `role::base` | 일반 서버 역할. `profile::base` 포함 |
+| `role::unmanaged` | 미관리 분류. Boolean puppet_managed=false 필수, 작업 Profile 없음 |
+| `role::devops` | 공통 + profile::devops, 팀별 추가 작업 없음 |
+| `role::data_infra` | 공통 + profile::data_infra, 팀별 추가 작업 없음 |
 | `role::gpu_svr` | GPU 서버 역할. `profile::base`, `profile::gpu_system` 포함 |
 | `profile::gpu_system` | GPU용 OS 정책 확장 지점. 현재 변경 리소스 없음 |
 | `profile::management` | 전체 적용·제외를 위한 Boolean ENC 파라미터 검증 |
@@ -101,7 +111,7 @@ Foreman이나 현재 코드가 자동으로 강제하는 제약은 아니다.
 `aws` 그룹에 `role::web`과 `role::database`를 모두 넣으면 개별 웹/DB 서버를 구분하는
 분류가 아니라 해당 그룹의 호스트가 두 역할을 모두 받는 분류가 된다.
 
-현재는 Role을 `role::base`, `role::gpu_svr` 두 개로 구성한다.
+현재 신규 Role은 `role::base`, `role::unmanaged`, `role::devops`, `role::data_infra`다. 기존 `role::gpu_svr`는 호환용으로 유지한다.
 각 호스트에 하나를 명시적으로 배정하고 CSP 그룹에는 Role을 배정하지 않는다.
 GPU 서버에 `role::base`를 추가로 배정할 필요는 없다. `role::gpu_svr`도 공통
 `profile::base`를 포함한다. 이 단일 Role 규칙은 운영 규약이며 코드에서 강제하지 않는다.
@@ -147,7 +157,7 @@ Class의 자동 파라미터 조회(APL)로 `profile::packages::packages`를 주
 profile::example_file::content: "echo xxx\n"
 ```
 
-두 Role 모두 `/etc/foreman-puppet/example.txt`를 `root:root`, `0644`로 관리한다.
+관리 대상 Role은 공통 Profile을 통해 `/etc/foreman-puppet/example.txt`를 `root:root`, `0644`로 관리한다.
 파일 내용은 줄바꿈으로 끝나는 `echo xxx` 문자열이다. 셸 명령을 실행하지 않는다.
 이 값을 환경별 YAML에 정의하면 해당 환경에서만 공통값을 덮어쓴다.
 
@@ -163,7 +173,7 @@ Hiera 데이터에 등록 토큰이나 비밀번호를 저장하지 않는다.
 2. Foreman 전역 Boolean `puppet_managed=true`를 준비한다. 개발 단계에서는 development 코드를 배포하고 Classes를 가져온다.
    운영 HA 구축 시 production을 배포하고 해당 환경의 Classes도 가져온다.
 3. `aws/gcp/kc` Host Group에 같은 값의 `csp` 파라미터를 설정하고, Class는 배정하지 않는다.
-   호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
+   호스트에 [서버 Role 구성](ROLES.md)의 Role 하나를 배정한다.
    Host Group의 Puppet Environment는 비워 두고 등록 시 호스트별로 명시한다.
 4. Profile Class는 Role을 통해 포함한다. Hiera로 관리할 파라미터의 Foreman override는 비워 둔다.
 5. 등록 절차에서 호스트의 Puppet Environment와 Agent 코드 환경을 맞추고,

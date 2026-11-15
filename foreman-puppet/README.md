@@ -1,5 +1,7 @@
 # Foreman / Puppet 아키텍처
 
+
+현재 신규 Role 기준은 [서버 Role 구성](docs/ROLES.md)이다. 기존 GPU 흐름은 호환 예제로 유지한다.
 서버 용어와 배치를 처음 볼 때는 [용어·아키텍처 그림](docs/ARCHITECTURE_GUIDE.md)부터 읽는다.
 
 그림으로 읽는 순서는 [파일 따라가기](docs/WALKTHROUGH.md)를 참고한다.
@@ -68,7 +70,7 @@ Foreman API나 등록 명령의 실제 인자 이름은 아니다.
 | --- | --- | --- | --- |
 | `PUPPET_MANAGED` | 필수 | Boolean `true/false` | 등록 자동화가 Foreman ENC 파라미터로 지정한다. 기본 대상은 전역 Boolean true를 준비하며 Fact로 넣지 않는다. |
 | `HOST_GROUP` | 필수 | `aws`, `gcp`, `kc` | Foreman 등록 시 지정한다. Fact로 보내는 값이 아니다. |
-| `PUPPET_ROLE` | 필수 | `role::base`, `role::gpu_svr` | user-data 등록 자동화가 Foreman 호스트에 Role Class 하나를 배정한다. Fact는 아니다. |
+| `PUPPET_ROLE` | 필수 | `role::base`, `role::unmanaged`, `role::devops`, `role::data_infra` | user-data 등록 자동화가 Foreman 호스트에 Role Class 하나를 배정한다. Fact는 아니다. |
 | `TEAM` | 선택 | `devops` | 표시·검색용 `team` 외부 Fact를 생성한다. 인증/권한 근거로 사용하지 않는다. |
 | `DEPLOY_ENV` | 필수 | `dev`, `prd` | `deploy_env` 외부 Fact 파일을 만든다. |
 | `PUPPET_ENV` | 필수 | `development`, `production` | `dev/development`, `prd/production` 매핑으로 Foreman 호스트와 Agent의 코드 환경을 설정한다. Fact는 아니다. |
@@ -173,7 +175,7 @@ Facts와 Report는 일반적인 Puppet 연동에서 Agent → Puppet Server → 
 
 ## 등록 및 적용 순서
 
-1. Foreman 전역 Boolean `puppet_managed=true`를 준비하고, `aws`, `gcp`, `kc` Host Group을 생성하고 각각 같은 이름의 `csp` 파라미터를 설정한 뒤 Classes를 가져온다. 각 호스트에 `role::base` 또는 `role::gpu_svr` 하나를 배정한다.
+1. Foreman 전역 Boolean `puppet_managed=true`를 준비하고, `aws`, `gcp`, `kc` Host Group을 생성하고 각각 같은 이름의 `csp` 파라미터를 설정한 뒤 Classes를 가져온다. 각 호스트에 [서버 Role 구성](docs/ROLES.md)의 Role 하나를 배정한다.
 2. Puppet Server의 ENC, Facts 업로드, Report 업로드 연동을 구성한다.
 3. 클라우드 생성 단계에서 Host Group, 환경, 접속 대상과 고유한 certname을 결정한다.
 4. user-data가 입력값을 검증하고 환경 Fact 파일을 생성한다.
@@ -193,7 +195,7 @@ Ubuntu 24.04/Puppet 지원을 먼저 확인하고 생성된 등록 명령을 활
 
 ## Class와 환경 사용
 
-Role은 `role::base`, `role::gpu_svr` 두 개다. Foreman 호스트별로 하나를 배정한다.
+신규 Role은 `base`, `unmanaged`, `devops`, `data_infra` 네 가지다. 기존 `gpu_svr`는 호환용이다. Foreman 호스트별로 하나를 배정한다.
 CSP Host Group에는 Role을 배정하지 않아 상속으로 두 Role이 동시에 붙지 않도록 한다.
 
 ```text
