@@ -9,25 +9,23 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 
 | 단계 | 관리 서버 구성 | 검증 대상 |
 | --- | --- | --- |
-| 1. 개발 기능 검증 | 개발 LB 뒤의 관리 서버 1대에 Foreman·Puppet Server/CA·Smart Proxy·PostgreSQL을 함께 배치. 소수 노드부터 시작 | 사내 인증서, 등록, Facts, ENC, Catalog 적용과 멱등성 |
-| 2. 개발 전체 규모 | AWS에서 1,000~2,000대 수용을 위해 Controller·Compiler·DB 분리 및 부하 시험 | 실제 Profile의 처리량·DB·Report/Facts 부하 |
+| 1. 개발 기능 검증 | LB + 고정 EC2 2대에 Foreman·Compiler·Smart Proxy 공동 배치. 공용 RDS PostgreSQL Multi-AZ 권장. 소수 Agent부터 시작 | 사내 인증서, 등록, Facts, ENC, Catalog 적용과 멱등성 |
+| 2. 개발 전체 규모 | AWS에서 같은 고정 2대 + 외부 DB 구성으로 1,000~2,000대 및 N-1 부하 시험 | 실제 Profile의 처리량·DB·Report/Facts 부하 |
 | 3. 운영 약 250대 | Foreman·Compiler·DB·CA를 아래 HA 설계대로 분리·이중화 | 정상 운영, 한 대 장애, DB·CA 전환, 복구 |
 
-개발 1대는 관리 서버 수이며 관리 대상 Agent 노드는 별도다.
-이 개발 서버는 단일 장애점이 있는 검증 환경이고, 운영 서비스에 대한 HA를 제공하지 않는다.
+관리 EC2 2대와 관리 대상 Agent 노드는 별도다. 서버 2대와 LB 외에도 DB·CA·키·작업 계층의
+장애 대응을 구성해야 하며 아직 실제 HA가 검증된 상태는 아니다.
 관리 서버 OS는 선택한 Foreman/Puppet 버전의 지원 목록에 따라 정한다.
 관리 대상 Agent의 코드 검증 범위는 Ubuntu 20.04·24.04·26.04와 Rocky 8·9이며,
 실제 Agent 패키지/이미지 동작은 별도로 검증한다.
 
 ```text
-개발 관리 서버 1대
-├── Foreman                  # UI, 호스트 분류, Facts/Report 조회
-├── Puppet Server            # Catalog 컴파일과 Agent 통신
-├── Puppet Intermediate CA   # 사내 CA에서 위임받는 발급 방식 사용 시
-├── Smart Proxy              # Puppet/CA 관리 연동
-└── PostgreSQL               # Foreman 데이터 저장
-        ↑
-AWS / GCP / KC의 개발 Agent 노드
+개발·운영 환경별 고정 구성
+├── 내부 NLB
+├── EC2 1 (AZ 1): Foreman + Compiler + Smart Proxy
+├── EC2 2 (AZ 2): Foreman + Compiler + Smart Proxy
+├── 공용 RDS PostgreSQL Multi-AZ 권장
+└── CA: PKI 모델에 따른 단일 Active + 별도 장애 전환 설계
 ```
 
 처음부터 Foreman·Puppet·CA에 각각 논리 DNS 이름을 정한다. 개발에서는 같은 IP를
@@ -101,7 +99,9 @@ Puppet 백엔드에는 그 프록시만 접근하도록 제한한다.
 개발 검증 이후 운영 관리 구성을 다음 구조로 구축한다.
 아래 구성은 운영 목표이며 개발 단일 서버에 먼저 적용하지 않는다.
 CA 부분은 사내 CA 아래의 Puppet Intermediate CA 발급 방식에 대한 설계다.
-개발도 같은 LB 접속 구조를 사용하되 초기 대상은 한 대다. 세부 HA 복제/전환은 후속으로
+아래 그림의 Foreman 1/Compiler 1과 Foreman 2/Compiler 2는 각각 같은 EC2에 공동 배치한다.
+CA는 해당 EC2 중 한 곳 또는 별도 위치에서 단일 Active로 운영하며 전환을 별도로 검증한다.
+개발도 같은 LB 접속 구조와 고정 EC2 2대를 사용한다. 세부 HA 복제/전환은 후속으로
 정하고, 지금은 논리 endpoint와 상태 저장 경계를 분리한다. [LB/Scaling](LB_AND_SCALING.md) 참조.
 
 ```mermaid
@@ -140,6 +140,7 @@ flowchart TB
 
 단일 CA 원칙은 Puppet Server 기본 구조에 따른 것이다. 위 Active/Standby 전환은
 제품에 내장된 자동 CA 클러스터 기능이라고 가정하지 않는다.
+Foreman DB를 RDS에 두어도 아래 CA 파일 상태가 자동으로 RDS에 저장되거나 복제되지는 않는다.
 CA 키·체인 외에도 서명 인증서, CSR, serial, inventory, CRL 등 선택한 버전의 CA 상태를
 일관되게 복구해야 한다. 두 CA를 동시에 쓰기 가능하게 실행하지 않는다.
 공유 스토리지를 쓴다면 스토리지 자체 HA와 fencing이 필요하다.

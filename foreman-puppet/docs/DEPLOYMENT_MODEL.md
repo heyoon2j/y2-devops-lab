@@ -40,7 +40,8 @@ flowchart LR
     P --> R["Agent 주기 실행\n변경 감지 및 유지"]
 ```
 
-개발은 관리 서버 1대에서 시작하며 운영 HA는 이후 구축한다.
+개발·운영은 LB + 고정 EC2 2대 + 공용 외부 DB 구성을 기준으로 한다.
+RDS PostgreSQL Multi-AZ를 권장하며 ASG는 고도화로 미룬다.
 운영의 여러 Compiler는 같은 코드 환경에 동일 commit을 제공하도록 배포한다.
 처음에는 소수 검증 노드로 영향과 재시작 여부를 확인한 후 대상 범위를 넓힌다.
 주기와 분산의 권장 초안은 30분 + splay이며 [Agent 실행 정책](AGENT_OPERATIONS.md)을 따른다.

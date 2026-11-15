@@ -4,7 +4,8 @@
 
 개발도 LB를 사용해 운영과 같은 접속 방식으로 시작한다.
 환경별로 별도 LB/endpoint와 신뢰 체계를 두되 같은 IaC 구조와 운영 절차를 사용한다.
-초기 개발은 LB 뒤의 대상 EC2가 한 대여도 된다. LB만 있다고 애플리케이션까지 HA인 것은 아니다.
+현재 기준은 LB 뒤 고정 EC2 2대다. 각 EC2에 Foreman·Compiler를 함께 배치하고
+공용 RDS PostgreSQL Multi-AZ를 권장한다. LB만으로 DB/CA까지 HA가 되는 것은 아니다.
 
 AWS 내부 NLB의 TCP passthrough를 기본 권장안으로 둔다.
 프론트엔드 TLS listener에서 TLS를 종료하는 방식과 구분한다.
@@ -16,15 +17,15 @@ ALB/L7 TLS 종료를 선택하려면 Foreman/Puppet 연동의 클라이언트 �
 
 | 논리 endpoint | listener | target group | 초기 대상 |
 | --- | --- | --- | --- |
-| Foreman DNS 이름 | TCP 443 | Foreman HTTPS | 개발 관리 EC2 1대 |
-| Puppet DNS 이름 | TCP 8140 | Puppet Compiler | 같은 개발 EC2 1대 |
+| Foreman DNS 이름 | TCP 443 | Foreman HTTPS | 관리 EC2 2대 |
+| Puppet DNS 이름 | TCP 8140 | Puppet Compiler | 같은 관리 EC2 2대 |
 | CA DNS 이름 | CA 전용 경로 | Compiler pool과 분리 | 선택한 CA 모델의 발급 서버 |
 
 Foreman/Puppet DNS 이름은 같은 NLB를 가리킬 수 있다. 서버 인증서 SAN에 실제 접속 이름을
 포함하고 대상 그룹은 실제 백엔드 포트로 전달한다. SG·NLB 배치·cross-zone 설정은 네트워크
 설계 시 검증한다. 여러 AZ에 배치할 때 대상이 없는 AZ의 전달 동작도 확인한다.
 
-초기 통합 VM에서 Puppet Server가 Foreman LB를 호출하면 요청이 같은 EC2로 돌아올 수 있다.
+공동 배치 EC2에서 Puppet Server가 Foreman LB를 호출하면 요청이 같은 EC2로 돌아올 수 있다.
 NLB의 client IP preservation이 켜진 동일 대상 hairpin 경로는 지원되지 않으므로,
 이 경로의 target group에서 보존을 끄는 등 설계와 실제 호출 시험이 필요하다.
 보존을 끄면 백엔드에 보이는 source IP가 달라지므로 접근 정책·로그도 함께 검토한다.
@@ -40,9 +41,9 @@ CA는 초기에는 Controller의 별도 사설 DNS endpoint로 둘 수 있다. �
 flowchart LR
     A["개발 또는 운영 Agent"] --> L["환경별 내부 NLB"]
     U["운영자 / 등록 자동화"] --> L
-    L -->|"TCP 443 / Foreman TG"| F["Foreman\n개발 처음 1대 → 필요 시 복수"]
-    L -->|"TCP 8140 / Compiler TG"| P["Compiler\n개발 처음 같은 EC2 → 분리·확장"]
-    F --> D["PostgreSQL\n처음 로컬 → 별도 DB/HA"]
+    L -->|"TCP 443 / Foreman TG"| F["Foreman\n고정 EC2 2대의 Foreman"]
+    L -->|"TCP 8140 / Compiler TG"| P["Compiler\n같은 고정 EC2 2대의 Compiler"]
+    F --> D["PostgreSQL\n공용 RDS PostgreSQL Multi-AZ 권장"]
     P -->|"ENC / Facts / Report"| F
     A -.->|"별도 ca_server"| C["CA endpoint\n단일 Active / 별도 상태 관리"]
 ```
@@ -53,7 +54,7 @@ flowchart LR
 정확한 대수·DB 복제·CA 전환 구현·RTO/RPO·장애 도메인·failover 시험은 뒤에서 상세화할 수 있다.
 단, HA 상세화를 미뤄도 인증서·DB가 삭제되어도 되는 임시 디스크에만 있도록 설계하지 않는다.
 
-## Autoscaling은 역할별로 판단
+## Autoscaling: 현재 보류, 고도화 참고
 
 | 역할 | 정책 |
 | --- | --- |
@@ -67,7 +68,7 @@ ASG의 고정 대수 운영과 부하에 따른 동적 증감은 구분한다. m
 상태 검사에 의한 인스턴스 교체는 발생할 수 있다. 상태 복구/부트스트랩이 검증되지 않으면
 고정 대수 ASG 역시 CA/DB 상태 보존의 대안이 아니다.
 
-## Compiler ASG를 나중에 도입할 조건
+## 고도화 시 Compiler ASG를 도입할 조건
 
 1. CA/DB를 외부화하고 Compiler의 CA 기능을 끈다.
 2. 이미지에는 노드별 인증서/개인키를 공통으로 굽지 않는다. 새 Compiler마다 고유 신원을 발급한다.
@@ -81,7 +82,7 @@ ASG의 고정 대수 운영과 부하에 따른 동적 증감은 구분한다. m
    CPU뿐 아니라 JRuby 대기·요청 큐·상위 지연을 확인한다.
 8. Foreman/DB가 병목인 상태에서 Compiler만 늘리는 정책을 만들지 않는다.
 
-초기 권장안은 개발·운영 모두 LB + 고정 대수 서버다. 부하 시험과 노드 수명 주기 자동화가
+현재 기준은 개발·운영 모두 LB + 고정 EC2 2대와 공용 외부 DB다. ASG는 생성하지 않는다. 부하 시험과 노드 수명 주기 자동화가
 준비된 후 Compiler 계층만 ASG 도입을 검토한다. HA가 반드시 동적 Autoscaling을 요구하지는 않는다.
 
 ## 참고

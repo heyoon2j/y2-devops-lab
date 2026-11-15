@@ -2,7 +2,7 @@
 
 ## 확정한 구축 순서
 
-1. 개발 관리 서버 1대에 Foreman·Puppet Server·Smart Proxy·PostgreSQL을 함께 구성한다.
+1. 개발도 LB + 고정 EC2 2대에 Foreman·Compiler·Smart Proxy를 공동 배치하고 공용 외부 DB를 사용한다. RDS PostgreSQL Multi-AZ를 권장한다.
 2. 사내 인증서로 등록·Facts 수집·설정 적용을 검증한다.
 3. AWS 개발 전체 1,000~2,000대 확대 전 [규모별 구성](CAPACITY_PLAN.md)의 부하 시험·분리 시점을 정한다.
 4. 검증한 코드를 이후 약 250대의 운영 HA 관리 구성에 배포한다. 개발의 단일 서버를 운영 HA라고 간주하지 않는다.
@@ -72,7 +72,7 @@ environment = development
 
 Foreman ENC가 반환하는 코드 환경과 Agent 설정을 일치시킨다.
 두 Role이 포함하는 공통 Profile은 `development/dev`, `production/prd`만 허용한다.
-개발 단일 서버에서는 Foreman·Puppet·CA의 논리 DNS 이름들이 같은 서버를 가리킬 수 있다.
+Foreman·Puppet 논리 DNS는 LB의 해당 target group을 사용하고 CA는 별도 endpoint로 분리한다.
 사내 인증서의 SAN에 실제 사용하는 접속 이름을 포함하고 개발/운영 endpoint는 구분한다.
 이 검증은 잘못된 배정을 차단하기 위한 것이며 노드가 보낸 Fact를 인증 근거로 삼지 않는다.
 

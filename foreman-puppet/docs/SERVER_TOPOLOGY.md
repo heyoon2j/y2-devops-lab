@@ -7,10 +7,12 @@
 
 | 구분 | 내용 |
 | --- | --- |
-| 개발 | LB를 초기부터 사용하고 대상 관리 서버 1대로 먼저 구성·검증 |
+| 개발 | LB + 고정 관리 EC2 2대 기준. 기능 검증은 소수 Agent부터 시작 |
 | 개발 관리 서버 위치 | AWS. 리전·VPC·CSP 간 접속 경로는 미정 |
 | 관리 노드 수 | 개발 1,000~2,000대, 운영 약 250대 |
-| 운영 | 개발 검증 후 별도 운영 HA 구성 |
+| 운영 | 같은 방식의 LB + 고정 EC2 2대 + 공용 HA DB 구성 |
+| Autoscaling | 현재 도입하지 않고 후속 고도화로 이관 |
+| DB 권장안 | RDS PostgreSQL Multi-AZ, 두 Foreman이 같은 DB endpoint 사용 |
 | 기능 범위 | Foreman 호스트 관리 + Puppet 계열의 시스템 설정 적용 |
 | 대상 노드 | AWS/GCP/KC의 Ubuntu 20.04·24.04·26.04, Rocky 8·9 |
 | Agent | 관리 대상에는 Puppet 계열 Agent/Facter. 별도 Foreman Agent 불필요 |
@@ -19,44 +21,78 @@
 | 모니터링 | Zabbix가 생존·응답 감시와 알림 |
 | 인증서 | 사내 CA 신뢰 체계 사용 계획. 세부 발급 방식/실제 설정은 후속 결정 |
 
-## 2. 개발 서버 권장 구성
+## 2. 현재 권장 구성: 고정 EC2 2대 + LB + RDS
 
-새 전용 VM에 OS 패키지를 설치하고 foreman-installer로 구성하는 방식을 권장한다.
-사용자는 설치 방식의 추천을 요청했으며 VM 직접 설치를 권장한다.
-관리 서버 OS 권장 후보는 Ubuntu 24.04 amd64다.
-대상 노드의 OS와 관리 서버의 OS는 같을 필요가 없다.
-아래 단일 VM은 소수 노드 기능 검증용이다. 개발 전체 1,000~2,000대 수용을 보장하는 구성이 아니다.
-전체 규모의 분리 구성과 용량 검증은 [AWS 규모별 구성](CAPACITY_PLAN.md)을 따른다.
+AWS의 서로 다른 AZ에 전용 EC2 2대를 고정 배치한다. 각 EC2에 Foreman·Puppet 계열
+Server/Compiler·Smart Proxy를 함께 설치하는 안으로 시작한다. 관리 OS 후보는 Ubuntu 24.04 amd64다.
+두 Foreman은 로컬 DB를 따로 사용하지 않고 같은 외부 PostgreSQL DB에 연결한다.
+RDS가 필수 제품은 아니지만 DB 복제·장애 전환 운영을 줄이기 위해 RDS PostgreSQL Multi-AZ를 권장한다.
+DB 엔진 버전·필요한 권한/extension은 Foreman 버전과 실제 설치 전에 확인한다.
 
 ```mermaid
-flowchart LR
-    U["운영자 / 등록 자동화"]
-    subgraph M["개발 관리 VM 1대"]
-      F["Foreman\nUI / API / ENC"]
-      P["Puppet 계열 Server\nCatalog 컴파일 / Report 처리"]
-      S["Smart Proxy\nPuppet / CA 관리 연동"]
-      DB["PostgreSQL\nForeman 데이터"]
-      CA["CA 기능\n발급 방식에 따라 구성"]
-      F --> DB
-      F --> S
-      P -->|"ENC / Facts / Report 연동"| F
+flowchart TB
+    A["운영자 / 등록 자동화 / Agent"] --> L["환경별 내부 NLB"]
+    subgraph AZ1["AZ 1: EC2 1"]
+      F1["Foreman 1"]
+      P1["Compiler 1 / Smart Proxy 1"]
     end
-    L["개발 내부 NLB"] -->|"TCP 443"| F
-    L -->|"TCP 8140"| P
-    U --> L
-    A["AWS / GCP / KC\n개발 Agent 노드"] --> L
-    A -.->|"Puppet CA 방식일 때 인증서 요청"| CA
+    subgraph AZ2["AZ 2: EC2 2"]
+      F2["Foreman 2"]
+      P2["Compiler 2 / Smart Proxy 2"]
+    end
+    L -->|"TCP 443"| F1
+    L -->|"TCP 443"| F2
+    L -->|"TCP 8140"| P1
+    L -->|"TCP 8140"| P2
+    F1 --> D["같은 RDS PostgreSQL endpoint
+Multi-AZ DB instance: Primary + Standby"]
+    F2 --> D
+    P1 -->|"ENC / Facts / Report"| L
+    P2 -->|"ENC / Facts / Report"| L
+    A -.->|"별도 ca_server / PKI 방식에 따름"| C["CA: 단일 Active
+장애 전환은 별도 구현"]
 ```
 
-CA는 사내 CA 아래에 Puppet Intermediate CA를 두는 방식일 때 관리 VM에서 운영할 수 있다.
-사내 CA 직접 발급 방식을 선택하면 외부 발급/배포 절차를 사용하고 내장 CA를 끈다.
-Redis/작업 실행 계층은 선택한 Foreman 플러그인과 기능의 요구에 맞춰 추가한다.
-개발 초기에도 LB를 사용해 운영과 같은 접속 방식을 검증한다. 외부 DB·PuppetDB·
-DHCP/TFTP/PXE·Katello는 초기 기능 검증 범위에 넣지 않는 것을 권장한다. 관리 대상의 DNS 설정을 Puppet으로 관리하는 것과 Foreman에 DNS 서버 기능을
-추가하는 것은 서로 다른 결정이다.
+NLB의 Foreman target group과 Compiler target group에 각각 해당하는 두 EC2 포트를 등록한다.
+한 EC2가 중단되면 다른 EC2가 두 역할을 모두 감당해야 하므로 N-1 성능 검증이 필요하다.
+개발 1,000~2,000대와 운영 약 250대의 사양은 실제 Profile·DB 부하로 정한다.
+2대가 부족하면 이후 고정 대수 수동 확장 또는 Compiler 전용 서버 분리를 검토한다.
 
-VM 수 1대는 관리 서버 수다. Agent 시험 노드는 별도로 필요하며 관리 서버 자체에
-업무 서버용 base/gpu_svr Role을 자동 배정하지 않는다.
+### DB 구성
+
+- RDS는 private subnet에 배치하고 공개 접속을 사용하지 않는 것을 기본으로 한다.
+- 두 Foreman은 같은 DB·스키마와 RDS 쓰기 endpoint를 사용한다. EC2별 독립 DB를 만들지 않는다.
+- 권장 기본은 Multi-AZ DB instance의 Primary + Standby다. 읽기 분산용 Read Replica와 구분한다.
+- 장애 전환 시 연결 끊김/재접속이 발생할 수 있으므로 Foreman 연결 복구와 DNS 동작을 시험한다.
+- 두 EC2의 DB 연결 풀 합계, Report/Facts 보존·정리, IOPS·증가량을 산정한다.
+- EC2에서 로컬 DB 생성/관리는 끄고 설치 자동화에 외부 DB 연결을 지정한다.
+- 스키마 migration/초기화는 두 노드에서 동시에 실행하지 않도록 설치·업그레이드 순서를 정한다.
+- 백업/PITR·보존 기간·복구 시험과 RDS 자체 TLS 신뢰도 별도로 준비한다.
+
+### 두 애플리케이션 노드가 공유·일치시켜야 하는 것
+
+- 같은 Foreman/플러그인 버전과 DB 연결 정보
+- 같은 Foreman 암호화 키·세션 서명 비밀값과 관련 서비스 설정
+- 같은 Puppet 코드·모듈·Hiera commit 및 ENC/Facts/Report 연동
+- 노드별 고유 인증서·개인키와 실제 LB 접속 이름의 SAN
+- 사용하는 작업 실행/캐시 기능에 맞춘 공유 상태 또는 다중 인스턴스 동작 검증
+
+DB를 외부화해도 애플리케이션의 모든 상태가 자동 공유되는 것은 아니다.
+암호화 키·세션 비밀값은 안전한 저장소에서 동기화하며 인증서 개인키를 공통 이미지로 복제하지 않는다.
+
+### CA는 별도 HA 항목
+
+Foreman DB의 RDS에는 Puppet CA 개인키·serial·CSR·서명 인증서·CRL 등 CA 상태가 자동 저장되지 않는다.
+사내 CA 직접 발급이면 외부 PKI의 발급/배포/HA 절차를 따른다.
+Puppet Intermediate CA를 선택하면 EC2 중 한 대 또는 별도 위치에서 단일 Active로 운영하고,
+상태 보존·Standby 전환·fencing·ca_server 경로를 따로 구현한다.
+두 EC2에서 동일 CA를 독립적으로 초기화하거나 동시에 발급하지 않는다.
+CA 전환 구현 전에는 EC2 1대 장애에도 신규 등록/서명/폐기를 계속할 수 있다고 보장하지 않는다.
+
+현재는 고정 2대 설계와 RDS 권장안을 문서화한 것이며 실제 설치·생성·failover 시험은 하지 않았다.
+소수 Agent로 한 노드씩 설치 기능을 확인할 수 있지만 로컬 DB 1대 구성을 최종 기반으로 삼지 않는다.
+Katello·PuppetDB·DHCP/TFTP/PXE는 초기 범위에 추가하지 않는다.
+Redis/작업 실행 계층은 선택한 플러그인이 요구하면 별도 관리형/HA 구성으로 검토한다.
 
 ## 3. 접속 이름과 통신
 
@@ -76,7 +112,7 @@ VM 수 1대는 관리 서버 수다. Agent 시험 노드는 별도로 필요하�
 | 운영자/등록 자동화 → Foreman | 443 | 승인된 관리 경로와 대상 노드의 등록 경로 |
 | Agent → Puppet Server/CA | 기본 8140 | 승인된 대상 노드 네트워크 |
 | Foreman → Smart Proxy | 기본 8443 | 개발은 동일 VM 내부, 운영은 필요한 관리 서버만 |
-| Foreman → PostgreSQL | 기본 5432 또는 Unix socket | 개발은 로컬 통신, 외부 노드에 개방하지 않음 |
+| 두 Foreman EC2 → RDS PostgreSQL | 기본 5432 | RDS SG는 승인된 Foreman 서버 경로만 허용 |
 | 운영자/설치 자동화 → 관리 VM SSH | 실제 SSH 포트 | 승인된 관리 경로만 |
 
 기본 Puppet 적용을 위해 관리 서버가 모든 Agent의 SSH로 접속할 필요는 없다.
@@ -100,7 +136,8 @@ CA 발급 모델과 실제 설치 구성에 따라 포트/endpoint는 재검증�
 
 ## 5. 운영 목표
 
-운영 이중화는 개발 VM 전체를 두 대 복제하는 것만으로 완성되지 않는다.
+개발·운영은 같은 고정 2대 + LB 구조를 사용한다. 두 역할은 같은 EC2에 공동 배치할 수 있지만
+DB·CA·키·작업 계층까지 별도 HA 조건을 충족해야 한다.
 
 | 구성 요소 | 운영 목표 |
 | --- | --- |
@@ -116,9 +153,9 @@ CA 발급 모델과 실제 설치 구성에 따라 포트/endpoint는 재검증�
 ## 6. 아직 결정할 사항
 
 1. AWS 리전/VPC·서브넷과 GCP/KC 연결 경로
-2. VM 직접 설치 권장안 채택과 전체 개발 규모의 역할별 분리 시점
+2. EC2 2대 공동 배치의 실제 사양·N-1 성능과 향후 수동 확장 시점
 3. Agent 실행 주기·분산과 Report/Facts 보존 기간
-4. 관리 VM 사양·디스크·FQDN·고정 접속 주소
+4. 관리 EC2 사양·디스크·FQDN·접속 주소와 RDS 버전·사양·보존 기간
 5. Foreman 및 실제 Puppet/OpenVox Server·Agent 버전과 패키지 공급 경로
    개발·운영 LB 및 확장 경계는 [LB/Scaling](LB_AND_SCALING.md), 실행 옵션은 [Agent 운영](AGENT_OPERATIONS.md) 참조
 6. 사내 CA 직접 발급/중간 CA 위임, DNS/SAN, 등록 인증과 갱신 절차
@@ -135,3 +172,6 @@ CA 발급 모델과 실제 설치 구성에 따라 포트/endpoint는 재검증�
 
 - [Foreman 5.0 Debian/Ubuntu Quickstart](https://docs.theforeman.org/5.0/Quickstart/index-foreman-deb.html)
 - [Foreman 5.0 Quickstart와 기본 구성 요소](https://theforeman.org/manuals/5.0/quickstart_guide.html)
+
+- [Foreman 다중 인스턴스의 공용 DB와 키](https://theforeman.org/manuals/5.0/index.html#5.8MultipleForemaninstances)
+- [RDS Multi-AZ DB instance](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZSingleStandby.html)
