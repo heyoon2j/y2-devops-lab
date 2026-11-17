@@ -174,7 +174,9 @@ Hiera 데이터에 등록 토큰이나 비밀번호를 저장하지 않는다.
 
 ## Foreman 연결 순서
 
-1. 개발도 고정 EC2 2대에 Foreman·Compiler·Smart Proxy를 설치하고 공용 외부 DB와 LB를 연결한 뒤,
+처음에는 [1단계 단일 개발 서버](PHASED_ROLLOUT.md)를 사용하고 이후 RDS·LB·두 번째 EC2로 확장한다.
+
+1. 개발 EC2 1대에 로컬 PostgreSQL·Foreman·Compiler·Smart Proxy를 설치한 뒤,
    사내 인증서 신뢰와 ENC/Facts/Report 연동을 준비한다.
 2. Foreman 전역 Boolean `puppet_managed=true`를 준비한다. 개발 단계에서는 development 코드를 배포하고 Classes를 가져온다.
    운영 HA 구축 시 production을 배포하고 해당 환경의 Classes도 가져온다.

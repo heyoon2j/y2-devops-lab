@@ -40,7 +40,8 @@ flowchart LR
     P --> R["Agent 주기 실행\n변경 감지 및 유지"]
 ```
 
-개발·운영은 LB + 고정 EC2 2대 + 공용 외부 DB 구성을 기준으로 한다.
+개발은 EC2 1대 + 로컬 PostgreSQL로 시작하고, DB를 RDS로 이전한 뒤 LB + 고정 EC2 2대로 확장한다.
+그다음 별도 운영을 구축한다. [단계별 구축](PHASED_ROLLOUT.md) 참조.
 RDS PostgreSQL Multi-AZ를 권장하며 ASG는 고도화로 미룬다.
 운영의 여러 Compiler는 같은 코드 환경에 동일 commit을 제공하도록 배포한다.
 처음에는 소수 검증 노드로 영향과 재시작 여부를 확인한 후 대상 범위를 넓힌다.

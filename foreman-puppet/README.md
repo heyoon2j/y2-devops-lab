@@ -22,6 +22,9 @@ Role별 최초 설정·지속 관리·미관리 전환은 [Role 수명 주기](d
 
 요청한 Banner·패스워드·root 로그인 설정은 [SSH Profile](docs/SSH_PROFILE.md)에 정리했다. 기본 비활성이다.
 
+현재 구축 순서는 **개발 1대 + 로컬 DB → 개발 LB + 2대 + RDS → 별도 운영**이다.
+[단계별 구축과 DB 이전](docs/PHASED_ROLLOUT.md)에 다음 작업과 전환 기준을 정리했다.
+
 ## 목적과 범위
 
 Foreman으로 노드의 등록·분류·상태를 관리하고, Puppet으로 서버 설정을 적용한다.

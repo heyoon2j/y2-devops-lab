@@ -4,10 +4,10 @@
 현재 신규 Role 기준은 [서버 Role 구성](ROLES.md)이다. 기존 GPU 흐름은 호환 예제로 유지한다.
 ## 확정한 구축 순서
 
-1. 개발도 LB + 고정 EC2 2대에 Foreman·Compiler·Smart Proxy를 공동 배치하고 공용 외부 DB를 사용한다. RDS PostgreSQL Multi-AZ를 권장한다.
-2. 사내 인증서로 등록·Facts 수집·설정 적용을 검증한다.
-3. AWS 개발 전체 1,000~2,000대 확대 전 [규모별 구성](CAPACITY_PLAN.md)의 부하 시험·분리 시점을 정한다.
-4. 검증한 코드를 이후 약 250대의 운영 HA 관리 구성에 배포한다. 개발의 단일 서버를 운영 HA라고 간주하지 않는다.
+1. 개발 EC2 1대 + 로컬 PostgreSQL에 Foreman·Compiler·Smart Proxy를 설치한다. LB는 아직 두지 않는다.
+2. 대표 소수 Agent로 등록·Facts·ENC·설정 적용·Report·멱등성·제외를 검증한다.
+3. 로컬 DB를 RDS로 이전하고 LB + 고정 EC2 2대로 확장해 개발 1,000~2,000대 및 N-1 부하를 검증한다.
+4. 검증한 설치 절차로 약 250대의 별도 운영 구성을 구축한다. [단계별 구축](PHASED_ROLLOUT.md) 참조.
 
 개발은 `development`, 운영은 `production` Puppet Environment를 사용한다.
 Host Group은 CSP만 표현하며, 개발·운영 표시는 계속 `deploy_env` Fact를 사용한다.

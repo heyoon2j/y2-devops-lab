@@ -2,9 +2,10 @@
 
 ## 결정과 권장 구조
 
-개발도 LB를 사용해 운영과 같은 접속 방식으로 시작한다.
+최초 개발은 LB 없이 EC2 1대 + 로컬 PostgreSQL로 시작한다.
+[2단계 개발 확장](PHASED_ROLLOUT.md)에서 RDS로 이전하고 LB·EC2 2대 구조로 전환한다.
 환경별로 별도 LB/endpoint와 신뢰 체계를 두되 같은 IaC 구조와 운영 절차를 사용한다.
-현재 기준은 LB 뒤 고정 EC2 2대다. 각 EC2에 Foreman·Compiler를 함께 배치하고
+아래는 2단계 개발과 운영의 LB 뒤 고정 EC2 2대 목표다. 각 EC2에 Foreman·Compiler를 함께 배치하고
 공용 RDS PostgreSQL Multi-AZ를 권장한다. LB만으로 DB/CA까지 HA가 되는 것은 아니다.
 
 AWS 내부 NLB의 TCP passthrough를 기본 권장안으로 둔다.
@@ -82,7 +83,7 @@ ASG의 고정 대수 운영과 부하에 따른 동적 증감은 구분한다. m
    CPU뿐 아니라 JRuby 대기·요청 큐·상위 지연을 확인한다.
 8. Foreman/DB가 병목인 상태에서 Compiler만 늘리는 정책을 만들지 않는다.
 
-현재 기준은 개발·운영 모두 LB + 고정 EC2 2대와 공용 외부 DB다. ASG는 생성하지 않는다. 부하 시험과 노드 수명 주기 자동화가
+1단계는 개발 1대+로컬 DB, 2단계 개발과 운영은 LB+고정 EC2 2대+공용 외부 DB를 목표로 한다. ASG는 생성하지 않는다. 부하 시험과 노드 수명 주기 자동화가
 준비된 후 Compiler 계층만 ASG 도입을 검토한다. HA가 반드시 동적 Autoscaling을 요구하지는 않는다.
 
 ## 참고
