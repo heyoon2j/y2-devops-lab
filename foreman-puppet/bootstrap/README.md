@@ -3,22 +3,60 @@
 서버와 Agent의 저장소·패키지·설정을 분리한다. 설치 자동화의 진입점이며
 실제 서버에서 실행하지 않는다. 상세 입력·실행·검증 범위는 이 문서에 함께 정리한다.
 
+설정 원본은 `config/`, 대상별 입력은 `examples/`, 실행 스크립트는 `server/agent`에 둔다.
+`.tmpl`은 실제 설정 형식에 `{{변수}}`만 넣은 원본이다. 스크립트가 값을 치환하고 검증한 뒤 배치한다.
+
 ```text
 bootstrap/
+├── config/                              # 관리자가 수정하는 설정 원본
+│   ├── repos/
+│   │   ├── apt/                         # Ubuntu: APT deb822 저장소
+│   │   │   ├── foreman.sources.tmpl
+│   │   │   └── openvox.sources.tmpl
+│   │   └── yum/                         # Rocky·Amazon Linux: YUM/DNF 저장소
+│   │       └── openvox.repo.tmpl
+│   ├── server/
+│   │   ├── foreman.answers.yaml.tmpl     # Foreman·로컬 DB의 installer 설정
+│   │   └── openvox.answers.yaml.tmpl     # Compiler·Smart Proxy·Foreman 연동 설정
+│   ├── agent/
+│   │   ├── puppet.conf.tmpl              # Agent 접속·인증·실행 주기
+│   │   └── facts.json.tmpl               # deploy_env와 선택적 team
+│   ├── packages/                        # Foreman/Server/Agent 설치 패키지 목록
+│   │   ├── foreman.json
+│   │   ├── openvox-server.json
+│   │   └── openvox-agent.json
+│   └── versions.json                    # 선택한 upstream 기준 버전
 ├── server/
-│   ├── foreman-repo.sh       # Foreman 저장소
-│   ├── openvox-repo.sh       # OpenVox Server용 저장소
-│   ├── foreman-install.sh    # Foreman 패키지
-│   ├── openvox-install.sh    # OpenVox Server 패키지
-│   ├── foreman-config.sh     # Foreman·로컬 DB·Proxy 구성
-│   └── openvox-config.sh     # Compiler·Foreman 연동 구성
+│   ├── foreman-repo.sh                   # APT용 Foreman 저장소 배치
+│   ├── openvox-repo.sh                   # APT용 OpenVox 저장소 배치
+│   ├── foreman-install.sh                # Foreman 패키지 설치
+│   ├── openvox-install.sh                # Server와 관리 VM의 Agent 설치
+│   ├── configure.sh                      # 두 서버 설정 원본을 함께 적용
+│   ├── foreman-config.sh                 # 호환 진입점: configure와 동일한 전체 구성
+│   └── openvox-config.sh                 # 호환 진입점: configure와 동일한 전체 구성
 ├── agent/
-│   ├── repo.sh               # OS/Agent 계열별 저장소
-│   ├── install.sh            # Agent 패키지
-│   └── config.sh             # 접속·인증·환경·외부 Facts
-├── examples/                 # 비밀값 없는 실행 입력 예시
-└── lib/                      # 검증·명령 계획·공통 처리
+│   ├── repo.sh                          # 대상 OS에 따라 APT 또는 YUM/DNF 선택
+│   ├── install.sh                       # Agent 패키지 설치
+│   └── config.sh                        # puppet.conf·외부 Facts 배치
+├── examples/                            # 대상 호스트·OS·인증서 경로·정확한 패키지 버전
+└── lib/bootstrap.py                      # 치환·검증·배치·실행 공통 처리
 ```
+
+| 설정 원본 | 대상 서버의 배치/사용 위치 |
+| --- | --- |
+| repos/apt/*.sources.tmpl | /etc/apt/sources.list.d/*-bootstrap.sources |
+| repos/yum/openvox.repo.tmpl | /etc/yum.repos.d/openvox-bootstrap.repo |
+| server/*.answers.yaml.tmpl | 두 원본을 /etc/foreman-installer/scenarios.d/foreman-answers.yaml에 병합하여 installer 실행 |
+| agent/puppet.conf.tmpl | /etc/puppetlabs/puppet/puppet.conf의 관리 키 |
+| agent/facts.json.tmpl | /etc/puppetlabs/facter/facts.d/foreman_puppet.json |
+
+관리 서버는 현재 Ubuntu 24.04만 대상으로 하므로 **Foreman YUM 저장소 파일은 포함하지 않는다**.
+Rocky/Amazon Linux는 Agent 설치 대상이며 OpenVox YUM 저장소를 사용한다. DNF도 같은 `.repo` 형식이다.
+OpenVox는 AL2에서 8 계열, 나머지 대상에서 9 계열을 선택하며 RPM의 `$basearch`는 패키지 관리자가 해석한다.
+저장소 URL·배포판·계열 정의가 파일에 있다는 것과 해당 OS 패키지의 실제 제공/설치 검증은 별개다.
+
+서버의 puppet.conf/puppetserver.conf는 installer가 생성·관리한다. 별도 파일을 직접 배치하면
+관리 주체가 겹치므로, 서버 설정 변경은 두 answers 원본에서 한다. Agent는 native INI 원본을 직접 배치한다.
 
 ## 현재 기준과 범위
 
@@ -26,7 +64,7 @@ bootstrap/
 - 관리 대상: Ubuntu 22.04/24.04/26.04, Rocky 8/9, AL2023은 Agent 9.4.0. AL2만 Agent 8.33.0.
 - Agent의 x86_64/aarch64 입력을 지원한다. Foreman 관리 VM은 x86_64만 허용한다.
 - PostgreSQL 16 로컬 배치다. RDS 이전은 별도 2단계이며 이 스크립트에 포함하지 않는다.
-- 실행기는 Bash + Python 3.7 이상 표준 라이브러리를 사용한다. AL2에도 Python 3가 필요하다.
+- 실행기는 Bash + Python 3.7 이상을 사용하고, 서버 설정에는 PyYAML(`python3-yaml`)도 필요하다. AL2에도 Python 3가 필요하다.
 - 실행 파일은 얇은 진입점이고 공통 검증·명령 계획은 lib/bootstrap.py에 모았다.
   Puppet 코드 배포 도구와 설정 지속 관리 Profile을 대신하는 파일이 아니다.
 
@@ -51,7 +89,7 @@ examples/server.json, agent.json, agent-amzn2.json을 bootstrap/local/ 또는 �
 | repository_keys | 공식 키의 **primary fingerprint**. 신뢰할 별도 경로에서 확인 |
 | package_versions | apt/rpm의 **전체 Version-Release 문자열**. upstream 번호만 보고 배포판 revision을 추정하지 않음 |
 | tls.ca_cert / host_cert / host_key | 사내 PKI가 발급해 대상 VM에 배치한 파일의 절대 경로 |
-| installer.*_args | Foreman/OpenVox 구성에 전달할 공개 옵션. 예시는 대상 installer와 대조 |
+| config/server/*.answers.yaml.tmpl | 서버 구성 정책은 JSON 인자가 아닌 이 YAML 원본에서 수정 |
 
 Foreman 설치에는 foreman, foreman-installer, foreman-proxy, ruby-foreman-puppet,
 postgresql-16의 전체 버전이 필요하다. OpenVox Server 설치에는 openvox-agent와
@@ -84,17 +122,20 @@ bash bootstrap/server/foreman-repo.sh --config bootstrap/local/server.json
 bash bootstrap/server/openvox-repo.sh --config bootstrap/local/server.json
 bash bootstrap/server/openvox-install.sh --config bootstrap/local/server.json
 bash bootstrap/server/foreman-install.sh --config bootstrap/local/server.json
-bash bootstrap/server/foreman-config.sh --config bootstrap/local/server.json
-bash bootstrap/server/openvox-config.sh --config bootstrap/local/server.json
+bash bootstrap/server/configure.sh --config bootstrap/local/server.json
 
 # 실제 적용 예시: 계획 확인 및 필수 입력 준비 후, 대상 VM에서 실행
 # sudo bash bootstrap/server/foreman-repo.sh --config /root/bootstrap/server.json --apply
 ```
 
 OpenVox 저장소와 패키지를 먼저 준비해 Foreman installer가 사용할 엔진을 공급한다.
-Foreman config는 Puppet/Proxy 모듈 실행을 건너뛰고 웹·DB를 구성한다.
-OpenVox config는 **같은 Foreman 인자 + OpenVox 인자를 함께 사용**해 두 구성을 유지한다.
-일부 기존 installer 답변을 삭제하거나 DB/CA를 초기화하는 동작은 하지 않는다.
+configure는 Foreman/OpenVox 원본을 함께 병합해 전체 구성을 적용한다. 두 config 호환 진입점도
+동일한 동작이므로 순서대로 모두 실행할 필요가 없다. 설정 원본의 분리와 installer 실행 단위는 다르다.
+기존 answers의 비밀번호·기타 모듈 설정은 보존하고 관리하는 키만 덮어쓴다. YAML 주석/서식은 재작성된다.
+기존 answers는 root 소유·0600이어야 하며 실행 전 root 전용 로그 디렉터리에 백업한다.
+설치된 scenario의 answers 경로가 예상 경로와 다르면 중단한다. DB/CA를 초기화하는 동작은 하지 않는다.
+과거 실행기가 만든 *-bootstrap.list가 있으면 새 .sources와 중복되지 않게 먼저 검토·이전해야 한다.
+이 경우 저장소 적용을 중단하고 기존 파일을 자동 삭제하지 않는다.
 config 단계는 installer를 통해 서비스를 시작/변경할 수 있으므로 점검 시간에 실행한다.
 
 ```sh
@@ -161,8 +202,9 @@ Compiler의 environment_classes API 허용, Host Group·Boolean puppet_managed·
 python3 tests/bootstrap_test.py
 ```
 
-격리 테스트는 9개 진입점의 help/기본 계획, 7개 OS 버전·2개 아키텍처의 저장소 선택,
+격리 테스트는 10개 진입점의 help/기본 계획, 7개 OS 버전·2개 아키텍처의 저장소 선택,
 AL2의 8 계열 예외, 정확한 버전·미정 입력·OS·인증서 이름·CA 보호 옵션·환경/Fact 경계를 확인한다.
+설정 원본 변경 반영·기존 비밀값 병합 보존·중복 YAML 키 거부도 검증한다.
 실제 저장소 키 다운로드·설치·서비스·TLS·Foreman/OpenVox 연동은 실행하지 않는다.
 
 참고: [Foreman installer 옵션](https://theforeman.org/manuals/5.0/index.html),

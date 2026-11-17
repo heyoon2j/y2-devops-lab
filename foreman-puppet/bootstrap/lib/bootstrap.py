@@ -1,9 +1,11 @@
 #!/usr/bin/env python3
-"""Separate repository/install/config actions. Python >=3.7, stdlib only.
+"""Apply native repository and service configuration templates. Python >=3.7.
+Server answers configuration additionally requires PyYAML.
 No operation is applied unless --apply is explicitly supplied. No shell eval.
 """
 import argparse
 import configparser
+import copy
 import fcntl
 import io
 import json
@@ -19,8 +21,69 @@ import urllib.request
 
 ACTIONS = ('foreman-repo', 'openvox-repo', 'foreman-install', 'openvox-install',
            'foreman-config', 'openvox-config', 'agent-repo', 'agent-install', 'agent-config')
-BASELINES = {'foreman': '5.0.1',
-             'openvox-server': '9.2.0', 'openvox-agent': '9.4.0'}
+CONFIG_ROOT = Path(__file__).resolve().parents[1] / 'config'
+BASELINES = json.loads((CONFIG_ROOT / 'versions.json').read_text())
+ANSWERS_PATH = Path('/etc/foreman-installer/scenarios.d/foreman-answers.yaml')
+SCENARIO_PATH = Path('/etc/foreman-installer/scenarios.d/foreman.yaml')
+
+
+def read_yaml(content):
+    # Only server configuration needs PyYAML. Agent bootstrap remains stdlib-only.
+    try:
+        import yaml
+    except ImportError as error:
+        raise ValueError('Install python3-yaml/PyYAML for server answers configuration') from error
+
+    class UniqueKeys(yaml.SafeLoader):
+        pass
+
+    def mapping(loader, node, deep=False):
+        result = {}
+        for key_node, value_node in node.value:
+            key = loader.construct_object(key_node, deep=deep)
+            if key in result:
+                raise ValueError('Duplicate YAML key: ' + str(key))
+            result[key] = loader.construct_object(value_node, deep=deep)
+        return result
+    UniqueKeys.add_constructor(yaml.resolver.BaseResolver.DEFAULT_MAPPING_TAG, mapping)
+    try:
+        result = yaml.load(content, Loader=UniqueKeys)
+    except yaml.YAMLError as error:
+        raise ValueError('Invalid installer answers YAML') from error
+    if not isinstance(result, dict):
+        raise ValueError('Installer answers must be a YAML mapping')
+    return result
+
+
+def merge_answers(existing, overlay):
+    result = copy.deepcopy(existing)
+    for key, value in overlay.items():
+        if isinstance(value, dict) and isinstance(result.get(key), dict):
+            result[key] = merge_answers(result[key], value)
+        else:
+            result[key] = copy.deepcopy(value)
+    return result
+
+
+def merge_agent_content(existing, content):
+    candidate = configparser.ConfigParser(interpolation=None)
+    candidate.read_string(content)
+    if candidate.sections() != ['main'] or candidate.defaults():
+        raise ValueError('Agent template must contain only a [main] section')
+    parser = configparser.ConfigParser(interpolation=None)
+    if existing:
+        parser.read_string(existing)
+    for section in parser.sections():
+        if section != 'main' and any(key in parser[section] for key in candidate['main']):
+            raise ValueError('Resolve conflicting puppet.conf section: ' + section)
+    if not parser.has_section('main'):
+        parser.add_section('main')
+    for key, value in candidate['main'].items():
+        parser.set('main', key, value)
+    output = io.StringIO()
+    parser.write(output)
+    return output.getvalue()
+
 
 
 def run(args, **kwargs):
@@ -89,6 +152,25 @@ class Plan:
             self.errors.append('Management server requires x86_64')
         return os_id, version
 
+    def render(self, name, values):
+        source = (CONFIG_ROOT / name).read_text()
+        def replace(match):
+            key = match.group(1)
+            if key not in values:
+                raise ValueError('Unknown template variable: ' + key + ' in ' + name)
+            value = values[key]
+            return '<unset:' + key + '>' if value is None else str(value)
+        result = re.sub(r'\{\{([a-z][a-z0-9_]*)\}\}', replace, source)
+        if '{{' in result or '}}' in result:
+            raise ValueError('Unresolved template expression in ' + name)
+        return result
+
+    def package_list(self, name):
+        packages = json.loads((CONFIG_ROOT / 'packages' / name).read_text())
+        if not isinstance(packages, list) or not packages or any(not isinstance(p, str) or not re.fullmatch(r'[a-z0-9][a-z0-9+.-]*', p) for p in packages):
+            raise ValueError('Invalid package list: ' + name)
+        return packages
+
     def repo(self, foreman=False):
         os_id, version = self.platform()
         product = 'foreman' if foreman else 'openvox'
@@ -97,31 +179,26 @@ class Plan:
                    'https://apt.voxpupuli.org/GPG-KEY-openvox.pub')
         series = '8' if (os_id, version) == ('amzn', '2') else '9'
         key_path = '/usr/share/keyrings/' + product + '-bootstrap.gpg'
+        values = {'key_path': key_path, 'os_version': version, 'series': series,
+                  'rpm_family': 'amazon' if os_id == 'amzn' else 'el'}
         self.operations.append({'type': 'key', 'url': key_url, 'fingerprint': fingerprint,
                                 'path': key_path, 'rpm': os_id != 'ubuntu'})
         if os_id == 'ubuntu':
-            if foreman:
-                content = ('deb [signed-by=' + key_path + '] https://deb.theforeman.org/ noble 5.0\n'
-                           'deb [signed-by=' + key_path + '] https://deb.theforeman.org/ plugins 5.0\n')
-            else:
-                content = 'deb [signed-by=' + key_path + '] https://apt.voxpupuli.org ubuntu' + version + ' openvox' + series + '\n'
-            self.file('/etc/apt/sources.list.d/' + product + '-bootstrap.list', content)
+            name = 'repos/apt/' + product + '.sources.tmpl'
+            self.file('/etc/apt/sources.list.d/' + product + '-bootstrap.sources', self.render(name, values))
+            self.operations[-1]['source'] = 'config/' + name
             self.command('apt-get', 'update')
         else:
-            family = 'amazon' if os_id == 'amzn' else 'el'
-            key_source = 'https://yum.voxpupuli.org/GPG-KEY-openvox.pub'
-            # Download uses the RPM endpoint too; fingerprint remains explicit.
-            self.operations[-1]['url'] = key_source
-            self.file('/etc/yum.repos.d/openvox-bootstrap.repo',
-                      '[openvox-bootstrap]\nname=OpenVox ' + series + '\nbaseurl=https://yum.voxpupuli.org/openvox' +
-                      series + '/' + family + '/' + version + '/$basearch\nenabled=1\ngpgcheck=1\ngpgkey=file://' + key_path + '.asc\n')
+            self.operations[-1]['url'] = 'https://yum.voxpupuli.org/GPG-KEY-openvox.pub'
+            self.file('/etc/yum.repos.d/openvox-bootstrap.repo', self.render('repos/yum/openvox.repo.tmpl', values))
+            self.operations[-1]['source'] = 'config/repos/yum/openvox.repo.tmpl'
 
     def install(self, packages):
         os_id, version = self.platform()
         pins = {}
         for package in packages:
             full = self.need('package_versions.' + package, r'[A-Za-z0-9.+:~_-]+')
-            expected = '8.33.0' if package == 'openvox-agent' and (os_id, version) == ('amzn', '2') else BASELINES.get(package)
+            expected = BASELINES['amazon2-agent'] if package == 'openvox-agent' and (os_id, version) == ('amzn', '2') else BASELINES.get(package)
             if expected and not (full == expected or full.startswith(expected + '-')):
                 self.errors.append('Pin ' + package + ' to upstream ' + expected + ' plus the distribution revision')
             pins[package] = full
@@ -132,49 +209,44 @@ class Plan:
         for key in ('ca_cert', 'host_cert', 'host_key'):
             self.need('tls.' + key, r'/[A-Za-z0-9_./-]+')
 
-    def installer(self, include_openvox):
+    def installer(self):
+        # Both public entrypoints converge the same complete installer stack.
+        # Splitting the source files must not disable the other component.
         self.platform()
-        self.host('host_fqdn')
-        for package in ('foreman', 'foreman-installer', 'foreman-proxy', 'ruby-foreman-puppet', 'postgresql-16', 'openvox-agent', 'openvox-server'):
+        values = {}
+        for key in ('host_fqdn', 'foreman_fqdn', 'puppet_fqdn', 'puppet_certname'):
+            values[key] = self.host(key)
+        for package in self.package_list('foreman.json') + self.package_list('openvox-server.json'):
             self.need('package_versions.' + package, r'[A-Za-z0-9.+:~_-]+')
-        self.host('foreman_fqdn')
-        self.host('puppet_fqdn')
         self.certificates()
-        groups = ['foreman'] + (['openvox'] if include_openvox else [])
-        args = []
-        for group in groups:
-            items = self.get('installer.' + group + '_args', [])
-            if not isinstance(items, list) or not items:
-                self.errors.append('Provide reviewed installer.' + group + '_args')
-                continue
-            for item in items:
-                if not isinstance(item, str) or not item.startswith('--') or '\n' in item:
-                    self.errors.append('Invalid installer argument')
-                    continue
-                # Do not place passwords/tokens in public JSON or process arguments.
-                if re.search(r'password|consumer-(?:key|secret)|initial-admin', item):
-                    self.errors.append('Keep credentials in root-only installer answers, not argument lists')
-                try:
-                    values = dict(self.cfg)
-                    values.update(self.get('tls', {}))
-                    args.append(item.format_map(values))
-                except (KeyError, ValueError, TypeError):
-                    self.errors.append('Unresolved installer placeholder: ' + item.split('=')[0])
-        if include_openvox:
-            self.host('puppet_certname')
-            required = ('--puppet-server=true', '--puppet-server-ca=false', '--puppet-client-package=openvox-agent',
-                        '--puppet-server-package=openvox-server', '--puppet-server-foreman=true',
-                        '--puppet-server-foreman-facts=true', '--puppet-server-reports=foreman')
-        else:
-            args += ['--no-enable-puppet', '--no-enable-foreman-proxy']
-            required = ('--foreman-db-manage=true',)
-        for value in required:
-            if value not in args:
-                self.errors.append('Required installer argument: ' + value)
-        flags = [arg.split('=', 1)[0].replace('--no-enable-', '--enable-') for arg in args]
-        if len(set(flags)) != len(flags):
-            self.errors.append('Duplicate installer switches are not allowed')
-        self.operations.append({'type': 'installer', 'argv': ['foreman-installer', '--scenario', 'foreman'] + args})
+        values.update(self.get('tls', {}))
+        if 'installer' in self.cfg:
+            self.errors.append('Remove legacy installer argument lists; edit config/server YAML templates')
+        overlay = {}
+        for name in ('server/foreman.answers.yaml.tmpl', 'server/openvox.answers.yaml.tmpl'):
+            fragment = read_yaml(self.render(name, values))
+            if set(fragment) & set(overlay):
+                raise ValueError('Server templates must not own the same top-level module')
+            overlay.update(fragment)
+        def required(module, key, value):
+            settings = overlay.get(module, {})
+            if not isinstance(settings, dict) or settings.get(key) != value:
+                self.errors.append('Required answers setting: ' + module + '.' + key)
+        for key, value in {'server': True, 'server_ca': False, 'manage_packages': False,
+                           'client_package': 'openvox-agent', 'server_package': 'openvox-server',
+                           'server_foreman': True, 'server_foreman_facts': True,
+                           'server_reports': ['foreman']}.items():
+            required('puppet', key, value)
+        required('foreman', 'db_manage', True)
+        required('foreman_proxy', 'puppetca', False)
+        # The repository contains only public configuration, never credentials.
+        for module, settings in overlay.items():
+            if isinstance(settings, dict) and any(re.search(r'password|oauth_consumer_(key|secret)', key) for key in settings):
+                self.errors.append('Keep credentials in existing root-only installer answers')
+        self.operations.append({'type': 'installer', 'argv': ['foreman-installer', '--scenario', 'foreman'],
+                                'path': str(ANSWERS_PATH), 'answers_overlay': overlay,
+                                'sources': ['config/server/foreman.answers.yaml.tmpl',
+                                            'config/server/openvox.answers.yaml.tmpl']})
 
     def agent_config(self):
         self.platform()
@@ -192,25 +264,38 @@ class Plan:
             if not isinstance(team, str) or not re.fullmatch(r'[a-z][a-z0-9_-]*', team):
                 self.errors.append('Invalid team fact')
             facts['team'] = team
-        settings = {'server': server, 'ca_server': ca_server, 'certname': certname,
-                    'environment': env, 'localcacert': self.get('tls.ca_cert'),
-                    'hostcert': self.get('tls.host_cert'), 'hostprivkey': self.get('tls.host_key')}
-        settings.update({'runinterval': '30m', 'splay': 'true', 'splaylimit': '30m',
-                         'usecacheonfailure': 'false', 'use_cached_catalog': 'false',
-                         'report': 'true', 'show_diff': 'false', 'waitforcert': '0',
-                         'http_connect_timeout': '30', 'http_read_timeout': '120'})
-        self.operations.append({'type': 'puppetconf', 'settings': settings})
-        self.file('/etc/puppetlabs/facter/facts.d/foreman_puppet.json', json.dumps(facts, indent=2) + '\n')
+        values = {'puppet_fqdn': server, 'ca_fqdn': ca_server, 'certname': certname,
+                  'puppet_environment': env}
+        values.update(self.get('tls', {}))
+        content = self.render('agent/puppet.conf.tmpl', values)
+        candidate = configparser.ConfigParser(interpolation=None)
+        candidate.read_string(content)
+        if candidate.sections() != ['main'] or candidate.defaults():
+            raise ValueError('Agent template must contain only [main]')
+        settings = dict(candidate['main'])
+        for key, value in {'server': server, 'certname': certname, 'environment': env,
+                           'waitforcert': '0', 'usecacheonfailure': 'false'}.items():
+            if settings.get(key) != value:
+                self.errors.append('Required Agent setting: ' + key)
+        self.operations.append({'type': 'puppetconf', 'content': content, 'settings': settings,
+                                'source': 'config/agent/puppet.conf.tmpl'})
+        content = self.render('agent/facts.json.tmpl', {
+            'deploy_env_json': json.dumps(deploy_env),
+            'team_entry': ',\n  "team": ' + json.dumps(team) if team else ''})
+        if json.loads(content) != facts:
+            self.errors.append('Facts template must contain only the declared deploy_env/team')
+        self.file('/etc/puppetlabs/facter/facts.d/foreman_puppet.json', content)
+        self.operations[-1]['source'] = 'config/agent/facts.json.tmpl'
         # Deliberately no CSR/signing, first apply, service enable or service start.
 
     def build(self):
         if self.action == 'foreman-repo': self.repo(True)
         elif self.action in ('openvox-repo', 'agent-repo'): self.repo()
-        elif self.action == 'foreman-install': self.install(['foreman', 'foreman-installer', 'foreman-proxy', 'ruby-foreman-puppet', 'postgresql-16'])
-        elif self.action == 'openvox-install': self.install(['openvox-agent', 'openvox-server'])
-        elif self.action == 'agent-install': self.install(['openvox-agent'])
-        elif self.action == 'foreman-config': self.installer(False)
-        elif self.action == 'openvox-config': self.installer(True)
+        elif self.action == 'foreman-install': self.install(self.package_list('foreman.json'))
+        elif self.action == 'openvox-install': self.install(self.package_list('openvox-server.json'))
+        elif self.action == 'agent-install': self.install(self.package_list('openvox-agent.json'))
+        elif self.action == 'foreman-config': self.installer()
+        elif self.action == 'openvox-config': self.installer()
         elif self.action == 'agent-config': self.agent_config()
         return self
 
@@ -258,7 +343,7 @@ def apply(plan):
             import socket
             if socket.getfqdn() != plan.cfg['host_fqdn']:
                 raise ValueError('Set the actual host FQDN and DNS before configuring services')
-        if plan.action == 'openvox-config':
+        if plan.action in ('openvox-config', 'foreman-config'):
             if any(Path(p).exists() for p in ('/etc/puppetlabs/puppetserver/ca/ca_key.pem', '/etc/puppetlabs/puppet/ssl/ca/ca_key.pem')):
                 raise ValueError('Existing Puppet CA found; external PKI conversion is not automatic')
             certname = plan.cfg['puppet_certname']
@@ -274,6 +359,11 @@ def apply(plan):
             key_pub = run(['openssl', 'pkey', '-in', str(expected_key), '-pubout'], stdout=subprocess.PIPE).stdout
             if cert_pub != key_pub:
                 raise ValueError('Puppet server certificate/key mismatch')
+    for operation in plan.operations:
+        if operation['type'] == 'file' and operation['path'].endswith('-bootstrap.sources'):
+            legacy = Path(operation['path']).with_suffix('.list')
+            if legacy.exists() or legacy.is_symlink():
+                raise ValueError('Review and migrate legacy repository file before applying: ' + str(legacy))
     lock = open('/run/lock/foreman-openvox-bootstrap.lock', 'a')
     fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
     for operation in plan.operations:
@@ -328,26 +418,43 @@ def apply(plan):
                 if actual != expected: raise ValueError('Installed version differs from pin: ' + package)
         elif kind == 'puppetconf':
             path = Path('/etc/puppetlabs/puppet/puppet.conf')
-            parser = configparser.ConfigParser(interpolation=None)
-            if path.exists(): parser.read(str(path))
-            # A section-specific setting overrides [main]; refuse ambiguous identity.
-            for section in parser.sections():
-                if section != 'main' and any(k in parser[section] for k in operation['settings']):
-                    raise ValueError('Resolve conflicting puppet.conf section: ' + section)
-            if not parser.has_section('main'): parser.add_section('main')
-            for key, value in operation['settings'].items(): parser.set('main', key, value)
-            output = io.StringIO(); parser.write(output)
-            atomic(str(path), output.getvalue(), 0o644)
+            existing = path.read_text() if path.exists() else ''
+            atomic(str(path), merge_agent_content(existing, operation['content']), 0o644)
         elif kind == 'installer':
             # Validate all switches against the installed installer before mutation.
             help_text = run(['foreman-installer', '--full-help'], stdout=subprocess.PIPE).stdout.decode()
             help_text = help_text.replace('--[no-]enable-', '--enable-').replace('--[no-]', '--')
-            for arg in operation['argv'][3:]:
-                flag = arg.split('=', 1)[0].replace('--no-enable-', '--enable-')
-                if flag not in help_text: raise ValueError('Unsupported installer option: ' + flag)
+            for module, settings in operation['answers_overlay'].items():
+                prefix = module.replace('::', '-').replace('_', '-')
+                flags = (['--' + prefix + '-' + key.replace('_', '-') for key in settings]
+                         if isinstance(settings, dict) else ['--enable-' + prefix])
+                for flag in flags:
+                    if not re.search(re.escape(flag) + r'(?=[\s=|,]|$)', help_text):
+                        raise ValueError('Unsupported installer option: ' + flag)
+            # The selected scenario must read the answers file we are managing.
+            scenario = read_yaml(SCENARIO_PATH.read_text())
+            actual_path = scenario.get(':answer_file', scenario.get('answer_file'))
+            if actual_path != operation['path']:
+                raise ValueError('Installed Foreman scenario uses a different answers path')
             logdir = Path('/var/log/foreman-openvox-bootstrap')
             logdir.mkdir(mode=0o700, exist_ok=True); logdir.chmod(0o700)
             # Installer may print initial credentials; never echo its output publicly.
+            answers = Path(operation['path'])
+            if answers.is_symlink():
+                raise ValueError('Refusing symlink answers destination')
+            existing = {}
+            if answers.exists():
+                info = answers.stat()
+                if info.st_uid != 0 or stat.S_IMODE(info.st_mode) & 0o077:
+                    raise ValueError('Existing answers must be root-owned and mode 0600')
+                existing = read_yaml(answers.read_text())
+                # Preserve the pre-run file, including generated credentials.
+                from datetime import datetime
+                stamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S%f')
+                atomic(str(logdir / ('answers-before-' + stamp + '.yaml')), answers.read_bytes(), 0o600)
+            import yaml
+            merged = merge_answers(existing, operation['answers_overlay'])
+            atomic(str(answers), yaml.safe_dump(merged, sort_keys=False), 0o600)
             log = logdir / (plan.action + '.log')
             with os.fdopen(os.open(str(log), os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600), 'w') as handle:
                 os.chmod(str(log), 0o600)

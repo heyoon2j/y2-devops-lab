@@ -4,6 +4,8 @@ import importlib.util
 import json
 from pathlib import Path
 import subprocess
+import shutil
+import tempfile
 import unittest
 from unittest.mock import patch
 
@@ -66,15 +68,51 @@ class BootstrapTest(unittest.TestCase):
         cfg = fixture()
         plan = m.Plan(cfg, 'openvox-config').build()
         self.assertFalse(plan.errors)
-        args = plan.operations[0]['argv']
-        self.assertIn('--puppet-server-ca=false', args)
-        self.assertIn('--foreman-db-manage=true', args)
-        self.assertIn('--puppet-manage-packages=false', args)
-        self.assertNotIn('--no-enable-foreman', args)
-        self.assertNotIn('--no-enable-puppet', args)
-        self.assertIn('--foreman-proxy-register-in-foreman=false', args)
-        cfg['installer']['openvox_args'].append('--puppet-server-ca=true')
+        overlay = plan.operations[0]['answers_overlay']
+        self.assertIs(overlay['puppet']['server_ca'], False)
+        self.assertIs(overlay['foreman']['db_manage'], True)
+        self.assertIs(overlay['puppet']['manage_packages'], False)
+        self.assertIs(overlay['foreman_proxy']['register_in_foreman'], False)
+        other = m.Plan(cfg, 'foreman-config').build()
+        self.assertEqual(other.operations, plan.operations)
+        cfg['installer'] = {'openvox_args': ['--puppet-server-ca=true']}
         self.assertTrue(m.Plan(cfg, 'openvox-config').build().errors)
+
+    def test_native_templates_are_the_source(self):
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory) / 'config'
+            shutil.copytree(m.CONFIG_ROOT, root)
+            agent = root / 'agent/puppet.conf.tmpl'
+            agent.write_text(agent.read_text().replace('runinterval = 30m', 'runinterval = 60m'))
+            with patch.object(m, 'CONFIG_ROOT', root):
+                plan = m.Plan(fixture(True), 'agent-config').build()
+                self.assertEqual(plan.operations[0]['settings']['runinterval'], '60m')
+                repo = m.Plan(fixture(True), 'agent-repo').build()
+                self.assertEqual(repo.operations[1]['source'], 'config/repos/apt/openvox.sources.tmpl')
+                agent.write_text(agent.read_text() + '\n# {{unknown}}\n')
+                with self.assertRaises(ValueError): m.Plan(fixture(True), 'agent-config').build()
+
+    def test_merge_preserves_installer_secrets_and_other_agent_settings(self):
+        existing = {'foreman': {'db_password': 'test-secret', 'db_manage': False}, 'other': True}
+        before = copy.deepcopy(existing)
+        merged = m.merge_answers(existing, {'foreman': {'db_manage': True}})
+        self.assertEqual(merged['foreman']['db_password'], 'test-secret')
+        self.assertIs(merged['foreman']['db_manage'], True)
+        self.assertEqual(existing, before)
+        self.assertIs(merged['other'], True)
+        content = m.merge_agent_content('[main]\nlogdest = syslog\n[agent]\nnoop = true\n', '[main]\nserver = node.internal\n')
+        self.assertIn('logdest = syslog', content)
+        self.assertIn('noop = true', content)
+        with self.assertRaises(ValueError):
+            m.merge_agent_content('[agent]\nserver = old.internal\n', '[main]\nserver = new.internal\n')
+        with self.assertRaises(ValueError): m.read_yaml('puppet: true\npuppet: false\n')
+
+    def test_optional_team_can_be_omitted(self):
+        cfg = fixture(True)
+        cfg.pop('team', None)
+        plan = m.Plan(cfg, 'agent-config').build()
+        self.assertFalse(plan.errors)
+        self.assertEqual(json.loads(plan.operations[1]['content']), {'deploy_env': 'dev'})
 
     def test_agent_identity_facts_and_no_automatic_execution(self):
         cfg = fixture(True)

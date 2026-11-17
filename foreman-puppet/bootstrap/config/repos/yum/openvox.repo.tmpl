@@ -1,0 +1,7 @@
+# OpenVox repository for Rocky or Amazon Linux
+[openvox-bootstrap]
+name=OpenVox {{series}}
+baseurl=https://yum.voxpupuli.org/openvox{{series}}/{{rpm_family}}/{{os_version}}/$basearch
+enabled=1
+gpgcheck=1
+gpgkey=file://{{key_path}}.asc
