@@ -1,0 +1,46 @@
+---
+# Planning inputs only. Not a Hiera file, inventory, or executable installer config.
+phase: development_single_server
+aws:
+  region: null
+  use_existing_server: true  # User confirmed a server already exists.
+  existing_instance_id: null
+  vpc_id: null
+  subnet_id: null
+  security_group_id: null
+host:
+  os: ubuntu
+  version: "24.04"
+  architecture: amd64
+  fqdn: null
+  private_ip: null
+  proposed_vcpu: 8
+  proposed_memory_gib: 32
+  proposed_disk_gib: 100
+endpoints:
+  foreman_fqdn: null
+  puppet_fqdn: null
+  ca_fqdn: null
+software:
+  foreman_series_candidate: "5.0"
+  engine_choice: null  # Await OpenVox/Puppet selection; do not install implicitly.
+  openvox_series_candidate: "8"
+  postgresql_major_candidate: "16"
+  exact_package_versions: null  # Record signed-repository candidates before install.
+database:
+  placement: local
+  name: foreman
+  # Keep credentials and certificate private keys out of this file and Git.
+pki:
+  trust: corporate_ca
+  issuance_model: null
+backup:
+  external_destination: null
+first_agent:
+  os: ubuntu
+  version: "24.04"
+  certname: null
+  host_group: aws
+  role: role::base
+  deploy_env: dev
+  puppet_environment: development
