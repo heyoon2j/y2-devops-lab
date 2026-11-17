@@ -7,6 +7,10 @@
 관리 서버 OS와 구분하며 [OS·엔진 호환성](OS_COMPATIBILITY.md)을 따른다.
 OpenVox는 필수가 아닌 후보이고 AL2 때문에 9 계열 통일을 가정하지 않는다.
 
+서버/Agent별 실행 파일과 JSON 입력은 [bootstrap](../bootstrap/README.md)에 구현했다.
+아래의 과거 8 계열 후보는 최신 결정으로 대체한다: **Foreman 5.0.1 + Server 9.2.0 + Agent 9.4.0, AL2 Agent 8.33.0**.
+실제 설치·통합 검증은 아직 수행하지 않았다.
+
 ## 설치 기준표
 
 | 항목 | 준비 기준 | 상태 |
@@ -15,7 +19,7 @@ OpenVox는 필수가 아닌 후보이고 AL2 때문에 9 계열 통일을 가정
 | 관리 OS | Ubuntu 24.04 amd64 | 공식 지원 확인, 제안 기준 |
 | 서버 자원 | 8 vCPU·32 GiB RAM·100 GiB SSD | 소수 Agent 검증용 후보, 성능 보장 아님 |
 | Foreman | 5.0 계열 | 공식 설치 경로 확인, 정확한 패키지 revision 미고정 |
-| Puppet 계열 엔진 | 공식 Quickstart의 OpenVox 8 경로 제안 | 특정 Puppet 제품 요구 없음, 제품 선택은 미확정 |
+| Puppet 계열 엔진 | OpenVox Server 9.2.0 / Agent 9.4.0, AL2 Agent 8.33.0 | 제품·계열 선택, 통합 검증 전 |
 | DB | Ubuntu 기본 PostgreSQL 16 계열, 로컬 전용 | 기본 패키지 확인, 실제 의존성·설치 검증 전 |
 | 기존 서버 | 사용자가 서버 보유 확인. 새 EC2 생성 제외 | 실제 FQDN·AWS 위치·OS·사양 확인 대기 |
 | 인증서 | 사내 CA 신뢰, 발급 방식·SAN 별도 확정 | 첫 연결 전 필요 |
@@ -78,6 +82,5 @@ bash scripts/server-preflight.sh \
 6. 첫 Agent 연결·0/2 종료 코드·동일 실행 Report·두 번째 적용 무변경을 확인한다.
    role::unmanaged는 최초부터 배정하지 않고 [최초 설정 흐름](ROLE_LIFECYCLE.md)을 따른다.
 
-위 절차는 아직 설치 스크립트로 구현하지 않았다. 이번 산출물은 설치 전 입력 표본과
-읽기 전용 사전 점검이며, 실제 값이 준비되면 반복 가능한 설치 명령/자동화로 이어간다.
-선택이 완료되지 않은 제품·인증서 모델을 설치 명령에 암묵적으로 고정하지 않는다.
+위 절차 중 저장소·패키지·설정 실행기는 bootstrap에 분리 구현했다. 실제 입력값·PKI 발급·분류 자동화와 OS 설치 검증은 남아 있다. 실제 입력이 준비되면 계획을 검토하고 bootstrap의 개별 단계를 대상 서버에서 검증한다.
+제품은 OpenVox로 선택했고 인증서 발급·갱신은 별도다. bootstrap은 사전 발급 PKI 파일을 사용하며 새 CA를 생성하지 않는다.

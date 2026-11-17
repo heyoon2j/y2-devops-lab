@@ -29,6 +29,8 @@ Role별 최초 설정·지속 관리·미관리 전환은 [Role 수명 주기](d
 
 관리 서버 OS와 대상 Agent의 지원 범위는 [OS·엔진 호환성](docs/OS_COMPATIBILITY.md)에서 구분한다.
 
+관리 서버/Agent의 저장소·설치·설정 실행 파일은 [bootstrap](bootstrap/README.md)에 분리했다. 기본은 변경 없는 계획 출력이며 실제 설치 검증 전이다.
+
 ## 목적과 범위
 
 Foreman으로 노드의 등록·분류·상태를 관리하고, Puppet으로 서버 설정을 적용한다.

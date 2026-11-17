@@ -4,7 +4,7 @@
 
 Foreman 관리 서버는 Ubuntu 24.04 amd64를 설치 기준 후보로 둔다.
 관리 대상 Agent는 아래 OS를 요구 범위로 한다. 모든 대상 OS에 Foreman을 설치하지 않는다.
-OpenVox는 필수 제품이 아니라 Puppet 호환 엔진 후보이며 아직 제품을 확정하지 않았다.
+오픈소스 조건에 따라 OpenVox를 선택했다. 현재 설치 기준은 Server 9.2.0, Agent 9.4.0이며 AL2는 Agent 8.33.0 예외다.
 기존 특정 Puppet 제품/라이선스 요구는 없다는 응답을 반영한다.
 
 | 관리 대상 OS | 프로젝트 아키텍처 | OpenVox 8 공식 플랫폼 표 | 현재 코드 / 실제 적용 |
@@ -24,14 +24,15 @@ OpenVox는 필수 제품이 아니라 Puppet 호환 엔진 후보이며 아직 �
 ## 선택 기준
 
 - Foreman 5.0 공식 Quickstart의 명시된 경로는 OpenVox 8이다. 이 경로와 AL2 요구 때문에
-  초기 검증 후보를 8 계열로 둔다. 기존 Puppet DSL·Role/Profile·Hiera 구조를 사용한다.
+  기존 후보는 8이었으나 현재는 Server 9 + 일반 Agent 9, AL2 Agent 8을 선택했다.
+  기존 Puppet DSL·Role/Profile·Hiera 구조를 사용하며 Foreman installer의 9 연동은 실기 검증한다.
 - OpenVox 9 공식 플랫폼 표에는 Amazon Linux 2 빌드가 없다. 전체 노드를 무조건 최신
   9 계열로 통일하는 안은 현재 요구에 맞지 않는다.
 - OpenVox 8은 현재 최신 주계열이 아니며 EOL 전 critical/security 수정 대상으로 안내된다.
   운영 확대 전 엔진·OS 수명과 업그레이드 방침을 확인한다.
 - 다른 Puppet 제품을 선택할 수도 있으나 해당 공급자의 패키지 권한·OS 지원·Foreman
   통합을 별도로 검증한다. Puppet Enterprise를 커뮤니티 installer의 대체 패키지처럼 취급하지 않는다.
-- 8/9 혼합 Agent/Server 버전은 이번에 검증하지 않았으므로 자동 대안으로 적용하지 않는다.
+- 공식 전환 안내는 Server 9와 원격 Agent 8의 혼합을 허용한다. AL2는 이 조합을 검증하며 실제 통합은 아직 미검증이다. 관리 서버 자체의 Agent는 Server 9의 패키지 의존성상 9 계열이다.
 
 자료 확인일: 2026-11-17.
 [Foreman 5.0 Quickstart](https://docs.theforeman.org/5.0/Quickstart/index-foreman-deb.html),
@@ -65,3 +66,5 @@ Catalog 테스트는 기존 Ubuntu 20.04를 포함한 8개 OS 버전 × OS별 2�
 실기 통과 전에는 SSH manage=false를 유지한다. DNS/NTP·저장소·cloud-init 등의 후속
 Profile도 OS별 백엔드 차이를 검증한 후 활성화하며, 패키지 대상이라는 이유로 모든 설정의
 동작을 보장하지 않는다.
+
+최신 선택과 설치 진입점은 [bootstrap](../bootstrap/README.md)을 따른다. 위 8 계열 플랫폼 표는 AL2 예외의 배경이며 전체를 8로 설치하라는 뜻은 아니다.

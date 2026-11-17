@@ -23,8 +23,12 @@ endpoints:
   ca_fqdn: null
 software:
   foreman_series_candidate: "5.0"
-  engine_choice: null  # No existing Puppet product requirement; not yet selected.
-  openvox_series_candidate: "8"
+  engine_choice: openvox  # Open-source product selected.
+  openvox_server_series: "9"
+  foreman_upstream: "5.0.1"
+  openvox_server_upstream: "9.2.0"
+  openvox_agent_upstream: "9.4.0"
+  amazon2_agent_upstream: "8.33.0"
   postgresql_major_candidate: "16"
   exact_package_versions: null  # Record signed-repository candidates before install.
 database:
