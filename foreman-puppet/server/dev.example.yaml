@@ -23,7 +23,7 @@ endpoints:
   ca_fqdn: null
 software:
   foreman_series_candidate: "5.0"
-  engine_choice: null  # Await OpenVox/Puppet selection; do not install implicitly.
+  engine_choice: null  # No existing Puppet product requirement; not yet selected.
   openvox_series_candidate: "8"
   postgresql_major_candidate: "16"
   exact_package_versions: null  # Record signed-repository candidates before install.
@@ -36,6 +36,10 @@ pki:
   issuance_model: null
 backup:
   external_destination: null
+required_agent_platforms:
+  ubuntu: ["22.04", "24.04", "26.04"]
+  rocky: ["8", "9"]
+  amazon: ["2", "2023"]
 first_agent:
   os: ubuntu
   version: "24.04"

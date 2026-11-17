@@ -149,7 +149,7 @@ bundle exec ruby tests/catalog_test.rb
 bundle exec ruby tests/service_policy_test.rb
 ```
 
-첫 테스트는 600개 기본 조합과 전체/Profile/서비스 제외·Boolean 검증·Hiera 정책 전달을 컴파일한다.
+첫 테스트는 960개 기본 조합과 전체/Profile/서비스 제외·Boolean 검증·Hiera 정책 전달을 컴파일한다.
 두 번째는 임시 파일과 가짜 systemctl에 Catalog를 실제 적용해 변경 이벤트·멱등성·상태 정책·
 실패·시간 초과·검증 실패의 동작을 확인한다. 실제 /etc와 systemd 서비스는 변경하지 않는다.
-실제 Foreman 연동 및 Ubuntu/Rocky에서의 서비스 검증을 대신하는 것은 아니다.
+실제 Foreman 연동 및 Ubuntu/Rocky/Amazon에서의 서비스 검증을 대신하는 것은 아니다.

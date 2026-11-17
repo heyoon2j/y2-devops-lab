@@ -3,6 +3,10 @@
 현재 단계는 설치 입력과 사전 점검 준비다. EC2 생성·원격 접속·패키지 설치·CA 초기화는
 아직 하지 않았다. [3단계 구축 계획](PHASED_ROLLOUT.md)의 첫 단계만 다룬다.
 
+관리 대상은 Ubuntu 22/24/26, Rocky 8/9, Amazon Linux 2/2023까지 요구한다.
+관리 서버 OS와 구분하며 [OS·엔진 호환성](OS_COMPATIBILITY.md)을 따른다.
+OpenVox는 필수가 아닌 후보이고 AL2 때문에 9 계열 통일을 가정하지 않는다.
+
 ## 설치 기준표
 
 | 항목 | 준비 기준 | 상태 |
@@ -11,7 +15,7 @@
 | 관리 OS | Ubuntu 24.04 amd64 | 공식 지원 확인, 제안 기준 |
 | 서버 자원 | 8 vCPU·32 GiB RAM·100 GiB SSD | 소수 Agent 검증용 후보, 성능 보장 아님 |
 | Foreman | 5.0 계열 | 공식 설치 경로 확인, 정확한 패키지 revision 미고정 |
-| Puppet 계열 엔진 | 공식 Quickstart의 OpenVox 8 경로 제안 | 제품 선택 응답 대기 |
+| Puppet 계열 엔진 | 공식 Quickstart의 OpenVox 8 경로 제안 | 특정 Puppet 제품 요구 없음, 제품 선택은 미확정 |
 | DB | Ubuntu 기본 PostgreSQL 16 계열, 로컬 전용 | 기본 패키지 확인, 실제 의존성·설치 검증 전 |
 | 기존 서버 | 사용자가 서버 보유 확인. 새 EC2 생성 제외 | 실제 FQDN·AWS 위치·OS·사양 확인 대기 |
 | 인증서 | 사내 CA 신뢰, 발급 방식·SAN 별도 확정 | 첫 연결 전 필요 |

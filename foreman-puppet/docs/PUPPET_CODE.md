@@ -99,7 +99,7 @@ Hiera는 이 최상위 파라미터로 CSP별 데이터를 선택한다. 노드�
 | `profile::example_file` | Hiera 예시 파일 생성·이전 진단 파일 삭제 |
 
 `csp` ENC 파라미터는 `aws/gcp/kc`, `deploy_env` Fact는 `dev/prd`만 허용한다.
-지원 OS는 Ubuntu 20.04·24.04·26.04(`amd64/arm64`), Rocky 8·9(`x86_64/aarch64`)다.
+지원 코드 범위는 Ubuntu 20.04·22.04·24.04·26.04(`amd64/arm64`), Rocky 8·9와 Amazon Linux 2·2023(`x86_64/aarch64`)다. 실제 패키지/OS 적용은 [호환성 문서](OS_COMPATIBILITY.md)의 별도 검증 대상이다.
 `development ↔ dev`, `production ↔ prd` 매핑도 검증한다.
 지원하지 않는 조합은 컴파일을 거부한다. 실제 Agent의 OS 지원은 설치 단계에서 별도 검증한다.
 
@@ -205,7 +205,7 @@ catalog_test는 임시 코드 환경에서 Catalog를 컴파일한다. service_p
 가짜 systemctl에만 적용한다. 실제 패키지나 `/etc`, systemd 서비스는 변경하지 않는다.
 다음 항목을 확인한다.
 
-- 두 Role·두 환경·세 CSP·다섯 OS 버전·OS별 두 아키텍처·GPU 상태의 600개 조합에서 Hiera와 예시 파일 생성
+- 두 Role·두 환경·세 CSP·여덟 OS 버전·OS별 두 아키텍처·GPU 상태의 960개 조합에서 Hiera와 예시 파일 생성
 - 임시 데이터로 CSP+환경 → CSP → 환경 → 공통 우선순위 검증
 - `role::gpu_svr`에만 GPU Profile이 포함되고 공통 패키지·예시 파일이 중복 없이 생성되는지 확인
 - GPU/MIG Facts가 없는 초기 노드의 컴파일

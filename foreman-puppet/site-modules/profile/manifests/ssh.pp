@@ -24,7 +24,8 @@ class profile::ssh (
     $unit = $facts['os']['name'] ? {
       'Ubuntu' => 'ssh.service',
       'Rocky'  => 'sshd.service',
-      default  => fail('profile::ssh supports Ubuntu or Rocky only'),
+      'Amazon' => 'sshd.service',
+      default  => fail('profile::ssh supports Ubuntu, Rocky or Amazon only'),
     }
     # The parent of validator_dir must exist; no recursive ownership of /usr/local.
     file { $validator_dir:

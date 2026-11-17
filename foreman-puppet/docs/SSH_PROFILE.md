@@ -82,11 +82,12 @@ Puppet이 관리하는 drop-in 내용 변경 때 실행되며, 다른 주체가 
 | 대상 | 서비스 | 확인할 전제조건 |
 | --- | --- | --- |
 | Ubuntu 20.04/24.04/26.04 | ssh.service | openssh-server, Include, host key, /run/sshd 등 |
+| Amazon Linux 2/2023 | sshd.service | OpenSSH Include 지원/위치, host key, 실행 디렉터리 등 |
 | Rocky 8/9 | sshd.service | openssh-server, Include 지원/위치, host key, SELinux 문맥 등 |
 
 OpenSSH 패키지·host key·Include·drop-in 부모 디렉터리는 이미지/부트스트랩에서 준비한다.
 이 Profile은 main config에 Include를 자동 삽입하거나 패키지를 설치하지 않는다.
-Rocky 8 등에서 Include가 없으면 먼저 이미지 설정을 확인해야 하며 활성화만으로 해결되지 않는다.
+Rocky 8·Amazon Linux 2 등에서 Include가 없으면 먼저 이미지 설정을 확인해야 하며 활성화만으로 해결되지 않는다.
 Agent의 Ruby 기본 경로는 /opt/puppetlabs/puppet/bin/ruby이며 native 패키지 경로가 다르면
 profile::ssh::ruby를 조정한다. /usr/bin/timeout과 /usr/bin/systemctl도 필요하다.
 검증기 디렉터리의 부모 /etc/puppetlabs/puppet은 이미 존재해야 한다.
@@ -103,7 +104,7 @@ bundle exec ruby tests/catalog_test.rb
 bundle exec ruby tests/ssh_profile_test.rb
 ```
 
-Catalog 테스트는 기본 비활성·전체 제외, Ubuntu/Rocky 서비스 매핑과 요청한 값 등을 확인한다.
+Catalog 테스트는 기본 비활성·전체 제외, Ubuntu/Rocky/Amazon 서비스 매핑과 요청한 값 등을 확인한다.
 SSH 적용 테스트는 임시 파일과 가짜 sshd/systemctl로 변경·멱등성·드리프트·검증 실패·
 Include/우선순위 거부·시간 초과·서비스 실패·제외를 검증한다.
 소유권은 Catalog에서 root:root를 확인하고 격리 적용에서는 chown을 생략한다.

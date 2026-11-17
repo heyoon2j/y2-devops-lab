@@ -15,7 +15,7 @@ Foreman·Compiler·Smart Proxy 용어는 [그림 설명](ARCHITECTURE_GUIDE.md)�
 | Autoscaling | 현재 도입하지 않고 후속 고도화로 이관 |
 | 2·3단계 DB 권장안 | RDS PostgreSQL Multi-AZ, 두 Foreman이 같은 DB endpoint 사용 |
 | 기능 범위 | Foreman 호스트 관리 + Puppet 계열의 시스템 설정 적용 |
-| 대상 노드 | AWS/GCP/KC의 Ubuntu 20.04·24.04·26.04, Rocky 8·9 |
+| 대상 노드 | AWS/GCP/KC의 Ubuntu 20.04·22.04·24.04·26.04, Rocky 8·9, Amazon Linux 2·2023 |
 | Agent | 관리 대상에는 Puppet 계열 Agent/Facter. 별도 Foreman Agent 불필요 |
 | Role | user-data 등록 입력으로 base/unmanaged/devops/data_infra 중 하나 선택 |
 | 설정 변경 | Puppet이 변경 감지·검증·조건부 반영 |

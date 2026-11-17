@@ -25,8 +25,8 @@ class profile::base (
 
     case $facts['os']['name'] {
       'Ubuntu': {
-        if $facts['os']['release']['full'] !~ /^(20|24|26)[.]04([.]|$)/ {
-          fail('profile::base supports Ubuntu 20.04, 24.04 or 26.04 only')
+        if $facts['os']['release']['full'] !~ /^(20|22|24|26)[.]04([.]|$)/ {
+          fail('profile::base supports Ubuntu 20.04, 22.04, 24.04 or 26.04 only')
         }
         if $facts['os']['architecture'] !~ Enum['amd64', 'arm64'] {
           fail('profile::base supports Ubuntu os.architecture amd64 or arm64 only')
@@ -40,8 +40,16 @@ class profile::base (
           fail('profile::base supports Rocky os.architecture x86_64 or aarch64 only')
         }
       }
+      'Amazon': {
+        if $facts['os']['release']['full'] !~ /^(2|2023)([.]|$)/ {
+          fail('profile::base supports Amazon Linux 2 or 2023 only')
+        }
+        if $facts['os']['architecture'] !~ Enum['x86_64', 'aarch64'] {
+          fail('profile::base supports Amazon os.architecture x86_64 or aarch64 only')
+        }
+      }
       default: {
-        fail('profile::base supports Ubuntu or Rocky only')
+        fail('profile::base supports Ubuntu, Rocky or Amazon only')
       }
     }
 

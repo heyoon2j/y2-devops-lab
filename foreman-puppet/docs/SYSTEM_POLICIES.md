@@ -2,7 +2,7 @@
 
 ## 관리 대상과 현재 구현 범위
 
-관리 대상은 Ubuntu 20.04·24.04·26.04, Rocky Linux 8·9로 해석한다.
+관리 대상은 Ubuntu 20.04·22.04·24.04·26.04, Rocky Linux 8·9, Amazon Linux 2·2023로 해석한다.
 현재 코드는 이 OS/아키텍처 Facts로 Catalog를 컴파일하는 기준을 검증한다.
 실제 이미지의 Facts 값, 각 OS의 Puppet Agent 패키지 가용성·서비스 동작은 설치 단계에서
 검증해야 한다. 컴파일 성공을 배포판 전체의 런타임 호환성 보장으로 해석하지 않는다.
@@ -105,8 +105,8 @@ DB/Hadoop/GPU용 추가 시스템 정책은 필요할 때 별도 Profile로 조�
 
 ## 검증
 
-Catalog 테스트는 5개 OS 버전·2개 아키텍처·3개 CSP·2개 환경·2개 Role·5개 GPU 상태의
-600개 조합을 확인한다. 별도 임시 데이터에서 4단계 Hiera 우선순위와 CSP 누락/오류도 검증한다.
+Catalog 테스트는 8개 OS 버전·2개 아키텍처·3개 CSP·2개 환경·2개 Role·5개 GPU 상태의
+960개 조합을 확인한다. 별도 임시 데이터에서 4단계 Hiera 우선순위와 CSP 누락/오류도 검증한다.
 실제 DNS/NTP·SSH·저장소·Zabbix 설정 적용 시험을 수행한 것은 아니다.
 
 SSH의 요청값과 구현·검증 범위는 [SSH Profile](SSH_PROFILE.md)을 따른다.

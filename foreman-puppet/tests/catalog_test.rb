@@ -62,10 +62,13 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   gpu_states = [[true, true], [true, false], [true, nil], [false, false], [nil, nil]]
   platforms = [
     ['Ubuntu', '20.04.6', %w[amd64 arm64]],
+    ['Ubuntu', '22.04.5', %w[amd64 arm64]],
     ['Ubuntu', '24.04', %w[amd64 arm64]],
     ['Ubuntu', '26.04', %w[amd64 arm64]],
     ['Rocky', '8.10', %w[x86_64 aarch64]],
     ['Rocky', '9.6', %w[x86_64 aarch64]],
+    ['Amazon', '2', %w[x86_64 aarch64]],
+    ['Amazon', '2023.8.20250721', %w[x86_64 aarch64]],
   ].flat_map do |name, release, arches|
     arches.map { |arch| { 'name' => name, 'release' => { 'full' => release }, 'architecture' => arch } }
   end
@@ -101,9 +104,9 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   expect_failure(valid.reject { |k, _| k == 'deploy_env' }, 'deploy_env must be dev or prd')
   expect_failure(valid.merge('deploy_env' => 'production'), 'deploy_env must be dev or prd')
   expect_failure(valid.merge('deploy_env' => '../common'), 'deploy_env must be dev or prd')
-  expect_failure(valid.merge('os' => os.merge('name' => 'Debian')), 'supports Ubuntu or Rocky only')
-  expect_failure(valid.merge('os' => os.merge('release' => { 'full' => '22.04' })),
-                 'supports Ubuntu 20.04, 24.04 or 26.04 only')
+  expect_failure(valid.merge('os' => os.merge('name' => 'Debian')), 'supports Ubuntu, Rocky or Amazon only')
+  expect_failure(valid.merge('os' => os.merge('release' => { 'full' => '23.10' })),
+                 'supports Ubuntu 20.04, 22.04, 24.04 or 26.04 only')
   expect_failure(valid.merge('os' => os.merge('architecture' => 's390x')),
                  'supports Ubuntu os.architecture amd64 or arm64 only')
   expect_failure(valid, 'deploy_env does not match', environment: 'production')
@@ -113,6 +116,12 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
                  'supports Rocky 8 or 9 only')
   expect_failure(valid.merge('os' => { 'name' => 'Rocky', 'release' => { 'full' => '9.6' }, 'architecture' => 's390x' }),
                  'supports Rocky os.architecture x86_64 or aarch64 only')
+  ['1', '20230'].each do |release|
+    expect_failure(valid.merge('os' => { 'name' => 'Amazon', 'release' => { 'full' => release }, 'architecture' => 'x86_64' }),
+                   'supports Amazon Linux 2 or 2023 only')
+  end
+  expect_failure(valid.merge('os' => { 'name' => 'Amazon', 'release' => { 'full' => '2' }, 'architecture' => 's390x' }),
+                 'supports Amazon os.architecture x86_64 or aarch64 only')
   expect_failure(valid, 'csp ENC parameter must be', csp: nil)
   expect_failure(valid, 'csp ENC parameter must be', csp: 'unknown')
   expect_failure(valid, 'csp ENC parameter must be', csp: '../common')
@@ -170,9 +179,9 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   File.write(common_path, common.to_yaml)
 
   # SSH is opt-in: verify enabled OS mapping, validation and state wiring.
-  %w[Ubuntu Rocky].each do |os_name|
+  platforms.each do |platform|
+    os_name = platform['name']
     File.write(common_path, common.merge('profile::ssh::manage' => true).to_yaml)
-    platform = os_name == 'Ubuntu' ? os : { 'name' => 'Rocky', 'release' => { 'full' => '9.6' }, 'architecture' => 'x86_64' }
     catalog = compile_catalog(valid.merge('os' => platform))
     config = catalog.resource('File', '/etc/ssh/sshd_config.d/00-foreman-puppet.conf')
     assert(config && config[:validate_cmd].include?('validate-sshd-config.rb %'), 'SSH candidate validation missing')
@@ -217,6 +226,6 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
     content = catalog.resource('File', '/etc/foreman-puppet/example.txt')[:content]
     assert(content == expected, "Wrong hierarchy precedence for #{csp}/#{env}: #{content.inspect}")
   end
-  puts 'Passed: 600 base combinations; team/unmanaged roles; opt-in SSH policy; host/profile exclusion and Boolean validation; 14 platform rejection cases; 6 hierarchy precedence cases.'
+  puts 'Passed: 960 base combinations; team/unmanaged roles; opt-in SSH policy; host/profile exclusion and Boolean validation; 17 platform rejection cases; 6 hierarchy precedence cases.'
 
 end

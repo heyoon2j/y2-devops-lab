@@ -27,10 +27,12 @@ Role별 최초 설정·지속 관리·미관리 전환은 [Role 수명 주기](d
 
 1단계 설치 기준·입력 표본·사전 점검은 [개발 서버 설치 준비](docs/DEV_SERVER_INSTALL.md)를 따른다.
 
+관리 서버 OS와 대상 Agent의 지원 범위는 [OS·엔진 호환성](docs/OS_COMPATIBILITY.md)에서 구분한다.
+
 ## 목적과 범위
 
 Foreman으로 노드의 등록·분류·상태를 관리하고, Puppet으로 서버 설정을 적용한다.
-AWS, GCP, KC와 Ubuntu 20.04·24.04·26.04, Rocky 8·9 관리 대상 노드를 기준으로 구성한다.
+AWS, GCP, KC와 Ubuntu 20.04·22.04·24.04·26.04, Rocky 8·9, Amazon Linux 2·2023 관리 대상 노드를 기준으로 구성한다.
 현재 OS 지원은 Catalog 컴파일 기준이며 실제 Agent 패키지/이미지 동작은 별도 검증한다.
 KC는 이 프로젝트의 CSP 식별자이며 구체적인 공급자 연동은 별도로 확정한다.
 
