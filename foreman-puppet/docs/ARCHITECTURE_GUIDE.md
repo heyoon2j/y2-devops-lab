@@ -1,9 +1,111 @@
-# 용어로 보는 고정 2노드 아키텍처
+# Foreman / OpenVox 구성과 아키텍처
 
 이 그림은 설계이며 현재 서버를 설치한 상태가 아니다.
 아래 2노드 그림은 2단계 개발 및 운영 목표다. 최초 개발은 EC2 1대 + 로컬 DB이며 LB가 없다.
 [단계별 구축](PHASED_ROLLOUT.md)에서 단일 서버와 이전 흐름을 확인한다.
 개발·운영은 별도 서버·DB·endpoint와 코드 환경을 사용한다.
+
+## 최초 개발 서버 구성과 버전
+
+2026-11-18 결정 기준이다. **개발 관리 서버 EC2 1대에 Foreman·Smart Proxy·OpenVox Server·
+로컬 PostgreSQL을 함께 설치**한다. 대상 서버에는 OpenVox Agent를 설치하며 Foreman Agent나
+Smart Proxy를 별도로 설치하지 않는다. 개발 2단계부터 LB + EC2 2대 + RDS로 확장한다.
+
+```text
+개발 관리 서버 — Ubuntu 24.04 x86_64 / AWS EC2 1대
+├── Foreman 5.0.1                 # 웹·API·호스트 분류·결과 조회
+│   └── Foreman Puppet 플러그인    # Puppet Class·Environment·Report 관리 기능
+├── Smart Proxy (foreman-proxy)    # Foreman의 Puppet 관리 API 중계, 별도 서비스
+├── OpenVox Server 9.2.0          # Compiler: 노드별 Catalog 생성
+├── OpenVox Agent 9.4.0 패키지     # Server가 사용하는 Ruby 코드·런타임 포함
+└── PostgreSQL 16                 # 1단계는 로컬 DB
+
+관리 대상 서버 — AWS / GCP / KC
+└── OpenVox Agent                 # Facts 전송·Catalog 수신/적용·Report 전송
+    ├── 기본: 9.4.0
+    └── Amazon Linux 2: 8.33.0
+```
+
+```mermaid
+flowchart LR
+    U["운영자"] --> F
+    subgraph M["개발 관리 서버 EC2 1대 / LB 없음"]
+        F["Foreman 5.0.1 + Puppet 플러그인"]
+        S["Smart Proxy / foreman-proxy"]
+        P["OpenVox Server 9.2.0
+같은 VM: Agent 패키지 9.4.0"]
+        D["로컬 PostgreSQL 16"]
+        F -->|"호스트·Facts·Report 저장"| D
+        F -->|"환경/Class 등 관리 기능 조회"| S
+        S -->|"Puppet 관리 API"| P
+        P -->|"ENC 분류 조회 / Facts·Report 전달"| F
+    end
+    A["대상 서버: OpenVox Agent
+기본 9.4.0 / AL2 8.33.0"] <-->|"Catalog 요청·수신 / Facts·Report"| P
+```
+
+Smart Proxy는 Foreman의 플러그인과 다른 프로세스다. 같은 VM에 함께 두지만 나중에 분리할 수 있다.
+Agent와 Compiler의 일상적인 통신 전체를 Smart Proxy가 중계하지 않는다.
+관리 서버의 Agent 패키지는 Server 의존성이며, 설치만으로 관리 서버의 정기 설정 적용을 켜지 않는다.
+
+| 구성 요소 | 패키지/선택 버전 | 관리 기준 |
+| --- | --- | --- |
+| Foreman | foreman 5.0.1 | 5.0 저장소의 전체 배포판 revision을 확인해 고정 |
+| Foreman Puppet 플러그인 | ruby-foreman-puppet | Foreman 5.0 호환 버전을 확인해 별도로 고정. 본체와 같은 버전 번호로 가정하지 않음 |
+| Smart Proxy | foreman-proxy | Foreman 5.0 저장소의 호환 패키지 버전/revision 고정 |
+| 설치 도구 | foreman-installer | Foreman 5.0 저장소의 호환 버전/revision 고정 |
+| OpenVox Server | openvox-server 9.2.0 | 같은 VM에 Agent 9.4.0 패키지도 설치 |
+| OpenVox Agent | openvox-agent 9.4.0 | Ubuntu 22/24/26, Rocky 8/9, Amazon Linux 2023 대상 |
+| AL2 OpenVox Agent | openvox-agent 8.33.0 | Amazon Linux 2만 8 계열 예외 |
+| DB | PostgreSQL 16 | Ubuntu 보안 수정이 포함된 16.x 전체 패키지 버전 기록 |
+| JVM | Java 21 | 지원되는 배포 패키지의 보안 패치 버전 기록 |
+| 웹/기타 Ruby 런타임 | 패키지 의존성·Installer가 요구하는 호환 구성 | 간접 의존성도 설치 목록과 보안 수정 여부 확인 |
+
+Remote Execution·Ansible·Katello는 현재 설치 범위에 포함하지 않는다.
+플러그인이나 의존성의 버전은 Foreman 본체 버전과 별도로 기록·점검한다.
+실제 패키지 revision과 FQDN은 미확정이며 실제 OS 설치·Foreman/OpenVox 9 통합도 검증 전이다.
+Foreman 공식 5.0 Quickstart의 OpenVox 8 경로와 차이가 있으므로 선택 버전의 보안 수정 여부와
+Foreman 연동 호환성 검증은 별개로 진행한다.
+
+## 설치 자동화 언어와 현재 구현 상태
+
+**설치 자동화는 Bash + 설정 파일 + Foreman Installer를 사용하고, 별도 Python/PyYAML 버전 관리를
+추가하지 않는 방향**으로 한다. APT/YUM 저장소, 서버 answers YAML, Agent puppet.conf·Facts 파일을
+설정 원본으로 유지한다. YAML 병합 등 구조화된 처리는 Installer 환경의 Ruby를 활용하는 방향이다.
+Foreman·OpenVox 운영 자체에 이 프로젝트 전용 Python 실행기가 필수인 것은 아니다.
+
+현재 저장소의 bootstrap 실행기는 아직 Python/PyYAML을 사용한다. 이번 결정은 목표 구조이며
+Bash/Ruby 실행기로의 교체는 후속 구현이다. 교체 전에는 현재 스크립트가 Python 없이 동작한다고
+가정하지 않는다. OS나 다른 패키지가 사용하는 Python을 제거하는 정책도 아니다.
+
+## 보안 수정 중심의 버전 업데이트 정책
+
+- 위 버전을 최초 설치 기준으로 고정하고, 새 기능이나 새 버전 출시만을 이유로 업데이트하지 않는다.
+- Foreman·플러그인·OpenVox·OS·DB·Java 및 간접 의존성의 공식 보안 공지를 정기 확인한다.
+  설치 버전이 영향을 받으며 보안 수정이 필요한 경우에 업데이트한다. 버전 고정은 보안 패치 거부가 아니다.
+- 필요한 수정이 포함된 호환 버전으로 변경한다. 지원 종료로 보안 수정을 받을 수 없으면
+  보안 유지에 필요한 지원 계열 전환을 계획한다. 무조건 최신 major로 자동 전환하지 않는다.
+- 개발에서 백업과 복구 경로를 준비하고 설치·TLS·Smart Proxy·ENC·Facts/Report·Catalog 적용을
+  검증한 후 운영에 같은 검증 버전을 적용한다. 긴급 보안 수정은 영향도에 따라 우선 처리한다.
+- 전체 패키지 Version-Release, 관련 CVE/GHSA, 수정 버전, 적용 날짜·검증 결과를 기록한다.
+  OS 패키지와 번들 런타임은 보안 패치 backport 여부도 확인해 버전 문자열만으로 판정하지 않는다.
+- Agent 9.4.0 및 AL2 8.33.0의 계열 예외를 유지한다. 관리 서버의 Agent 패키지도 Server와 함께
+  점검하고, 런타임 변경 후 필요한 서비스 재시작을 수행해 실제 적용 버전을 확인한다.
+
+2026-11-18 공식 공지 대조에서 확인한 주요 수정은 다음과 같다. 전체 의존성 스캔이나
+모든 취약점의 부재를 보증한 결과는 아니며, 실제 설치 시점에도 다시 대조한다.
+
+| 선택 버전 | 확인한 주요 보안 수정 |
+| --- | --- |
+| Foreman 5.0.1 | Safemode 우회 RCE, provisioning token 검증 오류, 여러 명령어 주입/역직렬화 수정 |
+| Server 9.2.0 + 같은 VM Agent 9.4.0 | GHSA-q4hm-33rc-572g 인증서 이름 검증 오류, GHSA-ffr6-rwpm-p5wq Report RCE 수정 |
+| AL2 Agent 8.33.0 | 8.32.0 Report 처리 수정과 앞선 OpenSSL/Ruby backport 포함. Report RCE의 직접 노출 지점은 Server |
+
+근거: [Foreman 5.0.1 공지](https://community.theforeman.org/t/foreman-5-0-1-is-now-available/47825),
+[Foreman/플러그인 보안 공지](https://theforeman.org/security.html),
+[OpenVox Server 9 릴리스 노트](https://docs.openvoxproject.org/openvox-server/9.x/release_notes.html),
+[Agent 9 릴리스 노트](https://docs.openvoxproject.org/openvox/9.x/release_notes.html),
+[Agent 8 릴리스 노트](https://docs.openvoxproject.org/openvox/8.x/release_notes.html).
 
 ## 먼저 알아둘 이름
 

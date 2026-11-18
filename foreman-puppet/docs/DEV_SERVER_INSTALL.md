@@ -5,11 +5,15 @@
 
 관리 대상은 Ubuntu 22/24/26, Rocky 8/9, Amazon Linux 2/2023까지 요구한다.
 관리 서버 OS와 구분하며 [OS·엔진 호환성](OS_COMPATIBILITY.md)을 따른다.
-OpenVox는 필수가 아닌 후보이고 AL2 때문에 9 계열 통일을 가정하지 않는다.
+엔진은 OpenVox로 선택했으며 AL2만 Agent 8 계열 예외를 둔다.
 
 서버/Agent별 실행 파일과 JSON 입력은 [bootstrap](../bootstrap/README.md)에 구현했다.
-아래의 과거 8 계열 후보는 최신 결정으로 대체한다: **Foreman 5.0.1 + Server 9.2.0 + Agent 9.4.0, AL2 Agent 8.33.0**.
+설치 버전 기준은 다음과 같다: **Foreman 5.0.1 + Server 9.2.0 + Agent 9.4.0, AL2 Agent 8.33.0**.
 실제 설치·통합 검증은 아직 수행하지 않았다.
+
+관리 서버/대상별 설치 목록·버전과 보안 수정 중심 업데이트 정책은
+[아키텍처 결정](ARCHITECTURE_GUIDE.md#최초-개발-서버-구성과-버전)을 따른다.
+설치 자동화의 Python 의존성을 없애는 방향은 확정했지만 현재 실행기는 아직 전환 전이다.
 
 ## 설치 기준표
 
@@ -18,7 +22,7 @@ OpenVox는 필수가 아닌 후보이고 AL2 때문에 9 계열 통일을 가정
 | 구성 | EC2 1대에 Foreman·Compiler·Smart Proxy·로컬 PostgreSQL | 합의 완료 |
 | 관리 OS | Ubuntu 24.04 amd64 | 공식 지원 확인, 제안 기준 |
 | 서버 자원 | 8 vCPU·32 GiB RAM·100 GiB SSD | 소수 Agent 검증용 후보, 성능 보장 아님 |
-| Foreman | 5.0 계열 | 공식 설치 경로 확인, 정확한 패키지 revision 미고정 |
+| Foreman | 5.0.1 | 공식 설치 경로 확인, 정확한 패키지 revision 미고정 |
 | Puppet 계열 엔진 | OpenVox Server 9.2.0 / Agent 9.4.0, AL2 Agent 8.33.0 | 제품·계열 선택, 통합 검증 전 |
 | DB | Ubuntu 기본 PostgreSQL 16 계열, 로컬 전용 | 기본 패키지 확인, 실제 의존성·설치 검증 전 |
 | 기존 서버 | 사용자가 서버 보유 확인. 새 EC2 생성 제외 | 실제 FQDN·AWS 위치·OS·사양 확인 대기 |
@@ -28,7 +32,7 @@ OpenVox는 필수가 아닌 후보이고 AL2 때문에 9 계열 통일을 가정
 Foreman 공식 Quickstart는 Ubuntu 24.04와 OpenVox 8 저장소 경로를 제공한다.
 OpenVox는 Puppet 호환 프로젝트이며 실제 제품/패키지명은 구분한다. OpenVox 설치 문서는
 9 계열도 안내하고 8은 EOL 전 critical/security 수정 대상으로 설명한다. 여기서는 Foreman의
-명시된 8 경로를 후보로 두며 운영 전 지원 기간·패키지/모듈 호환성을 다시 확인한다.
+기본 안내와 다른 9 계열을 선택했으므로 운영 전 지원 기간·패키지/모듈 호환성을 검증한다.
 현재 Ruby 테스트의 Puppet 8.10.0 고정은 실제 설치 제품·패치 버전 승인을 의미하지 않는다.
 
 [Foreman 5.0 Quickstart](https://docs.theforeman.org/5.0/Quickstart/index-foreman-deb.html),

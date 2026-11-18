@@ -2,7 +2,7 @@
 
 
 현재 신규 Role 기준은 [서버 Role 구성](docs/ROLES.md)이다. 기존 GPU 흐름은 호환 예제로 유지한다.
-서버 용어와 배치를 처음 볼 때는 [용어·아키텍처 그림](docs/ARCHITECTURE_GUIDE.md)부터 읽는다.
+서버 용어와 배치, 설치 버전·보안 업데이트 정책은 [구성·아키텍처 그림](docs/ARCHITECTURE_GUIDE.md)부터 읽는다.
 
 그림으로 읽는 순서는 [파일 따라가기](docs/WALKTHROUGH.md)를 참고한다.
 구축 전 결정할 서버 배치·설치·네트워크 항목은 [관리 서버 구성](docs/SERVER_TOPOLOGY.md)을 참고한다.
