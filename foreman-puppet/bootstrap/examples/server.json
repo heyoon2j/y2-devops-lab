@@ -1,0 +1,29 @@
+{
+  "os": {
+    "id": "ubuntu",
+    "version": "24.04",
+    "architecture": "x86_64"
+  },
+  "host_fqdn": null,
+  "foreman_fqdn": null,
+  "puppet_fqdn": null,
+  "puppet_certname": null,
+  "repository_keys": {
+    "foreman": null,
+    "openvox": "0E26429987002418F9513F2A5FB999C2D62FF3D9"
+  },
+  "package_versions": {
+    "foreman": null,
+    "foreman-installer": null,
+    "foreman-proxy": null,
+    "ruby-foreman-puppet": null,
+    "postgresql-16": null,
+    "openvox-agent": null,
+    "openvox-server": null
+  },
+  "tls": {
+    "ca_cert": null,
+    "host_cert": null,
+    "host_key": null
+  }
+}

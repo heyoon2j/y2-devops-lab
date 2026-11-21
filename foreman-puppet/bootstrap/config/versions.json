@@ -1,0 +1,6 @@
+{
+  "foreman": "5.0.1",
+  "openvox-server": "9.2.0",
+  "openvox-agent": "9.4.0",
+  "amazon2-agent": "8.33.0"
+}

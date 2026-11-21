@@ -1,0 +1,5 @@
+source 'https://rubygems.org'
+
+gem 'puppet', '8.10.0'
+# Puppet's parser requires racc, which is a bundled gem on Ruby 3.3.
+gem 'racc', '~> 1.7'

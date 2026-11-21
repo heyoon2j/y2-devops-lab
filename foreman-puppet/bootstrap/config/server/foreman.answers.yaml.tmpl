@@ -1,0 +1,10 @@
+# Native foreman-installer answers overlay. Edit settings here.
+foreman:
+  db_manage: true
+  db_host: localhost
+  servername: '{{foreman_fqdn}}'
+  foreman_url: https://{{foreman_fqdn}}
+  server_ssl_ca: '{{ca_cert}}'
+  server_ssl_cert: '{{host_cert}}'
+  server_ssl_key: '{{host_key}}'
+foreman::plugin::puppet: true

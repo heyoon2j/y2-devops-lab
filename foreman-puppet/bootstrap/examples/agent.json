@@ -1,0 +1,22 @@
+{
+  "os": {
+    "id": "ubuntu",
+    "version": "24.04",
+    "architecture": "x86_64"
+  },
+  "puppet_fqdn": null,
+  "ca_fqdn": null,
+  "certname": null,
+  "puppet_environment": "development",
+  "repository_keys": {
+    "openvox": "0E26429987002418F9513F2A5FB999C2D62FF3D9"
+  },
+  "package_versions": {
+    "openvox-agent": null
+  },
+  "tls": {
+    "ca_cert": null,
+    "host_cert": null,
+    "host_key": null
+  }
+}

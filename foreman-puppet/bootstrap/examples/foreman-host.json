@@ -1,0 +1,11 @@
+{
+  "host_group": "aws",
+  "role": "role::base",
+  "puppet_environment": "development",
+  "parameters": {
+    "deploy_env": "dev",
+    "team": null,
+    "dr_site": "primary",
+    "puppet_managed": true
+  }
+}
