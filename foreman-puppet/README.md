@@ -279,3 +279,14 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
 
 초기 코드는 Puppet 8.10.0에서 Catalog 컴파일로 검증했다.
 실제 Foreman 연동, Agent 적용과 멱등성 검증은 아직 수행하지 않았다.
+
+## 추후 TODO
+
+- [ ] sandbox 환경 지원: 현재 deploy_env는 dev/prd로 유지한다. sandbox는 필요 시
+  bootstrap/Catalog 입력 검증, Puppet Environment 배정 조합, CSP별·환경별 Hiera 데이터,
+  테스트·등록 예시를 함께 확장한다. sandbox Fact 추가만으로 코드 환경이 자동 생성되지는 않는다.
+
+당장 준비할 항목은 dr_site 입력·검증·파일 생성, team=null의 키 생략/기존 값 해제 검증,
+GPU/MIG 자동 수집 및 조회 실패 처리, 최초 Foreman API 등록과 재등록 시 중앙 정책 보존이다.
+Facts 개수를 더 늘리기보다 현재 항목의 수집·변경·등록 흐름을 먼저 검증한다.
+user-data/자동 수집/외부 Facts의 차이는 [분리 기준과 수집 방식](docs/LOOKUP_AND_REGISTRATION.md)을 따른다.

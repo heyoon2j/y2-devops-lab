@@ -54,7 +54,7 @@ Facts 업로드만으로 Host Group이나 Role이 자동 배정된다고 가정�
 
 | 항목 | 기준이 되는 저장 위치 | 최초 설정 | 등록 후 변경 방법 |
 | --- | --- | --- | --- |
-| deploy_env | 대상 서버의 외부 Facts 파일 | user-data로 dev/prd/sandbox 지정 | 서버의 Facts 원본을 변경·배포하고 다음 수집에서 전달 |
+| deploy_env | 대상 서버의 외부 Facts 파일 | user-data로 dev/prd 지정. sandbox는 추후 TODO | 서버의 Facts 원본을 변경·배포하고 다음 수집에서 전달 |
 | team | 대상 서버의 외부 Facts 파일 | 팀명 또는 미정 null 입력. null이면 외부 Fact 키 생략 | 서버의 Facts 원본 변경. 기존 팀 값을 해제할 때 키 제거 및 Foreman 반영 여부 확인 |
 | dr_site | 대상 서버의 외부 Facts 파일 | primary/secondary 지정 | 서버의 Facts 원본 변경. CSP별 실제 위치 매핑은 별도 정책 문서 |
 | OS·Arch·GPU/MIG | Facter/Custom Fact 수집 결과 | OS·Arch는 기본 수집, GPU/MIG 수집기는 후속 구현 | 실제 상태를 다시 수집하며 같은 이름의 수동 Fact로 중복 기록하지 않음 |
@@ -69,6 +69,43 @@ CSP도 기술적으로 Fact로 수집할 수 있지만, 이 프로젝트에서�
 관리 기준으로 중복 선언하지 않는다. deploy_env/team/dr_site도 자동 감지값이 아니라 서버 생성 시
 명시한 노드 분류이며, Foreman의 Facts 화면은 Agent가 업로드한 결과를 보여주는 곳이다.
 Foreman에서 로컬 Facts 원본까지 자동으로 변경하는 구조가 아니다.
+
+### user-data 지정, 자동 수집, 외부 Facts 파일의 차이
+
+user-data는 서버 초기화 때 실행할 입력/스크립트다. deploy_env·team·dr_site는 서버 장비에서
+자동으로 알아낼 수 있는 값이 아니라 IaC나 생성 담당자가 정한 값을 user-data로 전달한다.
+user-data가 서버의 외부 Facts 파일에 기록하면 이후 Agent 실행 때마다 Facter가 그 파일을 읽는다.
+user-data 자체가 매번 실행되거나 Facts를 계속 측정하는 구조는 아니다. 일반 환경변수만 설정하면
+후속 Agent 프로세스가 자동으로 Fact로 수집한다고 가정하지 않는다.
+
+**외부 Facts**의 외부는 네트워크 밖이라는 뜻이 아니라, Facter의 내장 수집 로직 밖에서 제공한
+값이라는 뜻이다. 이 프로젝트는 대상 서버의 다음 JSON 파일을 외부 Facts 원본으로 사용한다.
+
+```text
+/etc/puppetlabs/facter/facts.d/foreman_puppet.json
+```
+
+```json
+{
+  "deploy_env": "dev",
+  "dr_site": "primary"
+}
+```
+
+위 예시는 목표 형식이며 dr_site의 bootstrap 반영은 후속 구현이다. team 미정 입력 null은
+문자열 "null"로 저장하지 않고 외부 Facts 파일에서 team 키를 생략하는 규약이다.
+최초 user-data 실행 이후 값을 바꾸려면 원본 파일을 갱신해야 한다. Facts 파일은 비밀 저장소가 아니므로
+등록 토큰·개인키·비밀번호를 넣지 않는다.
+
+| 방식 | 값의 출처 | 값이 바뀌는 시점 | 우리 항목 |
+| --- | --- | --- | --- |
+| user-data로 지정 후 파일 기록 | 서버 생성 설정/IaC | 서버의 Facts 원본을 갱신할 때 | deploy_env, team, dr_site |
+| Facter 내장 자동 수집 | 현재 OS·장비 상태 | Facter가 실행되어 다시 조회할 때 | os, os.architecture |
+| Custom Fact 자동 수집 | 별도로 만든 장비 조회 로직 | 수집기가 실행되어 다시 조회할 때 | gpu.present, gpu.mig.configured |
+
+외부 Facts 파일은 Facter가 읽고, Agent가 그 결과를 Server에 보낸다. Foreman 등록 API는
+별도의 경로로 Host Group·Role·적용 여부·코드 환경을 저장한다. 로컬 Facts를 바꾸는 것과
+Foreman의 호스트 관리 정책을 바꾸는 것은 서로 자동 동기화되지 않는다.
 
 ### Role 변경 예시
 
@@ -90,11 +127,12 @@ Role에서 빠진 리소스가 자동으로 삭제·원복되는 것은 아니�
 
 ### Facts 관련 합의와 구현 상태
 
-합의한 외부 분류는 deploy_env=dev/prd/sandbox, 선택적 team(null 허용),
+현재 적용 범위의 외부 분류는 deploy_env=dev/prd, 선택적 team(null 허용),
 dr_site=primary/secondary다. dr_site는 평상시 지정한 주/DR 사이트로, 장애 시 실제 서비스의
 active/standby 상태와 분리한다. 실제 리전·Zone은 이번 필수 Facts에 추가하지 않는다.
 
-현재 bootstrap과 Catalog의 deploy_env 검증은 dev/prd 기준이다. sandbox 지원, dr_site 수집과
+sandbox는 현재 사용 범위에서 제외하고 [추후 TODO](../README.md#추후-todo)로 관리한다.
+현재 bootstrap과 Catalog의 deploy_env 검증은 dev/prd 기준이다. dr_site 수집과
 입력 검증, team=null의 명시적 지원 확인, API 등록 자동화는 후속 구현·검증 대상이다.
 sandbox 분류만 추가해도 코드 환경이 자동 생성되거나 자동 배정되지는 않는다.
 이 절은 설계 결정이며 해당 기능이 이미 실행 코드에 반영됐다는 의미가 아니다.
