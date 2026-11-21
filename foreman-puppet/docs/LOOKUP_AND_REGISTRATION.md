@@ -7,7 +7,7 @@
 | 구분 | 출처 | 예시 | 사용하는 곳 |
 | --- | --- | --- | --- |
 | 적용 의도 | IaC/user-data → 등록 자동화 → Foreman | Host Group, csp ENC 파라미터, Role, Puppet 코드 환경 | ENC의 노드 분류 |
-| 관측 정보 | Agent의 Facter 및 외부/Custom Facts | deploy_env, team, OS, Arch, GPU/MIG | Catalog 컴파일, Hiera 파일 경로, Foreman 조회 |
+| 노드 속성·관측 정보 | Agent의 Facter 및 외부/Custom Facts | deploy_env, team, dr_site, OS, Arch, GPU/MIG | Catalog 컴파일, Hiera 파일 경로, Foreman 조회 |
 | 설정 데이터 | Git의 Hiera YAML | 패키지 목록, 예시 파일 내용 | Profile의 파라미터 |
 
 `deploy_env`는 user-data가 파일로 준비하는 환경 정보다. GPU/MIG는 장비에서 수집할
@@ -40,6 +40,64 @@ flowchart TD
 
 이는 책임과 데이터 관계이며 모든 화살표가 반드시 단일 실행의 순차 작업을 의미하지 않는다.
 Facts/Report 업로드, Foreman ENC, 등록 자동화는 실제 배포 시 연결해야 한다.
+
+## 1.1. Facts와 Foreman 관리 정책을 분리하는 이유
+
+**결정: 기존처럼 노드 속성은 대상 서버의 Facts로 제공하고, 관리 정책은 Foreman에서 관리한다.**
+모든 항목을 대상 서버 파일 하나의 지속 관리 대상으로 합치지 않는다. Role을 바꿀 때 대상 서버에
+파일을 다시 배포하지 않고 Foreman 웹/API에서 변경할 수 있게 하기 위한 구분이다.
+
+user-data는 저장 위치가 아니라 최초 설정을 실행하는 수단이다. user-data/등록 자동화가
+노드 속성은 외부 Facts 파일로 기록하고, 관리 정책은 Foreman API로 등록·배정하는 두 경로를 사용한다.
+API 호출은 등록 자동화가 대행할 수 있으며 대상 노드에 관리자 토큰을 보관하지 않는다.
+Facts 업로드만으로 Host Group이나 Role이 자동 배정된다고 가정하지 않는다.
+
+| 항목 | 기준이 되는 저장 위치 | 최초 설정 | 등록 후 변경 방법 |
+| --- | --- | --- | --- |
+| deploy_env | 대상 서버의 외부 Facts 파일 | user-data로 dev/prd/sandbox 지정 | 서버의 Facts 원본을 변경·배포하고 다음 수집에서 전달 |
+| team | 대상 서버의 외부 Facts 파일 | 팀명 또는 미정 null 입력. null이면 외부 Fact 키 생략 | 서버의 Facts 원본 변경. 기존 팀 값을 해제할 때 키 제거 및 Foreman 반영 여부 확인 |
+| dr_site | 대상 서버의 외부 Facts 파일 | primary/secondary 지정 | 서버의 Facts 원본 변경. CSP별 실제 위치 매핑은 별도 정책 문서 |
+| OS·Arch·GPU/MIG | Facter/Custom Fact 수집 결과 | OS·Arch는 기본 수집, GPU/MIG 수집기는 후속 구현 | 실제 상태를 다시 수집하며 같은 이름의 수동 Fact로 중복 기록하지 않음 |
+| CSP Host Group | Foreman 호스트 분류 | 등록 입력 aws/gcp/kc를 API로 배정 | Foreman 웹/API에서 Host Group 변경 |
+| csp | Foreman Host Group의 ENC 파라미터 | 각 CSP 그룹에 같은 이름의 csp 값을 설정·상속 | 그룹 파라미터/호스트 소속을 Foreman에서 관리 |
+| Role | Foreman의 호스트별 Puppet Class 배정 | base/unmanaged/devops/data_infra 중 하나 배정 | Foreman 웹/API에서 기존 Role을 교체 |
+| puppet_managed | Foreman Boolean 파라미터 | 등록 시 적용/제외 정책 지정, 상속값 포함 확인 | Foreman 웹/API에서 유효한 Boolean 값을 변경 |
+| Puppet Environment | Foreman의 호스트 코드 환경 | 등록 시 development/production 배정 | Foreman 웹/API에서 코드 환경 변경 |
+
+CSP도 기술적으로 Fact로 수집할 수 있지만, 이 프로젝트에서는 CSP별 Host Group을 관리 기준으로
+선택했으므로 Hiera에는 상속된 csp ENC 파라미터를 사용한다. 같은 분류를 Fact와 ENC 양쪽의
+관리 기준으로 중복 선언하지 않는다. deploy_env/team/dr_site도 자동 감지값이 아니라 서버 생성 시
+명시한 노드 분류이며, Foreman의 Facts 화면은 Agent가 업로드한 결과를 보여주는 곳이다.
+Foreman에서 로컬 Facts 원본까지 자동으로 변경하는 구조가 아니다.
+
+### Role 변경 예시
+
+```text
+최초 등록: user-data의 role=base → 등록 API → Foreman에 role::base 배정
+이후 변경: 운영자가 Foreman에서 role::base를 제거하고 role::devops 배정
+다음 실행: Agent 요청 → Server가 Foreman ENC 조회 → 새 Role로 Catalog 생성·적용
+```
+
+Role 변경만을 위해 대상 서버에 새 파일을 배포하지 않는다. 새 Role의 코드는 해당 Puppet
+Environment에 미리 배포되어 있어야 한다. 단일 Role 규칙을 지키고, 미관리 전환 시에는
+[Role 수명 주기](ROLE_LIFECYCLE.md)의 puppet_managed 전환 순서를 따른다.
+Role에서 빠진 리소스가 자동으로 삭제·원복되는 것은 아니며 필요하면 별도 리소스로 선언한다.
+
+최초 등록 입력은 **새 호스트를 등록하기 위한 입력**이다. Agent의 정기 실행이나 부트스트랩
+재실행이 과거 user-data의 Role·Host Group·적용 여부·코드 환경으로 Foreman 값을 덮어쓰지 않도록
+등록 자동화를 구현한다. 기존 호스트가 있으면 신원·분류를 조회해 검증하고, 갱신은 명시적인
+관리 변경 절차에서만 수행한다. 등록 후 정책의 기준은 Foreman이다.
+
+### Facts 관련 합의와 구현 상태
+
+합의한 외부 분류는 deploy_env=dev/prd/sandbox, 선택적 team(null 허용),
+dr_site=primary/secondary다. dr_site는 평상시 지정한 주/DR 사이트로, 장애 시 실제 서비스의
+active/standby 상태와 분리한다. 실제 리전·Zone은 이번 필수 Facts에 추가하지 않는다.
+
+현재 bootstrap과 Catalog의 deploy_env 검증은 dev/prd 기준이다. sandbox 지원, dr_site 수집과
+입력 검증, team=null의 명시적 지원 확인, API 등록 자동화는 후속 구현·검증 대상이다.
+sandbox 분류만 추가해도 코드 환경이 자동 생성되거나 자동 배정되지는 않는다.
+이 절은 설계 결정이며 해당 기능이 이미 실행 코드에 반영됐다는 의미가 아니다.
 
 ## 2. Hiera에서 무엇을 어디서 찾는가
 

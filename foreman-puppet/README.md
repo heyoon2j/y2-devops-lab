@@ -8,6 +8,7 @@
 구축 전 결정할 서버 배치·설치·네트워크 항목은 [관리 서버 구성](docs/SERVER_TOPOLOGY.md)을 참고한다.
 AWS 개발 1,000~2,000대·운영 약 250대의 단계별 구성은 [규모와 용량 계획](docs/CAPACITY_PLAN.md)을 참고한다.
 [설정 조회·등록 확인 관계도](docs/LOOKUP_AND_REGISTRATION.md)는 Facts·Role·Hiera·Report와 로컬 진단 파일의 차이를 설명한다.
+[Facts와 Foreman 정책의 분리 기준](docs/LOOKUP_AND_REGISTRATION.md#11-facts와-foreman-관리-정책을-분리하는-이유)에 항목별 저장 위치·변경 방법과 Role을 중앙에서 관리하는 이유를 정리했다.
 
 이미지 빌드·user-data·지속 관리의 구분과 코드 배포 순서는 [배포·지속 관리](docs/DEPLOYMENT_MODEL.md)를 참고한다.
 서비스는 [설정 변경 시 검증·반영](docs/SERVICE_CHANGE_POLICY.md)을 Puppet이 담당하고,
