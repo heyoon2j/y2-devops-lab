@@ -53,7 +53,7 @@ false이면 이 프로젝트의 다른 Role이 실수로 함께 남아 있어도
 
 ## Facts 및 기존 GPU 예제
 
-team Fact는 선택적인 소유 팀 표시다. 예를 들어 devops, data_infra를 사용할 수 있지만
+team 파라미터는 선택적인 소유 팀 표시다. 예를 들어 devops, data_infra를 사용할 수 있지만
 Fact가 Role 배정이나 접근 권한의 근거가 되지는 않는다.
 GPU 존재/MIG Facts도 관측값이며 Role을 자동 변경하지 않는다.
 

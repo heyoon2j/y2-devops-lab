@@ -63,7 +63,7 @@ flowchart TD
 최종 목표 Role과 실제 최초 적용 Role을 구분한다. 예를 들어 최종 목표 unmanaged를
 등록 직후 그대로 Foreman에 배정하면 Base가 적용되지 않는다. 관리 자동화는 노드별
 목표·단계·최초 실행 식별 정보·완료 여부를 보관해야 한다. 이는 논리 설계이며 새로운
-Foreman 내장 필드나 API 인자를 정의한 것이 아니다. team Fact로 단계를 판단하지 않는다.
+Foreman 내장 필드나 API 인자를 정의한 것이 아니다. team 파라미터로 단계를 판단하지 않는다.
 
 1. 고유 노드 신원·CSP Host Group·코드 환경·deploy_env 및 최종 목표 Role을 결정한다.
 2. 표의 최초 Role 하나와 Boolean puppet_managed=true를 설정하고 ENC 결과를 확인한다.

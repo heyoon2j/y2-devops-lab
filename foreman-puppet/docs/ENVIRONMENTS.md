@@ -10,11 +10,11 @@
 4. 검증한 설치 절차로 약 250대의 별도 운영 구성을 구축한다. [단계별 구축](PHASED_ROLLOUT.md) 참조.
 
 개발은 `development`, 운영은 `production` Puppet Environment를 사용한다.
-Host Group은 CSP만 표현하며, 개발·운영 표시는 계속 `deploy_env` Fact를 사용한다.
+Host Group은 CSP만 표현하며, 개발·운영 표시는 계속 `deploy_env` ENC 파라미터를 사용한다.
 아래는 최종 개발·운영 매핑이다. 첫 개발 구축에서 운영 리소스까지 생성하지 않는다.
 운영 관리 구성의 세부 배치는 HA 문서에 따른다.
 
-| Host Group | `deploy_env` Fact | 호스트의 Puppet Environment | 호스트별 Role |
+| Host Group | `deploy_env` ENC 파라미터 | 호스트의 Puppet Environment | 호스트별 Role |
 | --- | --- | --- | --- |
 | `aws` | `dev` | `development` | 서버 Role 구성표에서 하나 선택 |
 | `aws` | `prd` | `production` | 서버 Role 구성표에서 하나 선택 |
@@ -46,7 +46,8 @@ HOST_GROUP=aws
 PUPPET_MANAGED=true
 PUPPET_ROLE=role::gpu_svr
 DEPLOY_ENV=dev
-TEAM=devops
+TEAM=null
+DR_SITE=primary
 PUPPET_ENV=development
 PUPPET_SERVER=puppet.example.internal
 PUPPET_CA_SERVER=puppet-ca.example.internal
@@ -57,7 +58,8 @@ CERTNAME=aws-dev-node-001.example.internal
 Foreman 호스트에 배정하도록 구현한다. 변수 선언만으로 배정되지 않으며 등록 스크립트는
 아직 구현하지 않았다. GPU Facts로 Role을 자동 선택하지 않는다.
 
-`TEAM`은 선택적 `team` Fact로 기록하며 Role 선택·인증 근거로 사용하지 않는다.
+`TEAM`은 선택적 Foreman team 파라미터이며 null/미설정을 허용한다.
+`DR_SITE`도 Foreman 파라미터로 primary/secondary 또는 미설정이다. Role을 자동 선택하지 않는다.
 
 `PUPPET_ENV`는 별도 Fact로 추가하지 않는다. Foreman 호스트 분류와 Agent 설정에 사용하는
 코드 환경 입력값이다. `PUPPET_CA_SERVER`는 CA를 Compiler에서 분리하기 위한 접속값이다.
@@ -102,7 +104,7 @@ Foreman·Puppet 논리 DNS는 LB의 해당 target group을 사용하고 CA는 �
 
 Hiera는 선택된 코드 환경 안에서 CSP+환경 → CSP → 환경 → 공통 순으로 조회한다.
 예를 들어 `csp/aws/dev.yaml` → `csp/aws.yaml` → `deploy_env/dev.yaml` → `common.yaml`이다.
-코드 환경은 코드 버전, Fact는 데이터 선택과 표시를 담당한다.
+코드 환경은 코드 버전, deploy_env ENC 파라미터는 데이터 선택과 표시를 담당한다.
 
 Puppet Environment 분리만으로 개발·운영의 보안 경계가 완성되지는 않는다.
 완전한 신뢰·장애 격리가 필요하면 Foreman/Puppet/DB/CA 관리 클러스터도 분리하고,

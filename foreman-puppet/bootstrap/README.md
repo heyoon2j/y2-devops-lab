@@ -19,8 +19,7 @@ bootstrap/
 │   │   ├── foreman.answers.yaml.tmpl     # Foreman·로컬 DB의 installer 설정
 │   │   └── openvox.answers.yaml.tmpl     # Compiler·Smart Proxy·Foreman 연동 설정
 │   ├── agent/
-│   │   ├── puppet.conf.tmpl              # Agent 접속·인증·실행 주기
-│   │   └── facts.json.tmpl               # deploy_env와 선택적 team
+│   │   └── puppet.conf.tmpl              # Agent 접속·인증·실행 주기
 │   ├── packages/                        # Foreman/Server/Agent 설치 패키지 목록
 │   │   ├── foreman.json
 │   │   ├── openvox-server.json
@@ -37,7 +36,7 @@ bootstrap/
 ├── agent/
 │   ├── repo.sh                          # 대상 OS에 따라 APT 또는 YUM/DNF 선택
 │   ├── install.sh                       # Agent 패키지 설치
-│   └── config.sh                        # puppet.conf·외부 Facts 배치
+│   └── config.sh                        # puppet.conf 배치
 ├── examples/                            # 대상 호스트·OS·인증서 경로·정확한 패키지 버전
 └── lib/bootstrap.py                      # 치환·검증·배치·실행 공통 처리
 ```
@@ -48,7 +47,6 @@ bootstrap/
 | repos/yum/openvox.repo.tmpl | /etc/yum.repos.d/openvox-bootstrap.repo |
 | server/*.answers.yaml.tmpl | 두 원본을 /etc/foreman-installer/scenarios.d/foreman-answers.yaml에 병합하여 installer 실행 |
 | agent/puppet.conf.tmpl | /etc/puppetlabs/puppet/puppet.conf의 관리 키 |
-| agent/facts.json.tmpl | /etc/puppetlabs/facter/facts.d/foreman_puppet.json |
 
 관리 서버는 현재 Ubuntu 24.04만 대상으로 하므로 **Foreman YUM 저장소 파일은 포함하지 않는다**.
 Rocky/Amazon Linux는 Agent 설치 대상이며 OpenVox YUM 저장소를 사용한다. DNF도 같은 `.repo` 형식이다.
@@ -147,8 +145,11 @@ bash bootstrap/agent/config.sh --config bootstrap/local/agent.json
 
 Agent config는 puppet.conf의 기존 다른 키/섹션을 보존하고 관리 키만 [main]에 설정한다.
 같은 키가 다른 섹션에 있으면 우선순위 혼동을 막기 위해 거부한다. 재작성 시 주석/서식은 보존하지 않는다.
-facts.d/foreman_puppet.json에는 deploy_env와 선택적 team만 기록한다. Role/Host Group은 Fact로 넣지 않는다.
-중복 deploy_env/team 외부 Facts 파일은 등록 과정에서 정리/대조해야 하며 자동 삭제하지 않는다.
+deploy_env/team/dr_site는 Foreman 파라미터로 옮겼으므로 Agent 입력에서 제거했고 Facts 파일도 생성하지 않는다.
+예전 입력 키가 있으면 Agent config가 거부한다. examples/foreman-host.json은 등록 자동화의 논리 입력 예시이며
+실제 API 요청이나 실행 입력이 아니다. csp는 Host Group 상속을 가정한다. team=null은 유효 ENC에서 미설정으로 처리한다.
+이전 foreman_puppet.json/deployment.yaml은 Foreman 파라미터·ENC를 준비한 뒤 옛 분류 키만 제거한다.
+현재 실행기는 기존 Facts 파일을 자동 삭제하지 않는다. [이전 기준](../docs/LOOKUP_AND_REGISTRATION.md)을 따른다.
 Agent config는 서비스 시작·enable·CSR 생성·첫 Catalog 적용을 수행하지 않는다.
 인증·Foreman 분류를 확인한 뒤 puppet agent --test --detailed-exitcodes를 수동 검증하고,
 0/2와 해당 Report를 확인한 후 정기 실행을 켠다. [최초 적용 흐름](../docs/ROLE_LIFECYCLE.md) 참조.

@@ -11,19 +11,22 @@ def assert(condition, message)
   raise message unless condition
 end
 
-def compile_catalog(facts, classes = ['role::base'], environment: nil, csp: 'aws', managed: true)
+def compile_catalog(facts, classes = ['role::base'], environment: nil, csp: 'aws', managed: true, deploy_env: 'dev', team: nil, dr_site: nil)
   name = 'test.example.internal'
-  environment ||= facts['deploy_env'] == 'dev' ? 'development' : 'production'
+  environment ||= deploy_env == 'prd' ? 'production' : 'development'
   parameters = csp.nil? ? {} : { 'csp' => csp }
   parameters['puppet_managed'] = managed unless managed == :absent
+  parameters['deploy_env'] = deploy_env unless deploy_env == :absent
+  parameters['team'] = team unless team.nil?
+  parameters['dr_site'] = dr_site unless dr_site.nil?
   node = Puppet::Node.new(name, environment: environment, classes: classes, parameters: parameters,
                           facts: Puppet::Node::Facts.new(name, facts))
   Puppet::Parser::Compiler.compile(node)
 end
 
-def expect_failure(facts, message, environment: nil, csp: 'aws', managed: true)
+def expect_failure(facts, message, environment: nil, csp: 'aws', managed: true, deploy_env: 'dev', team: nil, dr_site: nil)
   begin
-    compile_catalog(facts, environment: environment, csp: csp, managed: managed)
+    compile_catalog(facts, environment: environment, csp: csp, managed: managed, deploy_env: deploy_env, team: team, dr_site: dr_site)
   rescue Puppet::Error => e
     assert(e.message.include?(message), "Unexpected compilation failure: #{e.message}")
     return
@@ -75,12 +78,10 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   %w[dev prd].product(platforms, gpu_states, %w[role::base role::gpu_svr], %w[aws gcp kc]).each do |env, platform, gpu, role, csp|
     present, mig = gpu
     facts = {
-      'deploy_env' => env,
-      'team' => 'devops',
       'os' => platform,
       'gpu' => { 'present' => present, 'mig' => { 'configured' => mig } },
     }
-    catalog = compile_catalog(facts, [role], csp: csp)
+    catalog = compile_catalog(facts, [role], csp: csp, deploy_env: env, team: 'devops', dr_site: 'primary')
     gpu_profile = catalog.resource('Class', 'Profile::Gpu_system')
     assert(!gpu_profile.nil? == (role == 'role::gpu_svr'), 'Wrong GPU Profile selection')
     packages = catalog.resources.select { |r| r.type == 'Package' }.map(&:title).sort
@@ -94,23 +95,35 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
     assert(catalog.resources.none? { |r| r.type == 'Exec' }, 'Unexpected executable resource')
   end
 
+  # Policy parameters cannot be supplied or overridden by node Facts.
+  expect_failure(valid = { 'os' => os, 'deploy_env' => 'dev' }, 'deploy_env ENC parameter must be', deploy_env: :absent)
+  expect_failure({ 'os' => os }, 'deploy_env ENC parameter must be', deploy_env: 'sandbox')
+  expect_failure({ 'os' => os }, 'team ENC parameter must be', team: false)
+  expect_failure({ 'os' => os }, 'team ENC parameter must be', team: '')
+  expect_failure({ 'os' => os }, 'team ENC parameter must be', team: 'null')
+  expect_failure({ 'os' => os }, 'dr_site ENC parameter must be', dr_site: 'other')
+  [nil, 'devops', 'data_infra'].product([nil, 'primary', 'secondary']).each do |team, dr_site|
+    compile_catalog({ 'os' => os, 'team' => false, 'dr_site' => 'other', 'deploy_env' => 'prd' },
+                    team: team, dr_site: dr_site)
+  end
+
   # GPU/MIG facts are optional telemetry and must not gate the base catalog.
-  valid = { 'deploy_env' => 'dev', 'os' => os }
+  valid = { 'os' => os }
   compile_catalog(valid)
   unclassified = compile_catalog(valid, [])
   assert(unclassified.resources.none? { |r| %w[Package File].include?(r.type) },
          'Unclassified node must not receive managed resources')
 
-  expect_failure(valid.reject { |k, _| k == 'deploy_env' }, 'deploy_env must be dev or prd')
-  expect_failure(valid.merge('deploy_env' => 'production'), 'deploy_env must be dev or prd')
-  expect_failure(valid.merge('deploy_env' => '../common'), 'deploy_env must be dev or prd')
+  expect_failure(valid, 'deploy_env ENC parameter must be', deploy_env: :absent)
+  expect_failure(valid, 'deploy_env ENC parameter must be', deploy_env: 'production')
+  expect_failure(valid, 'deploy_env ENC parameter must be', deploy_env: '../common')
   expect_failure(valid.merge('os' => os.merge('name' => 'Debian')), 'supports Ubuntu, Rocky or Amazon only')
   expect_failure(valid.merge('os' => os.merge('release' => { 'full' => '23.10' })),
                  'supports Ubuntu 20.04, 22.04, 24.04 or 26.04 only')
   expect_failure(valid.merge('os' => os.merge('architecture' => 's390x')),
                  'supports Ubuntu os.architecture amd64 or arm64 only')
   expect_failure(valid, 'deploy_env does not match', environment: 'production')
-  expect_failure(valid.merge('deploy_env' => 'prd'), 'deploy_env does not match', environment: 'development')
+  expect_failure(valid, 'deploy_env does not match', deploy_env: 'prd', environment: 'development')
   expect_failure(valid, 'supports Puppet environments development or production only', environment: 'unsupported')
   expect_failure(valid.merge('os' => { 'name' => 'Rocky', 'release' => { 'full' => '7.9' }, 'architecture' => 'x86_64' }),
                  'supports Rocky 8 or 9 only')
@@ -217,7 +230,7 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
   FileUtils.mkdir_p(File.join(code, 'data', 'csp', 'aws'))
   File.write(File.join(code, 'data', 'csp', 'aws', 'prd.yaml'), { key => "csp+environment\n" }.to_yaml)
   %w[aws gcp kc].product(%w[dev prd]).each do |csp, env|
-    catalog = compile_catalog(valid.merge('deploy_env' => env), csp: csp)
+    catalog = compile_catalog(valid.merge('deploy_env' => (env == 'dev' ? 'prd' : 'dev')), csp: csp, deploy_env: env)
     expected = if csp == 'aws'
                  env == 'prd' ? "csp+environment\n" : "csp\n"
                else
@@ -226,6 +239,6 @@ Dir.mktmpdir('foreman-puppet-catalog-') do |root|
     content = catalog.resource('File', '/etc/foreman-puppet/example.txt')[:content]
     assert(content == expected, "Wrong hierarchy precedence for #{csp}/#{env}: #{content.inspect}")
   end
-  puts 'Passed: 960 base combinations; team/unmanaged roles; opt-in SSH policy; host/profile exclusion and Boolean validation; 17 platform rejection cases; 6 hierarchy precedence cases.'
+  puts 'Passed: 960 base combinations; team/unmanaged roles; opt-in SSH policy; host/profile exclusion and Boolean validation; platform rejection and ENC ownership cases; 6 hierarchy precedence cases.'
 
 end

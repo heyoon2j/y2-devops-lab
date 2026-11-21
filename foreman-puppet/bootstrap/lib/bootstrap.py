@@ -254,16 +254,12 @@ class Plan:
         ca_server = self.host('ca_fqdn')
         certname = self.host('certname')
         env = self.get('puppet_environment')
-        deploy_env = self.get('deploy_env')
-        if (env, deploy_env) not in (('development', 'dev'), ('production', 'prd')):
-            self.errors.append('Environment must be development/dev or production/prd')
+        if env not in ('development', 'production'):
+            self.errors.append('Environment must be development or production')
+        for key in ('deploy_env', 'team', 'dr_site'):
+            if key in self.cfg:
+                self.errors.append('Move ' + key + ' to Foreman host parameters; Agent config does not write policy Facts')
         self.certificates()
-        facts = {'deploy_env': deploy_env}
-        team = self.get('team')
-        if team:
-            if not isinstance(team, str) or not re.fullmatch(r'[a-z][a-z0-9_-]*', team):
-                self.errors.append('Invalid team fact')
-            facts['team'] = team
         values = {'puppet_fqdn': server, 'ca_fqdn': ca_server, 'certname': certname,
                   'puppet_environment': env}
         values.update(self.get('tls', {}))
@@ -279,13 +275,6 @@ class Plan:
                 self.errors.append('Required Agent setting: ' + key)
         self.operations.append({'type': 'puppetconf', 'content': content, 'settings': settings,
                                 'source': 'config/agent/puppet.conf.tmpl'})
-        content = self.render('agent/facts.json.tmpl', {
-            'deploy_env_json': json.dumps(deploy_env),
-            'team_entry': ',\n  "team": ' + json.dumps(team) if team else ''})
-        if json.loads(content) != facts:
-            self.errors.append('Facts template must contain only the declared deploy_env/team')
-        self.file('/etc/puppetlabs/facter/facts.d/foreman_puppet.json', content)
-        self.operations[-1]['source'] = 'config/agent/facts.json.tmpl'
         # Deliberately no CSR/signing, first apply, service enable or service start.
 
     def build(self):

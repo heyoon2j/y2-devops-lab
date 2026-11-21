@@ -50,5 +50,8 @@ first_agent:
   certname: null
   host_group: aws
   role: role::base
-  deploy_env: dev
+  parameters:  # Foreman ENC host parameters, not external Facts
+    deploy_env: dev
+    team: null
+    dr_site: primary
   puppet_environment: development

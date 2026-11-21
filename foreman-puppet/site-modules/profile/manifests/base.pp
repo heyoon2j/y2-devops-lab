@@ -10,8 +10,18 @@ class profile::base (
       fail('csp ENC parameter must be aws, gcp or kc; set it on the Foreman Host Group')
     }
 
-    if $facts['deploy_env'] !~ Enum['dev', 'prd'] {
-      fail('deploy_env must be dev or prd; create the external fact before the first Puppet run')
+    # Central Foreman parameters; node-supplied Facts never select these values.
+    $deploy_env_value = getvar('::deploy_env')
+    $team_value = getvar('::team')
+    $dr_site_value = getvar('::dr_site')
+    if $deploy_env_value !~ Enum['dev', 'prd'] {
+      fail('deploy_env ENC parameter must be dev or prd; set it on the Foreman host')
+    }
+    if $team_value != undef and ($team_value == 'null' or $team_value !~ Pattern[/^[a-z][a-z0-9_-]*$/]) {
+      fail('team ENC parameter must be a team name or unset')
+    }
+    if $dr_site_value != undef and $dr_site_value !~ Enum['primary', 'secondary'] {
+      fail('dr_site ENC parameter must be primary, secondary or unset')
     }
 
     $expected_deploy_env = $environment ? {
@@ -19,7 +29,7 @@ class profile::base (
       'production'  => 'prd',
       default       => fail('profile::base supports Puppet environments development or production only'),
     }
-    if $facts['deploy_env'] != $expected_deploy_env {
+    if $deploy_env_value != $expected_deploy_env {
       fail('deploy_env does not match the Puppet code environment assigned to this node')
     }
 

@@ -14,7 +14,7 @@ foreman-puppet/                         # Puppet 코드 환경 하나의 루트
 ├── data/                               # 코드에서 분리한 설정값(YAML)
 │   ├── common.yaml                     # 모든 환경에 공통인 기본값
 │   ├── csp/                           # CSP별 데이터: aws.yaml, gcp.yaml, kc.yaml
-│   └── deploy_env/                     # deploy_env Fact에 따른 환경별 데이터
+│   └── deploy_env/                     # deploy_env ENC 파라미터에 따른 환경별 데이터
 │       ├── dev.yaml                    # 개발 환경의 덮어쓰기 값
 │       └── prd.yaml                    # 운영 환경의 덮어쓰기 값; 현재 공통값 상속
 ├── site-modules/                       # 이 프로젝트가 직접 작성한 Puppet 모듈
@@ -59,7 +59,7 @@ foreman-puppet/                         # Puppet 코드 환경 하나의 루트
 Puppet Server의 `/etc/puppetlabs/code/environments/development/`와
 `/etc/puppetlabs/code/environments/production/`에 각각 검증할 코드와 승인된 코드를 배포한다.
 저장소 전체를 이 경로에 복사하지 않고 이 하위 디렉터리의 내용만 배포한다.
-Puppet Environment는 코드 버전 선택이고 `deploy_env`는 호스트의 환경 Fact다.
+Puppet Environment는 코드 버전 선택이고 `deploy_env`는 호스트의 환경 파라미터다.
 등록 단계에서 두 값을 함께 지정하고, 공통 Role이 매핑 일치 여부를 검증한다.
 상세 매핑은 [Host Group과 코드 환경](ENVIRONMENTS.md)을 참고한다.
 
@@ -98,14 +98,14 @@ Hiera는 이 최상위 파라미터로 CSP별 데이터를 선택한다. 노드�
 | `profile::packages` | Hiera의 패키지 목록을 `ensure => installed`로 관리 |
 | `profile::example_file` | Hiera 예시 파일 생성·이전 진단 파일 삭제 |
 
-`csp` ENC 파라미터는 `aws/gcp/kc`, `deploy_env` Fact는 `dev/prd`만 허용한다.
+`csp` ENC 파라미터는 `aws/gcp/kc`, `deploy_env` ENC 파라미터는 `dev/prd`만 허용한다.
 지원 코드 범위는 Ubuntu 20.04·22.04·24.04·26.04(`amd64/arm64`), Rocky 8·9와 Amazon Linux 2·2023(`x86_64/aarch64`)다. 실제 패키지/OS 적용은 [호환성 문서](OS_COMPATIBILITY.md)의 별도 검증 대상이다.
 `development ↔ dev`, `production ↔ prd` 매핑도 검증한다.
 지원하지 않는 조합은 컴파일을 거부한다. 실제 Agent의 OS 지원은 설치 단계에서 별도 검증한다.
 
 `gpu.present`와 `gpu.mig.configured`는 Foreman의 관측 정보다. 기본 Role은 이 Fact의 유무와 값에
 따라 MIG를 생성·삭제하거나 GPU 드라이버를 변경하지 않는다. 수집기는 후속 단계에서 구현한다.
-`deploy_env` Fact 파일도 user-data 소유로 유지한다.
+deploy_env/team/dr_site는 Foreman 최상위 ENC 파라미터이며 외부 Facts 파일로 배포하지 않는다.
 
 ## Host Group에 여러 Role을 배정할 수 있는가?
 
@@ -145,9 +145,9 @@ DB·Hadoop 등 필요가 생기면 기능별 Profile을 추가하고 필요한 R
 
 조회 우선순위는 다음과 같다.
 
-1. `data/csp/%{::csp}/%{facts.deploy_env}.yaml` (필요할 때 생성)
+1. `data/csp/%{::csp}/%{::deploy_env}.yaml` (필요할 때 생성)
 2. `data/csp/%{::csp}.yaml`
-3. `data/deploy_env/%{facts.deploy_env}.yaml`
+3. `data/deploy_env/%{::deploy_env}.yaml`
 4. `data/common.yaml`
 
 Class의 자동 파라미터 조회(APL)로 `profile::packages::packages`를 주입한다.

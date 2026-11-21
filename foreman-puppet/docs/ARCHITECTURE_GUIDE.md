@@ -67,10 +67,18 @@ Remote Execution·Ansible·Katello는 현재 설치 범위에 포함하지 않�
 Foreman 공식 5.0 Quickstart의 OpenVox 8 경로와 차이가 있으므로 선택 버전의 보안 수정 여부와
 Foreman 연동 호환성 검증은 별개로 진행한다.
 
+## 중앙 분류 파라미터와 자동 Facts
+
+2026-11-21 결정: deploy_env(dev/prd), team(미정은 null/미설정), dr_site(primary/secondary 또는 미설정)는
+Foreman 호스트 파라미터로 관리한다. user-data는 최초 등록 입력만 전달하며 등록 후 중앙 값을
+덮어쓰지 않는다. csp는 CSP Host Group의 ENC 파라미터를 상속한다. 자동 Facts는 OS·Arch·GPU/MIG다.
+Hiera는 ::deploy_env와 ::csp로 조회하고 Role은 호스트에 배정한 Class로 결정한다.
+sandbox는 TODO로 유지한다. 저장 위치·변경·이전 절차는 [조회·등록 관계](LOOKUP_AND_REGISTRATION.md)를 따른다.
+
 ## 설치 자동화 언어와 현재 구현 상태
 
 **설치 자동화는 Bash + 설정 파일 + Foreman Installer를 사용하고, 별도 Python/PyYAML 버전 관리를
-추가하지 않는 방향**으로 한다. APT/YUM 저장소, 서버 answers YAML, Agent puppet.conf·Facts 파일을
+추가하지 않는 방향**으로 한다. APT/YUM 저장소, 서버 answers YAML, Agent puppet.conf를
 설정 원본으로 유지한다. YAML 병합 등 구조화된 처리는 Installer 환경의 Ruby를 활용하는 방향이다.
 Foreman·OpenVox 운영 자체에 이 프로젝트 전용 Python 실행기가 필수인 것은 아니다.
 

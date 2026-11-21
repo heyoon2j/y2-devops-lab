@@ -39,20 +39,11 @@ data/common.yaml         # 전체 공통값
 배열도 별도 merge 설정 없이는 통째로 교체한다.
 CSP 기본값보다 환경별 예외가 우선해야 한다면 `data/csp/<csp>/<env>.yaml`에 명시한다.
 
-## 팀 Fact
+## 중앙 환경·팀·DR 파라미터
 
-user-data가 만드는 외부 Facts 파일에 다음 정보를 함께 기록할 수 있다.
-
-```yaml
-# /etc/puppetlabs/facter/facts.d/deployment.yaml
-deploy_env: dev
-team: devops
-```
-
-`team`은 Foreman 표시·검색·관리 대상 확인을 위한 선택적 문자열 Fact다.
-Role 또는 Host Group을 자동 선택하지 않으며 인증서 승인·권한 부여의 근거도 아니다.
-노드가 수정할 수 있는 값이므로 신뢰할 소유권 정보가 필요하면 Foreman/IaC의 관리 데이터와
-별도로 대조한다. 현재 Hiera에는 팀별 계층을 추가하지 않는다.
+deploy_env/team/dr_site는 Foreman 호스트 파라미터다. 최초 user-data 등록 입력으로 전달하고
+이후에는 Foreman 웹/API에서 관리한다. team 미정은 null/미설정으로 처리하며 Role을 자동 선택하지 않는다.
+현재 Hiera에는 팀별·DR별 계층을 추가하지 않는다. OS·Arch·GPU/MIG만 자동 수집 Facts다.
 
 ## DNS / NTP 정책
 
@@ -96,7 +87,7 @@ SSH는 기본 비활성으로 구현했으며 나머지는 후속 계획이다.
 | Zabbix | `profile::zabbix` | Agent 종류·버전·서버 주소·호스트 식별자·TLS 방식 |
 | Puppet | `profile::puppet_agent` | 서버·코드 환경·실행 주기·첫 등록/정기 실행 구분. 인증서 설정은 후속 단계 |
 
-최초 등록 전 필요한 Puppet 접속값과 `deploy_env/team` Fact는 이미지/user-data에서 준비한다.
+최초 등록 전 Puppet 접속값과 Foreman deploy_env/team/dr_site 파라미터를 등록 자동화에서 준비한다.
 Puppet의 사후 관리 Profile에만 넣어 첫 접속 자체가 불가능해지는 순환 의존을 만들지 않는다.
 DB/Hadoop/GPU용 추가 시스템 정책은 필요할 때 별도 Profile로 조합한다.
 모든 서비스 설정 Profile은 [서비스 설정 변경 정책](SERVICE_CHANGE_POLICY.md)에 따라

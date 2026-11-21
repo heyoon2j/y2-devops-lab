@@ -107,27 +107,20 @@ class BootstrapTest(unittest.TestCase):
             m.merge_agent_content('[agent]\nserver = old.internal\n', '[main]\nserver = new.internal\n')
         with self.assertRaises(ValueError): m.read_yaml('puppet: true\npuppet: false\n')
 
-    def test_optional_team_can_be_omitted(self):
-        cfg = fixture(True)
-        cfg.pop('team', None)
-        plan = m.Plan(cfg, 'agent-config').build()
-        self.assertFalse(plan.errors)
-        self.assertEqual(json.loads(plan.operations[1]['content']), {'deploy_env': 'dev'})
-
-    def test_agent_identity_facts_and_no_automatic_execution(self):
+    def test_agent_config_does_not_write_policy_facts(self):
         cfg = fixture(True)
         plan = m.Plan(cfg, 'agent-config').build()
         self.assertFalse(plan.errors)
-        self.assertFalse(any(o['type'] == 'command' for o in plan.operations))
+        self.assertEqual([op['type'] for op in plan.operations], ['puppetconf'])
         settings = plan.operations[0]['settings']
         self.assertEqual(settings['certname'], 'node.dev.internal')
         self.assertEqual(settings['waitforcert'], '0')
         self.assertEqual(settings['usecacheonfailure'], 'false')
-        self.assertNotIn('pluginsync', settings)  # Removed in OpenVox 9.
-        facts = json.loads(plan.operations[1]['content'])
-        self.assertEqual(facts, {'deploy_env': 'dev', 'team': 'devops'})
-        self.assertNotIn('role', facts)
-        cfg['deploy_env'] = 'prd'
+        self.assertNotIn('pluginsync', settings)
+        for key in ('deploy_env', 'team', 'dr_site'):
+            legacy = dict(cfg, **{key: None})
+            self.assertTrue(m.Plan(legacy, 'agent-config').build().errors)
+        cfg['puppet_environment'] = 'sandbox'
         self.assertTrue(m.Plan(cfg, 'agent-config').build().errors)
 
     def test_bad_os_key_and_hostname_are_rejected(self):

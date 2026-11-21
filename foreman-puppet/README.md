@@ -51,11 +51,12 @@ Foreman/Puppet 설치, 등록 템플릿, GPU/MIG Custom Fact 수집기 및 실�
 - Foreman의 Boolean `puppet_managed` 파라미터로 이 프로젝트의 설정 적용/제외를 제어한다.
 - Host Group은 CSP만 구분한다. 최상위 그룹으로 `aws`, `gcp`, `kc`를 만든다.
 - Host Group의 `csp` 파라미터를 ENC로 전달해 CSP별 Hiera 데이터를 선택한다.
-- 팀 표시는 선택적 `team` Fact(예: `devops`)를 사용한다.
-- 개발·운영은 `deploy_env` Custom Fact의 `dev`, `prd` 값으로 표시한다.
+- 팀 표시는 Foreman의 선택적 `team` 파라미터(미정은 null/미설정)를 사용한다.
+- 개발·운영은 Foreman의 `deploy_env` ENC 파라미터 `dev/prd`로 구분한다.
+- DR 사이트는 Foreman의 `dr_site` 파라미터 `primary/secondary`로 구분하며 미설정도 허용한다.
 - OS와 아키텍처는 Facter 기본 Facts를 사용한다.
 - GPU 관련 정보는 GPU 존재 여부인 `gpu.present`와 실제 MIG 인스턴스 구성 여부인 `gpu.mig.configured` Custom Facts로 수집한다.
-- Puppet Environment는 코드 선택 기준이다. 환경 Fact와 자동으로 연결하지 않는다.
+- Puppet Environment는 코드 선택 기준이다. 환경 파라미터와 자동으로 연결하지 않는다.
 - 적용할 Puppet Class는 Foreman의 Host Group 또는 개별 호스트에서 명시적으로 배정한다.
 
 ```text
@@ -65,8 +66,9 @@ Host Groups
 └── kc
 
 각 그룹의 호스트
-├── deploy_env: dev 또는 prd
-├── team: devops (선택적 Fact)
+├── Foreman deploy_env: dev 또는 prd
+├── Foreman team: devops 또는 null/미설정
+├── Foreman dr_site: primary/secondary 또는 미설정
 ├── os: Facter 기본 Fact
 ├── os.architecture: Facter 기본 Fact
 ├── gpu.present: Custom Fact
@@ -85,8 +87,9 @@ Foreman API나 등록 명령의 실제 인자 이름은 아니다.
 | `PUPPET_MANAGED` | 필수 | Boolean `true/false` | 등록 자동화가 Foreman ENC 파라미터로 지정한다. 기본 대상은 전역 Boolean true를 준비하며 Fact로 넣지 않는다. |
 | `HOST_GROUP` | 필수 | `aws`, `gcp`, `kc` | Foreman 등록 시 지정한다. Fact로 보내는 값이 아니다. |
 | `PUPPET_ROLE` | 필수 | `role::base`, `role::unmanaged`, `role::devops`, `role::data_infra` | user-data 등록 자동화가 Foreman 호스트에 Role Class 하나를 배정한다. Fact는 아니다. |
-| `TEAM` | 선택 | `devops` | 표시·검색용 `team` 외부 Fact를 생성한다. 인증/권한 근거로 사용하지 않는다. |
-| `DEPLOY_ENV` | 필수 | `dev`, `prd` | `deploy_env` 외부 Fact 파일을 만든다. |
+| `TEAM` | 선택 | 팀명 또는 null | Foreman 호스트 파라미터. null은 미설정이며 Role을 자동 선택하지 않는다. |
+| `DEPLOY_ENV` | 필수 | `dev`, `prd` | Foreman 최상위 ENC 파라미터로 등록한다. |
+| `DR_SITE` | 선택 | `primary`, `secondary` | Foreman 호스트 파라미터. 기본값 없이 미설정도 허용한다. |
 | `PUPPET_ENV` | 필수 | `development`, `production` | `dev/development`, `prd/production` 매핑으로 Foreman 호스트와 Agent의 코드 환경을 설정한다. Fact는 아니다. |
 | `FOREMAN_URL` | 필수 | `https://foreman.example.internal` | 등록 요청 대상. 개발·운영 관리 서버가 분리되면 환경에 맞는 주소를 전달한다. |
 | `PUPPET_SERVER` | 필수 | `puppet.example.internal` | Agent의 Puppet Server 연결 대상이다. |
@@ -105,8 +108,6 @@ Puppet Environment는 등록 시 Foreman 호스트와 Agent에 명시한다.
 
 | Fact 경로 | 출처 | user-data의 역할 | 예시 / 데이터 규약 |
 | --- | --- | --- | --- |
-| `deploy_env` | 외부 Custom Fact | 필수 입력값을 파일로 생성 | 문자열 `dev` 또는 `prd` |
-| `team` | 외부 Custom Fact | 선택 입력값을 파일에 기록 | 문자열 `devops` 등 |
 | `os.name` | Facter 기본 Fact | 직접 지정하지 않음 | `Ubuntu`, `Rocky` |
 | `os.release.full` | Facter 기본 Fact | 직접 지정하지 않음 | `20.04`, `24.04`, `26.04`, Rocky `8.x/9.x`의 실제 수집값 |
 | `os.architecture` | Facter 기본 Fact | 직접 지정하지 않음 | Ubuntu `amd64/arm64`, Rocky `x86_64/aarch64`의 실제 수집값 확인 |
@@ -138,32 +139,31 @@ gpu:
 `os.architecture`와 `processors.isa`는 표현이 다를 수 있으므로 혼용하지 않는다.
 실제 도입할 Agent/Facter 버전에서 키와 값을 확인한 뒤 조건식에 사용한다.
 
-### Ubuntu 24.04 user-data 예시
+### Ubuntu 24.04 최초 등록 입력 예시
 
-AWS 개발 노드의 환경 Fact를 생성하는 cloud-init 조각이다.
-Foreman 등록·Puppet 설치까지 실행하는 완성된 부트스트랩 스크립트는 아니다.
+다음은 등록 자동화에 전달할 논리 입력이며 실제 Foreman API 요청 형식은 아니다.
+등록 자동화는 아직 구현 전이다. deploy_env/team/dr_site의 외부 Facts 파일은 생성하지 않는다.
 
 ```yaml
-#cloud-config
-write_files:
-  - path: /etc/puppetlabs/facter/facts.d/deployment.yaml
-    owner: root:root
-    permissions: '0644'
-    content: |
-      deploy_env: dev
-      team: devops
+host_group: aws
+role: role::base
+puppet_environment: development
+parameters:
+  deploy_env: dev
+  team: null
+  dr_site: primary
+  puppet_managed: true
 ```
 
-이 노드의 등록 입력은 `HOST_GROUP=aws`, `DEPLOY_ENV=dev`이다.
-운영 노드는 Host Group을 그대로 두고 Fact 값을 `prd`로 바꾼다.
-GCP와 KC도 동일한 Fact 구조를 사용하고 Host Group만 각각 `gcp`, `kc`로 지정한다.
-환경 Fact는 첫 Puppet 실행 전에 생성하며 재부팅 시에도 유지한다.
+csp=aws는 Host Group에서 상속한다. 이후 환경·팀·DR 사이트·Role 변경은 Foreman 웹/API에서
+수행하며 서버의 최초 user-data 값으로 다시 덮어쓰지 않는다.
+자동 수집 Facts는 OS·Arch·GPU/MIG이며, [파라미터와 Facts의 분리 기준](docs/LOOKUP_AND_REGISTRATION.md)을 따른다.
 
 ## 구성 요소와 연결
 
 ```mermaid
 flowchart LR
-    I["클라우드 / IaC"] -->|"user-data: CSP, 환경, 접속 정보"| N["Ubuntu 24.04 노드\nPuppet Agent + Facter"]
+    I["클라우드 / IaC"] -->|"user-data: 최초 등록 입력, 접속 정보"| N["Ubuntu 24.04 노드\nPuppet Agent + Facter"]
     N -->|"HTTPS 등록 + Host Group 지정"| F["Foreman\nHost Groups: aws / gcp / kc"]
     N -->|"Facts + Catalog 요청"| P["Puppet Server / CA"]
     P -->|"ENC: 노드 분류 조회"| F
@@ -177,7 +177,7 @@ flowchart LR
 | 구성 요소 | 책임 |
 | --- | --- |
 | 클라우드 / IaC | CSP·환경을 결정하고 user-data를 제공한다. |
-| user-data / cloud-init | 환경 Fact 생성, Agent 준비, Foreman 등록 및 Agent 설정을 수행한다. |
+| user-data / cloud-init | 환경 파라미터 생성, Agent 준비, Foreman 등록 및 Agent 설정을 수행한다. |
 | Foreman | Host Group, 호스트, Facts, Class 배정, Parameters와 적용 결과를 관리한다. |
 | Puppet Server / CA | 인증서 수명 주기, ENC 조회, Catalog 컴파일, Facts·Report 전달을 담당한다. |
 | Puppet Agent / Facter | Facts 수집, Catalog 요청·적용, Report 제출을 수행한다. |
@@ -192,7 +192,7 @@ Facts와 Report는 일반적인 Puppet 연동에서 Agent → Puppet Server → 
 1. Foreman 전역 Boolean `puppet_managed=true`를 준비하고, `aws`, `gcp`, `kc` Host Group을 생성하고 각각 같은 이름의 `csp` 파라미터를 설정한 뒤 Classes를 가져온다. 각 호스트에 [서버 Role 구성](docs/ROLES.md)의 Role 하나를 배정한다.
 2. Puppet Server의 ENC, Facts 업로드, Report 업로드 연동을 구성한다.
 3. 클라우드 생성 단계에서 Host Group, 환경, 접속 대상과 고유한 certname을 결정한다.
-4. user-data가 입력값을 검증하고 환경 Fact 파일을 생성한다.
+4. user-data가 입력값을 검증하고 환경 파라미터 파일을 생성한다.
 5. 검증된 Agent 패키지와 GPU/MIG Fact 수집기를 설치하고 Puppet Server·certname을 설정한다.
 6. Foreman 등록 절차를 실행하여 지정한 Host Group으로 호스트를 등록한다.
 7. Agent가 인증서를 요청하고 승인 정책에 따라 서명받는다.
@@ -202,7 +202,7 @@ Facts와 Report는 일반적인 Puppet 연동에서 Agent → Puppet Server → 
 Foreman Global Registration을 사용할 경우 선택한 버전과 등록 템플릿의
 Ubuntu 24.04/Puppet 지원을 먼저 확인하고 생성된 등록 명령을 활용한다.
 패키지 설치와 등록의 구체적 순서는 템플릿에 따라 통합할 수 있으나,
-첫 설정 적용 전에 환경 Fact와 호스트 분류가 준비되어야 한다.
+첫 설정 적용 전에 환경 파라미터와 호스트 분류가 준비되어야 한다.
 
 등록 재실행은 동일한 certname의 기존 호스트를 확인하도록 설계한다.
 중복 호스트 생성이나 인증서 삭제·재발급을 무조건 수행하지 않는다.
@@ -238,7 +238,7 @@ Host Group이 CSP만 표현하므로, 같은 CSP에서 모든 노드에 적용�
 
 개발은 관리 서버 1대에 먼저 구성하고, 검증 후 운영에 이중화 구성을 구축한다.
 인증서는 사내 CA 신뢰 체계를 사용한다. 개발·운영의 Host Group 이름은 동일하게 유지한다.
-user-data에는 환경에 맞는 접속 대상을 전달한다. 노드가 보낸 환경 Fact 자체는
+user-data에는 환경에 맞는 접속 대상을 전달한다. 노드가 보낸 환경 파라미터 자체는
 등록 권한이나 운영 인증서 발급을 허가하는 근거로 사용하지 않는다.
 
 ## 통신 및 등록 조건
@@ -269,9 +269,9 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
 ## 도입 검증 기준
 
 1. 각 CSP의 테스트 노드가 지정된 Host Group에 한 번만 등록된다.
-2. 동일 Host Group 안에서 환경 Fact로 `dev`, `prd` 노드를 구분할 수 있다.
+2. 동일 Host Group 안에서 환경 파라미터로 `dev`, `prd` 노드를 구분할 수 있다.
 3. `facter os`로 Ubuntu 24.04 및 실제 아키텍처를 확인한다.
-4. `facter deploy_env`로 환경 값이 입력과 일치하는지 확인한다.
+4. Foreman 최종 ENC에서 deploy_env/team/dr_site의 유효값과 코드 환경 조합을 확인한다.
 5. GPU 유무와 MIG GI 구성·미구성(모드만 활성화 포함)·미지원·다중 GPU 부분 조회 실패 사례가 `true`/`false`/`null` 규약대로 수집된다.
 6. Foreman에 Facts와 Report가 도착하고, 선택한 Class의 설정이 실제로 적용된다.
 7. 변경 없는 두 번째 Puppet 실행에서 의도하지 않은 변경이 발생하지 않는다.
@@ -286,7 +286,7 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
   bootstrap/Catalog 입력 검증, Puppet Environment 배정 조합, CSP별·환경별 Hiera 데이터,
   테스트·등록 예시를 함께 확장한다. sandbox Fact 추가만으로 코드 환경이 자동 생성되지는 않는다.
 
-당장 준비할 항목은 dr_site 입력·검증·파일 생성, team=null의 키 생략/기존 값 해제 검증,
+당장 준비할 항목은 Foreman의 deploy_env/team/dr_site API 배정 및 null·상속·ENC 전달 검증,
 GPU/MIG 자동 수집 및 조회 실패 처리, 최초 Foreman API 등록과 재등록 시 중앙 정책 보존이다.
 Facts 개수를 더 늘리기보다 현재 항목의 수집·변경·등록 흐름을 먼저 검증한다.
 user-data/자동 수집/외부 Facts의 차이는 [분리 기준과 수집 방식](docs/LOOKUP_AND_REGISTRATION.md)을 따른다.

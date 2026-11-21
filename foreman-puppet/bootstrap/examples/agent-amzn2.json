@@ -8,8 +8,6 @@
   "ca_fqdn": null,
   "certname": null,
   "puppet_environment": "development",
-  "deploy_env": "dev",
-  "team": "devops",
   "repository_keys": {
     "openvox": "0E26429987002418F9513F2A5FB999C2D62FF3D9"
   },

@@ -20,7 +20,7 @@ PUPPET_ENV=development
 
 Foreman Boolean puppet_managed가 true일 때 아래 설정을 적용한다. false이면 Role의 작업을
 건너뛰며, 누락/문자열 값은 오류다. 등록 자동화가 이 입력을 받아 Foreman 호스트에 Host Group·Role Class·코드 환경을
-설정하고, Agent 설정과 `deploy_env` 외부 Fact를 준비하는 방식으로 구현한다.
+설정하고, deploy_env/team/dr_site를 Foreman 호스트 파라미터로 배정하는 방식으로 구현한다. Agent에는 접속 설정만 준비한다.
 `PUPPET_ROLE`은 Fact가 아니며 Foreman 기본 API 인자 이름도 아니다.
 신규 서버에는 서버 Role 구성표의 Role 하나를 지정한다. 아래는 기존 GPU 호환 예제다.
 수집된 GPU Facts로 Role을 자동 변경하지 않는다.
@@ -29,10 +29,10 @@ Foreman Boolean puppet_managed가 true일 때 아래 설정을 적용한다. fal
 flowchart LR
     U["user-data 입력\naws / role::gpu_svr / dev / development"] --> R["등록 자동화\n후속 구현"]
     R --> F["Foreman 호스트\nHost Group: aws\nRole: role::gpu_svr\nEnvironment: development"]
-    R --> A["Agent 설정\ndeploy_env Fact: dev"]
+    R --> A["Agent 접속 설정"]
     A -->|"Catalog 요청 + Facts"| P["Puppet Server"]
     P -->|"ENC 조회"| F
-    F -->|"Role Class + 코드 환경"| P
+    F -->|"Role Class + 코드 환경 + 호스트 파라미터 + ENC 파라미터"| P
 ```
 
 ## 2. 읽어볼 파일 지도
