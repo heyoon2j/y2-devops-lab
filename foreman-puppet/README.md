@@ -282,11 +282,20 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
 
 ## 추후 TODO
 
+- [ ] 공통 등록 서비스: CSP별 신원 검증·인벤토리/정책 대조 후 Foreman 및 Zabbix에 등록한다.
+  시스템별 상태·부분 실패 재시도·중복 방지·기존 중앙 정책 보존을 포함한다. 지금은 구축하지 않는다.
+- [ ] Zabbix 연동: 공통 입력을 Host Group·Template·Tags에 별도 매핑하고 첫 데이터 수신을 확인한다.
+  등록 서비스는 Agent의 일상 통신을 중계하지 않는다.
+
 - [ ] sandbox 환경 지원: 현재 deploy_env는 dev/prd로 유지한다. sandbox는 필요 시
   bootstrap/Catalog 입력 검증, Puppet Environment 배정 조합, CSP별·환경별 Hiera 데이터,
-  테스트·등록 예시를 함께 확장한다. sandbox Fact 추가만으로 코드 환경이 자동 생성되지는 않는다.
+  테스트·등록 예시를 함께 확장한다. sandbox 파라미터 추가만으로 코드 환경이 자동 생성되지는 않는다.
 
 당장 준비할 항목은 Foreman의 deploy_env/team/dr_site API 배정 및 null·상속·ENC 전달 검증,
 GPU/MIG 자동 수집 및 조회 실패 처리, 최초 Foreman API 등록과 재등록 시 중앙 정책 보존이다.
 Facts 개수를 더 늘리기보다 현재 항목의 수집·변경·등록 흐름을 먼저 검증한다.
 user-data/자동 수집/외부 Facts의 차이는 [분리 기준과 수집 방식](docs/LOOKUP_AND_REGISTRATION.md)을 따른다.
+
+현재 우선 경로는 **user-data의 등록 스크립트가 Foreman API를 직접 호출**하는 방식이다.
+API 인증은 [등록 인증 설계](docs/LOOKUP_AND_REGISTRATION.md#최초-user-data-등록의-api-인증)에서
+권장한 전용 계정+유효기간이 있는 PAT를 기준으로 검토한다. 실제 등록 실행기는 아직 구현 전이다.

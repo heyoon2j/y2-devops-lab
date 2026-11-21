@@ -103,6 +103,47 @@ Foreman에서 Role을 교체하면 다음 Agent 요청에서 Server가 새 분�
 현재 Hiera와 Catalog는 중앙 파라미터를 사용한다. 최초 API 등록, Foreman UI/API에서 null·상속·ENC
 전달 확인, 실제 Agent 적용은 후속 검증이다. sandbox는 [추후 TODO](../README.md#추후-todo)다.
 
+### 최초 user-data 등록의 API 인증
+
+현재 구현 우선순위는 별도 등록 서비스 없이 user-data의 등록 스크립트가 Foreman API를 직접
+호출하는 것이다. 공통 등록 서비스와 Zabbix 연계는 [추후 TODO](../README.md#추후-todo)다.
+
+권장 인증은 **등록 전용 Foreman 계정 + 만료일을 설정한 Personal Access Token(PAT) + HTTPS**다.
+PAT는 해당 계정 비밀번호 대신 사용하며 API의 HTTP Basic 인증에 사용자명:PAT로 전달한다.
+Bearer 토큰이나 Foreman Global Registration의 JWT와는 다른 방식이다.
+Foreman 5.0 공식 문서는 PAT의 만료일 설정과 폐기를 지원하며 만료일을 생략하면 자동 만료되지 않는다.
+
+- 전용 계정은 관리자가 사전에 만든다. 기존 Host Group·Puppet Environment·Class 등 등록에 필요한
+  참조 정보 조회와 신규 호스트 생성에 필요한 권한만 준비한다. 기존 호스트 조회·신원 대조 범위도
+  정한다. 기존 호스트 수정·삭제나 사용자/Role 관리 권한은 주지 않는 것을 목표로 한다.
+  실제 plugin API 경로와 생성 시 파라미터/Class 배정의 권한 조합은 설치 버전에서 검증한다.
+- PAT는 토큰별 세밀한 범위가 아니라 소유 계정의 유효 권한을 기준으로 취급한다.
+  만료일은 최초 등록 작업 기간에 맞춰 짧게 정하고 배치 완료 시 관리 측에서 폐기한다.
+  PAT 자체는 일회용이나 특정 인스턴스에 묶인 신원 증명이 아니다.
+- user-data에는 토큰 원문을 넣지 않고 비밀 저장소의 참조만 둔다. AWS 초기 구축에서는
+  인스턴스 IAM Role로 허용된 SSM Parameter Store SecureString 또는 Secrets Manager의
+  해당 비밀만 읽는 구성을 권장한다. 암호화 키의 필요한 복호화 권한도 함께 제한한다.
+  Foreman은 AWS IAM을 직접 인증하는 것이 아니며 IAM은 PAT를 가져오는 경로의 인증이다.
+  GCP/KC의 비밀 조회·인증 경로는 해당 CSP에서 별도로 정한다.
+- 가져온 PAT는 root 전용 /run 임시 파일(0600)에 두고 curl --netrc-file 등으로 읽는다.
+  명령행 --user 사용자명:실제토큰, Git·이미지·Facts·일반 로그·cloud-init 출력에 토큰을 남기지 않는다.
+  shell tracing은 끄고 성공/실패 종료 시 임시 파일을 제거한다. 로컬 삭제만으로 원격 PAT가 폐기되지는 않는다.
+- 사내 CA 체인으로 Foreman HTTPS 서버를 검증하고 인증서 검증을 끄지 않는다.
+  등록 API의 계정/PAT 인증과 Agent↔OpenVox Server의 인증서 인증은 별개다.
+- 기존 호스트가 있으면 고유 신원과 중앙 분류를 검증하고 덮어쓰지 않는다. 충돌은 실패로 보고한다.
+  PAT를 읽을 수 있다는 사실만으로 임의 운영 Role 배정이 정당화되지 않으므로 계정 권한·참조 범위와
+  등록 입력 검증을 함께 적용한다. CSP 신원 검증을 중앙에서 수행하는 기능은 공통 서비스 TODO다.
+
+실행 흐름: IaC가 최초 등록 입력과 비밀 참조 전달 → user-data가 비밀 조회 → HTTPS API로
+신규 등록/기존 호스트 검증 → 최종 ENC 확인 → 임시 인증 파일 제거. 인증서 준비와 첫 Puppet Report는
+별도 완료 단계이며 API 호스트 생성만으로 전체 등록 성공으로 보지 않는다.
+
+현재는 인증 방식의 권장안과 구현 경계를 문서화한 상태다. 계정·PAT 발급, 비밀 저장소 생성,
+IAM 설정, API 등록 스크립트 실행은 아직 수행하지 않았다. Foreman Global Registration JWT 경로는
+일반 호스트 CRUD용 PAT와 혼용하지 않고, 사용할 경우 별도의 템플릿/권한·요청 경로를 검증한다.
+
+근거: [Foreman 5.0 REST API — 토큰 인증](https://docs.theforeman.org/5.0/Project_API/index-foreman-deb.html).
+
 ## 2. Hiera에서 무엇을 어디서 찾는가
 
 전체 우선순위는 CSP+환경 → CSP → 환경 → 공통이다. 아래 그림은 해당 CSP 상위 계층에
