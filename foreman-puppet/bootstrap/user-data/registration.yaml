@@ -1,0 +1,7 @@
+#cloud-config
+# Prerequisite: place the reviewed bootstrap artifact under /opt/foreman-puppet
+# and install the pinned OpenVox agent (for its bundled Ruby) before this command.
+# IaC must render registration.json for this particular instance before runcmd.
+# Never insert a PAT into this file. Disable shell tracing in any surrounding script.
+runcmd:
+  - [bash, /opt/foreman-puppet/bootstrap/agent/register.sh, --config, /etc/foreman-bootstrap/registration.json, --apply]

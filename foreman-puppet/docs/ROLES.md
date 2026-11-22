@@ -2,7 +2,7 @@
 
 Foreman 호스트에 아래 Role 중 하나를 배정한다. CSP Host Group은 aws/gcp/kc를 유지한다.
 Role은 user-data의 논리 입력 PUPPET_ROLE을 등록 자동화가 Foreman Class로 배정하는 방식이며,
-실제 등록 자동화는 아직 구현하지 않았다. 팀 Fact로 Role을 자동 선택하지 않는다.
+최초 등록 실행기는 [user-data 등록](USER_DATA_REGISTRATION.md)을 따른다. 실제 Foreman 통합 검증은 남아 있다. 팀 Fact로 Role을 자동 선택하지 않는다.
 
 | 서버 구분 | Foreman Class | puppet_managed (Boolean) | 포함 Profile |
 | --- | --- | --- | --- |

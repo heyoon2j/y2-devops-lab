@@ -107,7 +107,7 @@ Facts/Report 수집을 유지한다. 서비스 상시 감시와 알림은 Zabbix
 | --- | --- |
 | Role·공통/팀 Profile 구성, 적용 제외 스위치 | 코드 구현 및 Catalog 검증 완료 |
 | 최초/지속 관리에서 동일 Profile·Hiera 사용 | 현재 코드 구조로 가능 |
-| user-data 설치·등록, 최초 실행 자동화 | 후속 구현 |
+| user-data 설치·등록, 최초 실행 자동화 | [최초 등록 실행기](USER_DATA_REGISTRATION.md) 구현. 인증서·최초 적용/Report 통합 자동화는 후속 |
 | 성공 Report 검증·목표/단계 저장·미관리 전환 API | 후속 구현 |
 | 실제 OS에서 최초 적용 → 제외 → 재실행 검증 | 후속 검증 |
 

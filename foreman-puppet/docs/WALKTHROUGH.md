@@ -6,8 +6,8 @@
 
 ## 1. 서버 생성과 Foreman 등록
 
-아래는 user-data 등록 자동화에 전달할 논리 입력이다. 아직 실행 가능한 등록 스크립트는
-구현하지 않았으며, 변수만 선언한다고 Foreman에 자동 배정되지는 않는다.
+아래는 user-data 등록 자동화에 전달할 논리 입력이다. 실행 가능한 등록 입력과 명령은 [user-data 등록](USER_DATA_REGISTRATION.md)을 따른다.
+변수만 선언한다고 Foreman에 자동 배정되지는 않는다.
 
 ```text
 HOST_GROUP=aws
@@ -27,7 +27,7 @@ Foreman Boolean puppet_managed가 true일 때 아래 설정을 적용한다. fal
 
 ```mermaid
 flowchart LR
-    U["user-data 입력\naws / role::gpu_svr / dev / development"] --> R["등록 자동화\n후속 구현"]
+    U["user-data 입력\naws / role::gpu_svr / dev / development"] --> R["등록 자동화\nagent/register.sh"]
     R --> F["Foreman 호스트\nHost Group: aws\nRole: role::gpu_svr\nEnvironment: development"]
     R --> A["Agent 접속 설정"]
     A -->|"Catalog 요청 + Facts"| P["Puppet Server"]

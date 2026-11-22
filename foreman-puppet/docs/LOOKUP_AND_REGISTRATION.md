@@ -18,7 +18,7 @@ Facts 영구 저장은 별도 설정에 따르며 이 저장소는 PuppetDB를 �
 
 ```mermaid
 flowchart TD
-    I["IaC / user-data\naws, role::gpu_svr, dev, development"] --> B["등록 자동화\n후속 구현"]
+    I["IaC / user-data\naws, role::gpu_svr, dev, development"] --> B["등록 자동화\nagent/register.sh"]
     B --> F["Foreman 호스트 분류\nHost Group / Role / 코드 환경"]
     B --> A["Agent\n접속 설정만 준비"]
     A --> Q["Facter\nOS / Arch / GPU·MIG"]
@@ -62,7 +62,7 @@ deploy_env·team·dr_site는 자동 측정값이 아니므로 외부 Facts로 �
 user-data는 **최초 설정을 실행하는 수단**이다. 등록 자동화에 deploy_env·team·dr_site와 그룹·Role 등의
 초기값을 전달하고, 등록 자동화가 Foreman에 저장한다. 변수 선언이나 Facts 업로드만으로 등록되지 않는다.
 대상 노드에는 관리자 토큰을 보관하지 않는다. 등록 후에는 Foreman이 기준이며 부트스트랩 재실행이
-과거 user-data 값으로 중앙 정책을 덮어쓰지 않도록 구현한다. API 등록 자동화는 아직 후속 구현이다.
+과거 user-data 값으로 중앙 정책을 덮어쓰지 않도록 구현한다. 최초 API 등록은 [등록 실행기](USER_DATA_REGISTRATION.md)로 수행한다.
 
 ### ENC 전달과 값 검증
 
@@ -100,13 +100,13 @@ Foreman에서 Role을 교체하면 다음 Agent 요청에서 Server가 새 분�
 새 Role 코드는 해당 Environment에 먼저 배포되어 있어야 하며, 빠진 리소스의 삭제·원복은
 별도 선언이 필요하다. 기존 호스트 재등록은 고유 신원과 현재 분류를 검증하고 자동 덮어쓰지 않는다.
 
-현재 Hiera와 Catalog는 중앙 파라미터를 사용한다. 최초 API 등록, Foreman UI/API에서 null·상속·ENC
+현재 Hiera와 Catalog는 중앙 파라미터를 사용한다. 등록 실행기는 구현했으며, 실제 Foreman UI/API에서 null·상속·ENC
 전달 확인, 실제 Agent 적용은 후속 검증이다. sandbox는 [추후 TODO](../README.md#추후-todo)다.
 
 ### 최초 user-data 등록의 API 인증
 
-현재 구현 우선순위는 별도 등록 서비스 없이 user-data의 등록 스크립트가 Foreman API를 직접
-호출하는 것이다. 공통 등록 서비스는 [추후 TODO](../README.md#추후-todo)다.
+현재 [등록 실행기](USER_DATA_REGISTRATION.md)는 별도 등록 서비스 없이 user-data에서 Foreman API를 직접
+호출한다. 공통 등록 서비스는 [추후 TODO](../README.md#추후-todo)다.
 
 권장 인증은 **등록 전용 Foreman 계정 + 만료일을 설정한 Personal Access Token(PAT) + HTTPS**다.
 PAT는 해당 계정 비밀번호 대신 사용하며 API의 HTTP Basic 인증에 사용자명:PAT로 전달한다.
@@ -125,9 +125,9 @@ Foreman 5.0 공식 문서는 PAT의 만료일 설정과 폐기를 지원하며 �
   해당 비밀만 읽는 구성을 권장한다. 암호화 키의 필요한 복호화 권한도 함께 제한한다.
   Foreman은 AWS IAM을 직접 인증하는 것이 아니며 IAM은 PAT를 가져오는 경로의 인증이다.
   GCP/KC의 비밀 조회·인증 경로는 해당 CSP에서 별도로 정한다.
-- 가져온 PAT는 root 전용 /run 임시 파일(0600)에 두고 curl --netrc-file 등으로 읽는다.
+- 구현된 실행기는 SSM에서 가져온 PAT를 Ruby 메모리에서만 사용한다. 임시 인증 파일을 만들지 않는다.
   명령행 --user 사용자명:실제토큰, Git·이미지·Facts·일반 로그·cloud-init 출력에 토큰을 남기지 않는다.
-  shell tracing은 끄고 성공/실패 종료 시 임시 파일을 제거한다. 로컬 삭제만으로 원격 PAT가 폐기되지는 않는다.
+  shell tracing은 끈다. 별도 file 공급 방식을 쓰면 호출자가 root 전용 0600 파일을 정리한다. 로컬 삭제만으로 원격 PAT가 폐기되지는 않는다.
 - 사내 CA 체인으로 Foreman HTTPS 서버를 검증하고 인증서 검증을 끄지 않는다.
   등록 API의 계정/PAT 인증과 Agent↔OpenVox Server의 인증서 인증은 별개다.
 - 기존 호스트가 있으면 고유 신원과 중앙 분류를 검증하고 덮어쓰지 않는다. 충돌은 실패로 보고한다.
@@ -135,10 +135,10 @@ Foreman 5.0 공식 문서는 PAT의 만료일 설정과 폐기를 지원하며 �
   등록 입력 검증을 함께 적용한다. CSP 신원 검증을 중앙에서 수행하는 기능은 공통 서비스 TODO다.
 
 실행 흐름: IaC가 최초 등록 입력과 비밀 참조 전달 → user-data가 비밀 조회 → HTTPS API로
-신규 등록/기존 호스트 검증 → 최종 ENC 확인 → 임시 인증 파일 제거. 인증서 준비와 첫 Puppet Report는
+신규 등록/기존 호스트 검증 → 최종 ENC 확인. 인증서 준비와 첫 Puppet Report는
 별도 완료 단계이며 API 호스트 생성만으로 전체 등록 성공으로 보지 않는다.
 
-현재는 인증 방식의 권장안과 구현 경계를 문서화한 상태다. 계정·PAT 발급, 비밀 저장소 생성,
+현재는 등록 실행기와 오프라인 테스트를 구현한 상태다. 계정·PAT 발급, 비밀 저장소 생성,
 IAM 설정, API 등록 스크립트 실행은 아직 수행하지 않았다. Foreman Global Registration JWT 경로는
 일반 호스트 CRUD용 PAT와 혼용하지 않고, 사용할 경우 별도의 템플릿/권한·요청 경로를 검증한다.
 
@@ -188,7 +188,7 @@ Foreman의 최신 Facts/Report와 Agent 실행 결과를 기준으로 확인한�
 ## 4. 부트스트랩 성공 판정 설계
 
 user-data에서 API 관리자 토큰을 보관하지 않고, 로컬 결과와 관리 측 검증을 분리한다.
-아래는 구현할 기준이며 현재 등록/검증 스크립트는 아직 없다.
+아래는 전체 완료 판정 기준이다. 호스트/ENC 등록 실행기는 구현했으며, 인증서·첫 Report까지의 자동 검증은 후속 단계다.
 
 ```mermaid
 sequenceDiagram

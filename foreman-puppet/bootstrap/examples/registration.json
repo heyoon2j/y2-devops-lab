@@ -1,0 +1,32 @@
+{
+  "foreman": {
+    "url": "https://foreman.dev.example.internal",
+    "ca_cert": "/etc/company-pki/ca.pem",
+    "username": "bootstrap_dev"
+  },
+  "auth": {
+    "source": "aws_ssm",
+    "region": "ap-northeast-2",
+    "reference": "/foreman/dev/bootstrap-pat"
+  },
+  "host": {
+    "name": "i-EXAMPLE.dev.example.internal",
+    "bootstrap_identity": "aws/123456789012/ap-northeast-2/i-EXAMPLE",
+    "csp": "aws",
+    "organization_id": 1,
+    "location_id": 1,
+    "hostgroup_id": 1,
+    "environment_id": 1,
+    "role_id": 1,
+    "puppet_proxy_id": 1,
+    "puppet_ca_proxy_id": 1,
+    "environment": "development",
+    "role": "role::base",
+    "parameters": {
+      "deploy_env": "dev",
+      "team": null,
+      "dr_site": "primary",
+      "puppet_managed": true
+    }
+  }
+}

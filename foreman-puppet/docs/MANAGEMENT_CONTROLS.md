@@ -20,7 +20,7 @@ environment: development
 `profile::management`가 이 값을 검증한다. 누락/잘못된 타입은 컴파일 오류다.
 현재의 모든 Role과 개별 Profile 및 service_control 모두 이 스위치를 따른다.
 노드를 제외해도 Role 배정을 지울 필요는 없다. Role은 남기고 포함하는 설정을 건너뛴다. 미관리 전용 분류에는 [role::unmanaged](ROLES.md)를 사용할 수 있으며 이 Role은 false를 필수로 요구한다.
-분류 자동화는 이 파라미터를 지정해야 하며, 실제 등록/API 자동화는 아직 구현하지 않았다.
+분류 자동화는 이 파라미터를 지정해야 하며, 최초 등록/API 실행기는 [user-data 등록](USER_DATA_REGISTRATION.md)에 구현했으며 실제 서버 검증은 남아 있다.
 
 | 값 | 동작 |
 | --- | --- |

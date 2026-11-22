@@ -142,7 +142,7 @@ gpu:
 ### Ubuntu 24.04 최초 등록 입력 예시
 
 다음은 등록 자동화에 전달할 논리 입력이며 실제 Foreman API 요청 형식은 아니다.
-등록 자동화는 아직 구현 전이다. deploy_env/team/dr_site의 외부 Facts 파일은 생성하지 않는다.
+최초 등록 실행기는 [user-data 등록](docs/USER_DATA_REGISTRATION.md)에 구현했다. deploy_env/team/dr_site의 외부 Facts 파일은 생성하지 않는다.
 
 ```yaml
 host_group: aws
@@ -302,4 +302,4 @@ user-data/자동 수집/외부 Facts의 차이는 [분리 기준과 수집 방�
 
 현재 우선 경로는 **user-data의 등록 스크립트가 Foreman API를 직접 호출**하는 방식이다.
 API 인증은 [등록 인증 설계](docs/LOOKUP_AND_REGISTRATION.md#최초-user-data-등록의-api-인증)에서
-권장한 전용 계정+유효기간이 있는 PAT를 기준으로 검토한다. 실제 등록 실행기는 아직 구현 전이다.
+권장한 전용 계정+유효기간이 있는 PAT를 기준으로 검토한다. 등록 실행기는 [user-data 등록](docs/USER_DATA_REGISTRATION.md)에 구현했으며 실제 개발 서버 통합 검증이 다음 단계다.
