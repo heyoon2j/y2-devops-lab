@@ -1,12 +1,61 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
+if [[ $# -ne 0 && ( $# -ne 2 || $1 != --resume-raw ) ]]; then
+    printf '사용법: %s [--resume-raw 테스트_폴더]\n' "$0" >&2
+    exit 2
+fi
+
 for dependency in codex python3; do
     if ! command -v "$dependency" >/dev/null; then
         printf '%s 명령을 설치한 뒤 다시 실행하세요.\n' "$dependency" >&2
         exit 1
     fi
 done
+
+run_codex() {
+    codex exec --skip-git-repo-check --sandbox workspace-write "$1"
+}
+
+run_raw_sync() {
+    run_codex '$wiki-raw-sync 스킬로 raw/csv-meeting.md를 반영해줘. 승인된 출력 계약은 docs/INPUT_OUTPUT.md에 원본 링크와 함께 기록하고, 확정된 후속 작업 한 건은 STATUS.md 작업 표 맨 아래에 대기 상태로 등록해줘. 이정표는 미배정 상태로 유지해줘. 현재 프로젝트 내부에만 쓰고 원본은 보존해줘.'
+}
+
+
+check_raw_result() {
+    grep -F 'deployed_at,environment,result' docs/INPUT_OUTPUT.md
+    grep -F '../raw/csv-meeting.md' docs/INPUT_OUTPUT.md
+    grep -E '^\|[[:space:]]*T[0-9]+[[:space:]]*\|[[:space:]]*—[[:space:]]*\|.*헤더.*\|[[:space:]]*대기[[:space:]]*\|' STATUS.md
+    test "$(grep -Ec '^\|[[:space:]]*T[0-9]+[[:space:]]*\|' STATUS.md)" -eq 1
+    diff -u "$test_dir/raw.before" raw/csv-meeting.md
+    python3 .agents/scripts/update_progress.py --check
+}
+
+verify_raw_replay() {
+    local file snapshot
+    local documents=(README.md STATUS.md LOG.md docs/ARCHITECTURE.md docs/INPUT_OUTPUT.md)
+    check_raw_result
+    snapshot=$(mktemp -d "$test_dir/raw-replay.XXXXXXXX")
+    cp "${documents[@]}" "$snapshot/"
+    printf '\n같은 회의록 다시 반영\n'
+    run_raw_sync
+    for file in "${documents[@]}"; do
+        diff -u "$snapshot/$(basename "$file")" "$file"
+    done
+    diff -u "$test_dir/raw.before" raw/csv-meeting.md
+}
+
+if [[ $# -eq 2 ]]; then
+    test_dir=$(cd "$2" && pwd -P)
+    if [[ ! -f "$test_dir/raw.before" || ! -f "$test_dir/template/csv-export-test/raw/csv-meeting.md" ]]; then
+        printf '기존 테스트 폴더와 가상 CSV 회의록을 찾을 수 없습니다.\n' >&2
+        exit 1
+    fi
+    cd "$test_dir/template/csv-export-test"
+    verify_raw_replay
+    printf '\n통과: wiki-raw-sync 재호출 후 변경 없음.\n'
+    exit 0
+fi
 
 project_dir=$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)
 test_dir=$(mktemp -d "${TMPDIR:-/tmp}/wiki-skills.XXXXXXXX")
@@ -17,9 +66,6 @@ for copy in template project; do
     cp -R "$project_dir/.agents" "$project_dir/docs" "$project_dir/"*.md "$test_dir/$copy/"
 done
 
-run_codex() {
-    codex exec --skip-git-repo-check --sandbox workspace-write "$1"
-}
 
 cd "$test_dir/project"
 
@@ -96,23 +142,8 @@ cat > raw/csv-meeting.md <<'MEETING'
 MEETING
 cp raw/csv-meeting.md "$test_dir/raw.before"
 
-run_raw_sync() {
-    run_codex '$wiki-raw-sync 스킬로 raw/csv-meeting.md를 반영해줘. 승인된 출력 계약은 docs/INPUT_OUTPUT.md에 원본 링크와 함께 기록하고, 확정된 후속 작업 한 건은 STATUS.md 작업 표 맨 아래에 대기 상태로 등록해줘. 이정표는 미배정 상태로 유지해줘. 현재 프로젝트 내부에만 쓰고 원본은 보존해줘.'
-}
 
 run_raw_sync
-grep -F 'deployed_at,environment,result' docs/INPUT_OUTPUT.md
-grep -F '../raw/csv-meeting.md' docs/INPUT_OUTPUT.md
-grep -E '^\|[[:space:]]*T[0-9]+[[:space:]]*\|.*헤더.*\|[[:space:]]*대기[[:space:]]*\|' STATUS.md
-test "$(grep -Ec '^\|[[:space:]]*T[0-9]+[[:space:]]*\|' STATUS.md)" -eq 1
-diff -u "$test_dir/raw.before" raw/csv-meeting.md
-python3 .agents/scripts/update_progress.py --check
 
-cp README.md STATUS.md LOG.md docs/ARCHITECTURE.md docs/INPUT_OUTPUT.md "$test_dir/"
-printf '\n같은 회의록 다시 반영\n'
-run_raw_sync
-for file in README.md STATUS.md LOG.md docs/ARCHITECTURE.md docs/INPUT_OUTPUT.md; do
-    diff -u "$test_dir/$(basename "$file")" "$file"
-done
-diff -u "$test_dir/raw.before" raw/csv-meeting.md
+verify_raw_replay
 printf '\n통과: wiki-log-sync, wiki-start, wiki-raw-sync\n'
