@@ -1,6 +1,7 @@
 #cloud-config
 # Prerequisite: place the reviewed bootstrap artifact under /opt/foreman-puppet
-# and install the pinned OpenVox agent (for its bundled Ruby) before this command.
+# and prepare curl/jq/coreutils, the corporate CA and AWS CLI (for SSM).
+# Registration itself does not require the OpenVox agent or Ruby.
 # IaC must render registration.json for this particular instance before runcmd.
 # Never insert a PAT into this file. Disable shell tracing in any surrounding script.
 runcmd:

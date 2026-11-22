@@ -1,18 +1,22 @@
 #!/usr/bin/env bash
-# Requires the installed OpenVox agent Ruby; default is an offline plan.
+# Direct Bash/curl Foreman API client; no Ruby or agent installation required.
 set -euo pipefail
 if [[ "${1:-}" == --help || "${1:-}" == -h ]]; then
-  printf '%s\n' 'Usage: register.sh --config FILE [--apply]' 'Default: offline plan. --apply: root-only, create-only Foreman registration.'
+  printf '%s\n' 'Usage: register.sh --config FILE [--apply]' 'Default: offline plan. --apply: root-only, create-only Foreman API registration.'
   exit 0
 fi
-if [[ "${1:-}" == --help && $# == 1 ]]; then
-  printf '%s\n' 'Usage: register.sh --config FILE [--apply]' 'Default: offline plan. --apply: root, HTTPS create-only registration.'
-  exit 0
+mode=plan
+if [[ $# == 3 && "$3" == --apply ]]; then mode=apply; set -- "$1" "$2"; fi
+if [[ $# != 2 || "$1" != --config ]]; then
+  printf '%s\n' 'Usage: register.sh --config FILE [--apply]' >&2
+  exit 2
 fi
-script_dir=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)
-ruby_bin=${FOREMAN_BOOTSTRAP_RUBY:-/opt/puppetlabs/puppet/bin/ruby}
-if [[ ! -x "$ruby_bin" ]]; then
-  printf '%s\n' 'Install OpenVox agent first, or set FOREMAN_BOOTSTRAP_RUBY to a Ruby executable.' >&2
+if [[ "$mode" == apply && $EUID != 0 ]]; then
+  printf '%s\n' '--apply requires root' >&2
   exit 1
 fi
-exec "$ruby_bin" "$script_dir/../lib/register.rb" "$@"
+artifact_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
+source "$artifact_root/bootstrap/user-data/register.bash"
+config_path=$2
+[[ "$config_path" = /* ]] || config_path="$PWD/$config_path"
+foreman_register "$artifact_root" "$config_path" "$mode"

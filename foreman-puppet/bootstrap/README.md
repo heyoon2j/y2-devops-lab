@@ -23,12 +23,12 @@ bootstrap/
 │       # foreman-config.sh와 openvox-config.sh도 같은 전체 구성의 호환 진입점
 ├── agent/repo.sh / install.sh / config.sh
 │   └── register.sh                       # 최초 API 등록/기존 중앙 정책 검증
-├── user-data/                           # cloud-init 예시·기존 Bash에 붙일 함수
+├── user-data/                           # cloud-init·직접 API 호출 Bash 함수·독립 Go 구현
 ├── examples/                            # 비밀값 없는 입력
 └── lib/
     ├── bootstrap.sh                     # Bash+jq: 저장소·패키지 단계 및 진입점
     ├── configure.rb                     # OpenVox의 Ruby 표준 라이브러리: 설정·CA 처리
-    └── register.rb                      # PAT/HTTPS API, 생성만 수행
+    └── registration.jq                  # Bash 등록 입력/ENC 검증·API payload
 ```
 
 **Python/PyYAML은 사용하지 않는다.** 초기 repo/install에는 Bash·jq·curl·GnuPG·OpenSSL·coreutils(timeout)·
@@ -236,7 +236,7 @@ API 등록 성공 후 인증서 승인과 첫 Catalog/Report 확인은 별도 �
 
 ```sh
 bundle exec ruby tests/bootstrap_test.rb
-bundle exec ruby tests/registration_test.rb
+bash tests/registration_test.sh
 ```
 
 테스트는 repo/install 계획에 Bash+jq, config 계획에 Ruby만 사용한다. 12개 wrapper, 7개 OS×2개 CPU,
@@ -260,5 +260,9 @@ Agent 설치 후 `agent/register.sh --config /etc/foreman-bootstrap/registration
 기존 호스트는 조회만 하며 중앙 정책을 덮어쓰지 않는다. 인증서 승인과 첫 적용은 별도 단계다.
 
 ```sh
-bundle exec ruby tests/registration_test.rb
+bash tests/registration_test.sh
 ```
+
+등록은 Bash(curl+jq) 또는 Go(net/http) 중 하나를 선택한다. 두 구현 모두 Ruby 없이 API를 직접 호출하며,
+Go 노드에는 컴파일한 바이너리만 배포한다. Agent 자체의 내장 Ruby 및 서버 config/ca-init의 Ruby 사용은 유지한다.
+구현 선택·빌드·함수 호출은 [user-data 등록](../docs/USER_DATA_REGISTRATION.md)을 따른다.

@@ -2,15 +2,20 @@
 
 등록 실행기는 `bootstrap/agent/register.sh`, 입력 예시는
 [`registration.json`](../bootstrap/examples/registration.json)이다. 기본 실행은 네트워크와 비밀 조회가 없는 계획 출력이며,
-`--apply`에서만 HTTPS API를 호출한다. Python은 사용하지 않고 OpenVox Agent에 포함된 Ruby를 사용한다.
+`--apply`에서만 HTTPS API를 호출한다. Bash(curl+jq)와 Go(net/http) 두 구현이 각각 API를 직접 호출한다. 등록 과정에서 Ruby/Python을 실행하지 않는다.
 실제 Foreman 5.0 + foreman_puppet 환경의 API/RBAC·ENC 통합 검증은 아직 수행하지 않았다.
 
 ## 파일과 입력을 준비하는 순서
 
 ```text
 bootstrap/
-├── agent/register.sh                  # Ruby 실행 진입점: 기본 plan, --apply만 등록
-├── lib/register.rb                    # PAT 조회 → 호스트 조회 → 신규 생성 → ENC 확인
+├── agent/register.sh                  # Bash CLI: 기본 plan, --apply만 등록
+├── lib/registration.jq                # Bash 입력/ENC 검증·요청 JSON 구성
+├── user-data/register.bash            # source해서 부르는 직접 API 등록 함수
+├── user-data/go/                      # 독립 Go API 클라이언트
+│   ├── register.go                    # RegisterForeman(ctx, config, apply)
+│   ├── register_test.go               # Go/Bash 공통 HTTPS 시나리오 검증
+│   └── cmd/foreman-register/main.go    # Go CLI 진입점
 ├── examples/registration.json         # 복사 후 인스턴스별로 수정할 입력 예시
 ├── local/registration.json            # 운영자가 만드는 실제 입력, Git 제외
 └── user-data/registration.yaml        # 사전 배치된 코드·입력을 실행하는 cloud-init 예시
@@ -25,7 +30,7 @@ bootstrap/
 3. AWS SSM SecureString에 PAT를 저장한다. 노드 IAM Role에는 해당 파라미터 조회와 필요한 KMS 복호화만 허용한다.
    AWS CLI는 이미지나 별도 초기화 단계에서 설치해야 하며 실행기가 설치하지 않는다.
 4. 검토한 저장소 커밋의 코드를 노드 `/opt/foreman-puppet`에 배치하고 OpenVox Agent를 설치한다.
-   코드 다운로드·Agent 설치 방법은 기존 [bootstrap 실행 순서](../bootstrap/README.md)를 따른다.
+   등록만 실행할 때는 Agent/Ruby가 없어도 된다. 코드 다운로드·Agent 설치 방법은 기존 [bootstrap 실행 순서](../bootstrap/README.md)를 따른다.
 5. **이 시점에 입력 파일을 만든다.** 아래처럼 예시를 복사하고, 실제 값으로 수정한 다음 plan을 실행한다.
 
 ```sh
@@ -92,7 +97,10 @@ GCP/KC처럼 비밀 조회 경로를 아직 정하지 않은 환경에는 `auth`
 - 생성 후 ENC 검증 실패 시 이미 호스트가 남아 있을 수 있다. 오류 원인을 관리 측에서 확인하고 수정한다.
   실행기는 생성한 호스트도 삭제하거나 정책을 덮어쓰지 않는다. 재실행은 현재 중앙 정책을 검증하는 동작이다.
 
-PAT는 Ruby 메모리에서만 HTTP Basic 인증에 사용하고, API 응답 본문이나 토큰을 로그에 출력하지 않는다.
+PAT는 실행 프로세스 메모리에서 HTTP Basic 인증에 사용하며, API 응답 본문이나 토큰을 로그에 출력하지 않는다.
+Bash는 curl 인증 설정을 표준 입력 파이프로 전달해 PAT를 argv·환경변수·임시 파일에 넣지 않는다.
+Go는 net/http 요청 헤더를 메모리에서 구성하며 Bash·curl·Ruby를 호출하지 않는다.
+두 구현의 aws_ssm 공급 방식은 AWS CLI를 사용한다. 별도의 Python 버전 관리를 피하려면 AWS CLI v2 배포본을 사용한다.
 HTTPS 호스트명·CA 검증을 끄지 않으며 리다이렉트를 따라가지 않는다. 입력 파일과 신원은 IaC가 제공하는
 값이므로 AWS가 서명한 신원을 중앙에서 검증한 것으로 간주하면 안 된다. PAT와 RBAC가 현재의 보안 경계다.
 인스턴스 신원 검증을 포함한 공통 등록 서비스는 향후 API Gateway+Lambda TODO다.
@@ -105,7 +113,7 @@ HTTPS 호스트명·CA 검증을 끄지 않으며 리다이렉트를 따라가�
 Agent 서비스를 시작하거나 인증서를 승인하는 동작은 포함하지 않는다.
 
 ```sh
-bundle exec ruby tests/registration_test.rb
+bash tests/registration_test.sh
 ```
 
 API 형식 근거: [Foreman 5.0 hosts/create](https://apidocs.theforeman.org/foreman/5.0/apidoc/v2/hosts/create.html),
@@ -115,7 +123,7 @@ API 형식 근거: [Foreman 5.0 hosts/create](https://apidocs.theforeman.org/for
 ## 기존 user-data에 함수로 결합하기
 
 Bash는 [`register.bash`](../bootstrap/user-data/register.bash)를 source한다. source만으로 실행되지 않는다.
-실제 입력 파일과 Agent 설치를 마친 뒤 함수를 호출한다. 세 번째 인자를 생략하면 plan이다.
+실제 입력 파일·사내 CA·curl·jq·coreutils와 필요 시 AWS CLI를 준비한 뒤 함수를 호출한다. 세 번째 인자를 생략하면 plan이다.
 
 ```bash
 source /opt/foreman-puppet/bootstrap/user-data/register.bash
@@ -124,5 +132,59 @@ foreman_register /opt/foreman-puppet /etc/foreman-bootstrap/registration.json pl
 foreman_register /opt/foreman-puppet /etc/foreman-bootstrap/registration.json apply
 ```
 
-함수는 공통 Bash/Ruby 등록 실행기를 호출한다. Agent 설치·입력 작성·CSR 승인은 별도 단계다.
-등록 로직 변경 시 공통 실행기를 수정하고 검토한 새 아티팩트를 배포한다.
+이 함수 안에서 직접 API를 호출한다. `register.sh`는 같은 함수를 부르는 CLI이며 선택적으로 사용한다.
+Agent 설치·입력 작성·CSR 승인은 별도 단계다. 단독 CLI의 --apply는 기존대로 root로 실행한다.
+재사용 API 함수 자체에는 OS 변경이 없으므로 root를 강제하지 않으며, API 계정/PAT와 IAM 권한으로 인증한다.
+file 공급 방식은 어느 구현에서도 root 소유 0600 파일만 허용한다. 일반적인 cloud-init은 root로 실행된다.
+Bash file 공급은 GNU stat/dd의 nofollow/nonblock 기능을 사용하므로 비밀 파일은 root 전용 디렉터리에 배치한다.
+
+## Go 함수 또는 실행 파일 사용
+
+Go는 같은 입력 JSON을 받지만 Bash나 jq가 필요하지 않다. 표준 라이브러리만 사용하고 모듈의 최소 Go 버전은 1.22다.
+실제 빌드는 보안 업데이트가 적용된 지원 Go 버전으로 수행한다. 대상 Linux 노드에는 빌드한 바이너리만 배포한다.
+
+```sh
+cd bootstrap/user-data/go
+# 개발/빌드 머신에서 실행. 산출물은 Git 제외인 bootstrap/local/ 아래에 둔다.
+mkdir -p ../../local
+CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -trimpath -o ../../local/foreman-register-amd64 ./cmd/foreman-register
+CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -trimpath -o ../../local/foreman-register-arm64 ./cmd/foreman-register
+```
+
+노드 아키텍처에 맞는 실행 파일을 배치한 뒤 실행한다. Go CLI도 기본은 plan이다.
+
+```sh
+/opt/foreman-bootstrap/foreman-register --config /etc/foreman-bootstrap/registration.json
+sudo /opt/foreman-bootstrap/foreman-register --config /etc/foreman-bootstrap/registration.json --apply
+```
+
+기존 Go 초기화 프로그램에는 모듈을 의존성으로 추가하거나 패키지를 내부 코드로 편입해서 아래처럼 호출한다.
+이 함수는 외부 Bash 스크립트를 부르는 어댑터가 아니라 직접 Foreman API를 호출한다.
+
+```go
+import (
+    "context"
+    "encoding/json"
+    "os"
+    "time"
+    registration "github.com/heyoon2j/y2-devops-lab/foreman-puppet/bootstrap/user-data/go"
+)
+
+// 기존 Go 초기화 프로그램에서 호출할 함수 예시.
+func registerNode() error {
+f, err := os.Open("/etc/foreman-bootstrap/registration.json")
+if err != nil { return err }
+cfg, err := registration.LoadConfig(f)
+f.Close()
+if err != nil { return err }
+ctx, cancel := context.WithTimeout(context.Background(), 10*time.Minute)
+defer cancel()
+result, err := registration.RegisterForeman(ctx, cfg, true)
+if err != nil { return err }
+return json.NewEncoder(os.Stdout).Encode(result)
+}
+```
+
+Bash와 Go 중 하나만 선택해 실행한다. 두 구현은 같은 JSON·API 요청·중앙 정책 보존 기준을 사용하며
+테스트에서 동일한 HTTPS 서버 시나리오를 통과해야 한다. Go 테스트가 두 구현을 함께 검증하므로
+테스트 머신에는 Go·Bash·curl·jq·GNU coreutils가 필요하다. 실제 Foreman 연동 검증과는 별개다.
