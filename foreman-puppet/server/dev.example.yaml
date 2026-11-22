@@ -42,8 +42,10 @@ database:
   name: foreman
   # Keep credentials and certificate private keys out of this file and Git.
 pki:
-  trust: corporate_ca
-  issuance_model: null
+  foreman_web_trust: corporate_ca
+  agent_trust: openvox_internal_ca
+  issuance_model: internal_primary
+  autosign: false
 backup:
   external_destination: null
 required_agent_platforms:

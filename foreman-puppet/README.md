@@ -281,17 +281,15 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
 실제 Foreman 연동, Agent 적용과 멱등성 검증은 아직 수행하지 않았다.
 
 서버·LB·DB·인증·CA 장애 시 복구·DNS 전환·복귀 절차는 [장애 대응](docs/FAILURE_RUNBOOK.md)을 따른다.
-현재 내장 CA 구성/복구 자동화는 구현 전이며 기존 bootstrap과의 차이를 문서에 명시했다.
+최초 Server1의 내장 CA 구성은 bootstrap에 반영했고 백업·승계 자동화와 실서버 검증은 후속 작업이다.
 
 ## 추후 TODO
 
 - [ ] CA/인증 고도화: API Gateway + Lambda로 등록 인증 및 CSR 승인·폐기 대행을 전환한다.
   CA 발급자 자체 교체는 별도 서명/상태 저장 기반과 Puppet CA API·갱신/CRL·기존 인증서 이전 검증 후 결정한다.
 
-- [ ] API Gateway + Lambda 공통 인증·등록 서비스: CSP별 신원 검증·인벤토리/정책 대조 후 Foreman 및 Zabbix에 등록한다.
+- [ ] API Gateway + Lambda 공통 인증·등록 서비스: CSP별 신원 검증·인벤토리/정책 대조 후 Foreman에 등록한다.
   시스템별 상태·부분 실패 재시도·중복 방지·기존 중앙 정책 보존을 포함한다. 지금은 구축하지 않는다.
-- [ ] Zabbix 연동: 공통 입력을 Host Group·Template·Tags에 별도 매핑하고 첫 데이터 수신을 확인한다.
-  등록 서비스는 Agent의 일상 통신을 중계하지 않는다.
 
 - [ ] sandbox 환경 지원: 현재 deploy_env는 dev/prd로 유지한다. sandbox는 필요 시
   bootstrap/Catalog 입력 검증, Puppet Environment 배정 조합, CSP별·환경별 Hiera 데이터,

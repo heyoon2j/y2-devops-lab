@@ -84,9 +84,11 @@ sandbox는 TODO로 유지한다. 저장 위치·변경·이전 절차는 [조회
 설정 원본으로 유지한다. YAML 병합 등 구조화된 처리는 Installer 환경의 Ruby를 활용하는 방향이다.
 Foreman·OpenVox 운영 자체에 이 프로젝트 전용 Python 실행기가 필수인 것은 아니다.
 
-현재 저장소의 bootstrap 실행기는 아직 Python/PyYAML을 사용한다. 이번 결정은 목표 구조이며
-Bash/Ruby 실행기로의 교체는 후속 구현이다. 교체 전에는 현재 스크립트가 Python 없이 동작한다고
-가정하지 않는다. OS나 다른 패키지가 사용하는 Python을 제거하는 정책도 아니다.
+현재 실행기는 repo/install의 Bash+jq와 config/ca-init의 OpenVox Ruby 표준 라이브러리로 전환했다.
+설치 순서는 OpenVox Agent 패키지를 먼저 준비해 Ruby를 확보한다. Python/PyYAML은 필요 없다.
+OS나 다른 패키지가 사용하는 Python을 제거하는 정책은 아니다.
+내장 CA는 ca-init에서 명시적으로 생성하고 일반 configure는 기존 CA를 요구한다.
+기존 외부 PKI 설치를 자동 변환하거나 CA를 재생성하지 않는다. [설치 파일](../bootstrap/README.md)을 따른다.
 
 ## 보안 수정 중심의 버전 업데이트 정책
 
@@ -237,4 +239,4 @@ CA Active/Standby 상태 복구가 구현되기 전에는 신규 등록까지 �
 상세 설계는 [관리 서버 구성](SERVER_TOPOLOGY.md), [LB와 확장](LB_AND_SCALING.md)을 참고한다.
 
 서버·LB·DB·인증 장애 및 CA 서버 1 장애 시 수동 승계·DNS 전환·복귀는 [장애 대응](FAILURE_RUNBOOK.md)을 따른다.
-내장 CA와 백업 기반 수동 복구가 이 절차의 대상이며, 현재 bootstrap의 외부 PKI 구성은 별도 변경·검증이 필요하다.
+내장 CA와 백업 기반 수동 복구가 이 절차의 대상이다. 최초 CA 설정은 bootstrap에 반영했지만 실제 복구·Server2 설정은 별도 구현/검증이 필요하다.

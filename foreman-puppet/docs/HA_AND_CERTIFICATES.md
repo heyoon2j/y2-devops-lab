@@ -13,7 +13,7 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 방향으로 검토한다. 내장 CA는 서버 1 단일 실행·외부 백업, 장애 시 서버 2로 수동 복구·DNS 전환한다.
 세부 절차와 현재 구현의 차이는 [장애 대응](FAILURE_RUNBOOK.md)에 정리했다.
 아래 사내 CA 직접 발급/위임 제안은 이전 설계 대안이다. 내장 CA에 그대로 적용된다고 가정하지 않는다.
-현재 bootstrap은 여전히 외부 PKI 사전 발급/내장 CA 비활성이고 이번에는 문서만 추가했다.
+현재 bootstrap은 최초 Server1의 명시적 내장 CA 초기화·구성을 지원한다. 백업·복구·Server2 전환 자동화와 실제 설치 검증은 후속 작업이다.
 
 ## 확정한 구축 단계
 
@@ -43,41 +43,32 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 개발·운영의 CA 키와 Agent 인증서는 별도로 관리하고, 개발 CA 개인키를 운영에 복제하지 않는다.
 사내 Root CA는 공통이어도 별도 발급 CA와 허용 정책으로 개발·운영 신원을 구분한다.
 
-## 인증서: 사내 CA 사용
+## 인증서: 사내 웹 PKI와 OpenVox 내장 CA
 
-Foreman·Puppet Server·Agent 모두 사내 CA 신뢰 체계를 사용하는 것으로 정한다.
-실제 인증서·개인키·CA 키는 Git에 저장하지 않고 서버별로 안전하게 배포한다.
+Foreman 웹/API 및 해당 서비스 연동 인증 자료는 사내 PKI를 사용하고,
+Agent↔OpenVox Server는 내장 CA가 발급한 노드별 인증서로 상호 인증한다.
+서버 최초 CA 생성은 bootstrap/server/ca-init.sh의 --apply에서만 명시적으로 수행한다.
+기존 CA는 검증·보존하고 외부 PKI 설치/기존 Agent 인증서를 자동 변환하지 않는다.
 
-| 구간 | 사용할 인증서 | 조건 |
-| --- | --- | --- |
-| 사용자 / 등록 스크립트 → Foreman HTTPS | 사내 CA 발급 웹 서버 인증서 | 접속 DNS 이름의 SAN 및 CA 신뢰 체인 배포 |
-| Agent ↔ Puppet Server | 사내 CA 신뢰 체계 아래의 노드별 인증서 | certname, SAN, mTLS 용도, 체인·CRL·갱신·폐기 절차 일치 |
-| Foreman ↔ Smart Proxy, Puppet → Foreman | 사내 CA 신뢰 체계 아래의 서비스별 인증서 | 서버/클라이언트 인증 용도와 상대 서비스의 허용 목록 일치 |
+| 구간 | 인증 자료 |
+| --- | --- |
+| 사용자/user-data → Foreman | 사내 웹 인증서 검증 + 전용 계정/PAT |
+| Foreman ↔ Proxy, Puppet → Foreman | 사내 서비스 인증서·CA 신뢰·클라이언트 허용 목록 |
+| Proxy → Puppet 관리 API | 내장 CA 신원·Server/CA API의 별도 인가 |
+| Agent ↔ OpenVox Server/CA | 내장 CA의 노드별 인증서·체인·CRL |
 
-Puppet용 기본 제안은 **사내 Root/발급 CA → 전용 Puppet Intermediate CA → 노드별 인증서**다.
-이 방식이면 사내 CA가 위임한 중간 CA로 Puppet의 CSR·발급 수명 주기를 유지할 수 있다.
-사내 PKI의 중간 CA 위임 정책과 인증서 프로파일을 먼저 확인한다.
-중간 CA 위임이 불가능하면 사내 CA가 모든 Puppet 노드 인증서를 직접 발급하는 방식으로
-구성할 수 있지만, 아래와 같이 부트스트랩과 인증서 관리 절차가 달라진다.
+bootstrap은 autosign=false로 시작한다. 인증서 승인과 첫 Agent 실행을 자동으로 수행하지 않는다.
+서버/Agent 인증서·개인키는 고유하게 유지하고 사내 CA 자료와 내장 CA 자료를 서로 덮어쓰지 않는다.
+CA 만료·갱신·폐기·백업과 CRL 반영을 검증한다. 자동 갱신 활성화는 후속 검증 대상이다.
+내장 CA는 단일 Active이고 3단계 Server2 추가 시 수동 상태 복구/DNS 전환부터 리허설한다.
+[설치 절차](../bootstrap/README.md), [장애 대응](FAILURE_RUNBOOK.md)을 함께 따른다.
 
-| 발급 방식 | Agent 등록·갱신 | Puppet/Foreman CA 관리 |
-| --- | --- | --- |
-| 사내 CA 아래의 Puppet Intermediate CA | Agent가 Puppet CA endpoint에 CSR을 보내고 승인 정책에 따라 발급 | Puppet CA와 Smart Proxy를 통한 인증서 관리 흐름 유지 |
-| 사내 CA 직접 발급 | 외부 발급 절차로 인증서·개인키·신뢰 체인·CRL을 미리 배치하고 갱신 | 내장 Puppet CA는 비활성화. 사내 CA가 Puppet CA API를 제공한다고 가정하지 않으며 Foreman의 기존 CA 서명 UI로 직접 관리하지 않음 |
-
-`PUPPET_CA_SERVER`와 아래 CA Active/Standby 설계는 Puppet Intermediate CA 방식에 해당한다.
-사내 CA 직접 발급 방식은 외부 PKI의 HA·등록·갱신 절차로 대체하고, 일반 Puppet CSR 요청을
-`ca_server` 주소만 바꿔 사내 발급 서비스에 보내는 방식으로 구현하지 않는다.
-발급 방식 확정 전 실제 서버 인증서/CA 설정은 생성하지 않는다.
-
-Agent마다 고유한 인증서·개인키를 사용한다. 공통 웹 인증서 하나를 모든 Agent에 공유하지 않는다.
-등록 토큰이나 SSH 키는 Agent/Server mTLS 인증서를 대신하지 않는다.
-`puppet apply` 로컬 실행에는 Server와의 mTLS가 필요하지 않지만 현재 중앙 관리 방식과 다르다.
-TLS 검증은 유지한다.
+사내 CA 직접 발급이나 중간 CA 위임은 기술적 대안이지만 현재 설치 기본값이 아니다.
+발급자 변경은 기존 노드 신원·신뢰·갱신·CRL과 전체 CA 상태를 검토한 별도 이전 절차로 수행한다.
 
 ## 인증서 없이 통신한다는 옵션의 구분
 
-표준 Agent/Server 구성은 mTLS이며 현재 프로젝트는 사내 인증서 사용 결정을 유지한다.
+표준 Agent/Server 구성은 mTLS이며 현재 Agent 구간은 OpenVox 내장 CA를 사용한다.
 다만 인증서가 없는 요청을 허용하거나 특정 구간에서 TLS를 종료하는 옵션 자체는 존재한다.
 아래는 기능 설명이며 해당 설정을 적용한 것은 아니다.
 
@@ -108,7 +99,7 @@ Puppet 백엔드에는 그 프록시만 접근하도록 제한한다.
 
 개발 검증 이후 운영 관리 구성을 다음 구조로 구축한다.
 아래 구성은 운영 목표이며 개발 단일 서버에 먼저 적용하지 않는다.
-CA 부분은 사내 CA 아래의 Puppet Intermediate CA 발급 방식에 대한 설계다.
+CA 부분은 OpenVox 내장 CA의 단일 발급 신원과 상태를 유지하는 설계다.
 아래 그림의 Foreman 1/Compiler 1과 Foreman 2/Compiler 2는 각각 같은 EC2에 공동 배치한다.
 CA는 해당 EC2 중 한 곳 또는 별도 위치에서 단일 Active로 운영하며 전환을 별도로 검증한다.
 개발·운영 모두 1단계부터 LB+Server1+로컬 DB, 2단계 RDS 이전, 3단계 고정 EC2 2대로 전환한다. 세부 HA 복제/전환은 후속으로

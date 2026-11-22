@@ -13,7 +13,7 @@
 
 관리 서버/대상별 설치 목록·버전과 보안 수정 중심 업데이트 정책은
 [아키텍처 결정](ARCHITECTURE_GUIDE.md#최초-개발운영-서버-구성과-버전)을 따른다.
-설치 자동화의 Python 의존성을 없애는 방향은 확정했지만 현재 실행기는 아직 전환 전이다.
+설치 실행기는 Bash+jq와 설치된 OpenVox Ruby로 전환했다. Python/PyYAML은 필요 없다.
 
 ## 설치 기준표
 
@@ -26,7 +26,7 @@
 | Puppet 계열 엔진 | OpenVox Server 9.2.0 / Agent 9.4.0, AL2 Agent 8.33.0 | 제품·계열 선택, 통합 검증 전 |
 | DB | Ubuntu 기본 PostgreSQL 16 계열, 로컬 전용 | 기본 패키지 확인, 실제 의존성·설치 검증 전 |
 | 기존 서버 | 사용자가 서버 보유 확인. 새 EC2 생성 제외 | 실제 FQDN·AWS 위치·OS·사양 확인 대기 |
-| 인증서 | 사내 CA 신뢰, 발급 방식·SAN 별도 확정 | 첫 연결 전 필요 |
+| 인증서 | 사내 웹 PKI + 내장 CA, SAN·최초 서명·CA 지문 공급 검증 | 첫 연결 전 필요 |
 | 최초 Agent | Ubuntu 24.04 1대, development/dev, role::base | 실제 노드 미정 |
 
 Foreman 공식 Quickstart는 Ubuntu 24.04와 OpenVox 8 저장소 경로를 제공한다.
@@ -87,4 +87,4 @@ bash scripts/server-preflight.sh \
    role::unmanaged는 최초부터 배정하지 않고 [최초 설정 흐름](ROLE_LIFECYCLE.md)을 따른다.
 
 위 절차 중 저장소·패키지·설정 실행기는 bootstrap에 분리 구현했다. 실제 입력값·PKI 발급·분류 자동화와 OS 설치 검증은 남아 있다. 실제 입력이 준비되면 계획을 검토하고 bootstrap의 개별 단계를 대상 서버에서 검증한다.
-제품은 OpenVox로 선택했고 인증서 발급·갱신은 별도다. bootstrap은 사전 발급 PKI 파일을 사용하며 새 CA를 생성하지 않는다.
+Foreman 웹/API·Proxy는 사내 인증서, Agent 통신은 OpenVox 내장 CA를 사용한다. bootstrap은 별도 ca-init에서 최초 CA를 명시적으로 초기화하며 configure는 기존 CA를 검증한다. Agent 서명·갱신·정기 실행은 별도 검증 후 진행한다.

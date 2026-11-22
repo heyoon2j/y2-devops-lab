@@ -39,7 +39,7 @@ NLB를 처음부터 두되 Target Group에는 Server1 한 대만 등록한다. L
 - 8 vCPU·32 GiB RAM·100 GiB SSD는 시작 후보이고 확정 성능이 아니다. JVM·DB·디스크·Report 부하를 측정한다.
 - 로컬 DB는 같은 EC2의 Foreman만 사용한다. 외부 Agent에 DB 포트를 열지 않는다.
 - 로컬 DB·CA·비밀값의 복구 가능한 백업을 EC2 밖에 보관한다.
-- 내장 CA 운영 절차와 현재 외부 PKI용 bootstrap 사이의 차이는 [장애 대응](FAILURE_RUNBOOK.md)을 따른다.
+- 내장 CA 초기화·설정과 백업/복구 경계는 [장애 대응](FAILURE_RUNBOOK.md)을 따른다.
 
 ### 처음부터 유지할 접속 이름
 
@@ -114,7 +114,7 @@ RDS에 새 쓰기를 받기 전에는 검증 실패 시 기존 로컬 DB로 복�
 ## 후속 고도화: API Gateway + Lambda 인증·등록
 
 user-data의 Foreman 직접 PAT 등록에서 **API Gateway + Lambda 기반 신원 검증·등록 대행**으로 전환한다.
-CSP별 신원 증명/인벤토리·허용 Role·환경 검증, Foreman/Zabbix별 등록, 부분 실패 재시도·중복 방지·삭제 정리를
+CSP별 신원 증명/인벤토리·허용 Role·환경 검증, Foreman 등록, 부분 실패 재시도·중복 방지·삭제 정리를
 구현하고 Foreman 자격증명은 관리 측에만 둔다. 지금은 TODO이며 별도 AWS 리소스를 만들지 않는다.
 
 CA 고도화는 먼저 Lambda가 검증한 등록 정보에 따라 기존 Puppet CA API로 CSR 승인·폐기를 대행하는

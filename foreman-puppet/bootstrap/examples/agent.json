@@ -14,9 +14,5 @@
   "package_versions": {
     "openvox-agent": null
   },
-  "tls": {
-    "ca_cert": null,
-    "host_cert": null,
-    "host_key": null
-  }
+  "puppet_ca_fingerprint": null
 }

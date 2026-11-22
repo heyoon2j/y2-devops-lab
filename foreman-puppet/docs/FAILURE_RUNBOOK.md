@@ -40,8 +40,8 @@ DB 이전/복구 경계는 [단계별 계획](PHASED_ROLLOUT.md), LB 세부 조�
 구성을 대상으로 한다. Foreman 웹/API는 사내 인증서를 사용하고 Agent 통신용 내장 CA와 구분한다.
 개발/운영 CA는 각각 독립적이며 개발 CA 상태를 운영에 복원하지 않는다.
 
-현재 bootstrap은 외부 PKI 사전 발급·내장 CA 비활성 설정이다. 내장 CA 구성·백업·복구 자동화는
-아직 구현되지 않았다. 현재 bootstrap을 그대로 실행해 내장 CA가 활성화된다고 가정하지 않는다.
+현재 bootstrap은 Server1의 명시적 ca-init와 내장 CA 설정을 지원한다. 실제 설치 검증과
+백업·복구 자동화 및 Server2/Standby 설정은 아직 구현/검증 전이다. 초기화 단계를 장애 복구에 사용하지 않는다.
 전환 전에 설정·인증서·CA 신뢰·Smart Proxy Puppet CA 연동을 별도 검증한다.
 이 문서는 자동 CA 이중화나 무중단 발급을 보장하지 않는다.
 
@@ -144,7 +144,7 @@ openssl x509 -in /etc/puppetlabs/puppetserver/ca/ca_crt.pem -noout -subject -iss
    CA 상태가 아닌 서버 1의 ssldir 전체를 서버 2에 덮어쓰지 않는다. 서버 2의 고유 신원은 유지한다.
 4. 기존 CA 지문·키 일치·일련번호/발급 목록·최신 CRL·CRL 만료와 Server TLS의 CA 신뢰를 검증한다.
 5. 검증한 설정 절차로 서버 2의 CA 기능을 활성화한다. **새 CA setup/키 생성은 실행하지 않는다.**
-   현재 외부 PKI용 bootstrap을 그대로 재실행하지 않는다.
+   Server1용 ca-init를 장애 복구에 사용하지 않는다. 최초 Server1용 configure도 검토 없이 재실행하지 않는다.
 6. 같은 JVM의 CA 활성화에 puppetserver 재시작이 필요한 경우 계획된 중단으로 처리한다.
    서버 1이 이미 중단된 상태에서 서버 2까지 재시작하면 그동안 Catalog 통신도 중단될 수 있다.
 7. DNS 전환 전에 새 서버를 직접 대상으로 CA 도메인의 SNI·SAN·신뢰 체인 및 실제 CA API 응답을
@@ -196,7 +196,7 @@ CA 담당 목록·DNS·백업 작업과 설정 관리가 새 담당 서버를 �
 
 ## 후속 구현과 리허설
 
-- 내장 CA 배치·서비스 설정, 암호화 백업·무결성 확인·상태 변경 후 보존 자동화
+- 내장 CA 배치·서비스 설정의 실서버 검증, 암호화 백업·무결성 확인·상태 변경 후 보존 자동화
 - 복구 담당 IAM/KMS/DNS 권한, 서버 1 fencing 및 복귀 후 CA 비활성 보장
 - 두 Compiler CRL 반영과 Foreman CA Proxy 재연결 검증
 - 서버 1 중단, 백업 공백, DNS 지연, 서버 2 재시작, 발급 후 복귀 실패 시나리오 리허설
@@ -211,7 +211,7 @@ CA 담당 목록·DNS·백업 작업과 설정 관리가 새 담당 서버를 �
 ## 고도화 전략: API Gateway + Lambda 인증·CA 연계
 
 직접 PAT 등록을 API Gateway + Lambda의 CSP 신원 검증/등록 대행으로 전환하는 항목은 TODO다.
-추후 Foreman/Zabbix 등록과 CA CSR 승인·폐기를 관리 API로 연계하고 구성 요소별 실패 상태를 기록한다.
+추후 Foreman 등록과 CA CSR 승인·폐기를 관리 API로 연계하고 구성 요소별 실패 상태를 기록한다.
 CA 발급자 자체 교체는 서명 키·발급 상태·CRL·갱신과 Puppet 프로토콜/기존 인증서 호환성을 검증한 뒤
 결정한다. API Gateway/Lambda만으로 내장 CA의 모든 역할이 대체되지는 않는다.
 장애 시 API Gateway·Lambda·비밀 저장소·CA 서비스의 상태와 재시도/멱등성도 별도 점검하도록 확장한다.

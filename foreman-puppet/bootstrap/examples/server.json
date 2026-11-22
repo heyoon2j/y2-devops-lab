@@ -25,5 +25,7 @@
     "ca_cert": null,
     "host_cert": null,
     "host_key": null
-  }
+  },
+  "ca_fqdn": null,
+  "ca_mode": "internal_primary"
 }

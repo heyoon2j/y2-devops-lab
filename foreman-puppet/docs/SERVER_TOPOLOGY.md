@@ -20,7 +20,7 @@ Foreman·Compiler·Smart Proxy 용어는 [그림 설명](ARCHITECTURE_GUIDE.md)�
 | Role | user-data 등록 입력으로 base/unmanaged/devops/data_infra 중 하나 선택 |
 | 설정 변경 | Puppet이 변경 감지·검증·조건부 반영 |
 | 모니터링 | Zabbix가 생존·응답 감시와 알림 |
-| 인증서 | 사내 CA 신뢰 체계 사용 계획. 세부 발급 방식/실제 설정은 후속 결정 |
+| 인증서 | Foreman/서비스 웹 PKI는 사내 인증서, Agent 구간은 OpenVox 내장 CA. 실제 발급/연동 검증 전 |
 
 ## 2. 3단계 개발·운영 목표: 고정 EC2 2대 + LB + RDS
 
@@ -161,7 +161,7 @@ DB·CA·키·작업 계층까지 별도 HA 조건을 충족해야 한다.
 4. 관리 EC2 사양·디스크·FQDN·접속 주소와 RDS 버전·사양·보존 기간
 5. Foreman 및 실제 Puppet/OpenVox Server·Agent 버전과 패키지 공급 경로
    개발·운영 LB 및 확장 경계는 [LB/Scaling](LB_AND_SCALING.md), 실행 옵션은 [Agent 운영](AGENT_OPERATIONS.md) 참조
-6. 사내 CA 직접 발급/중간 CA 위임, DNS/SAN, 등록 인증과 갱신 절차
+6. 사내 웹 PKI와 내장 CA 신원, DNS/SAN, 최초 승인·갱신·백업/복구 절차
 7. 설치·서버 구성·코드 승격 자동화의 실행 위치와 인증 방식
 
 적용·제외 및 SSH 공통 제어는 구현했다. 지금 다음 작업은 1단계 단일 개발 서버의 설치·연동 절차다.

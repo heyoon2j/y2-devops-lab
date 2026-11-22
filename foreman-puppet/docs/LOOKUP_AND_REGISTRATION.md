@@ -106,7 +106,7 @@ Foreman에서 Role을 교체하면 다음 Agent 요청에서 Server가 새 분�
 ### 최초 user-data 등록의 API 인증
 
 현재 구현 우선순위는 별도 등록 서비스 없이 user-data의 등록 스크립트가 Foreman API를 직접
-호출하는 것이다. 공통 등록 서비스와 Zabbix 연계는 [추후 TODO](../README.md#추후-todo)다.
+호출하는 것이다. 공통 등록 서비스는 [추후 TODO](../README.md#추후-todo)다.
 
 권장 인증은 **등록 전용 Foreman 계정 + 만료일을 설정한 Personal Access Token(PAT) + HTTPS**다.
 PAT는 해당 계정 비밀번호 대신 사용하며 API의 HTTP Basic 인증에 사용자명:PAT로 전달한다.
