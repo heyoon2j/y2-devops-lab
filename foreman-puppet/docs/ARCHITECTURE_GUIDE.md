@@ -233,3 +233,6 @@ RDS Multi-AZ DB instance의 Standby는 장애 전환용이며 일반 읽기 분�
 CA Active/Standby 상태 복구가 구현되기 전에는 신규 등록까지 완전한 HA라고 보장하지 않는다.
 
 상세 설계는 [관리 서버 구성](SERVER_TOPOLOGY.md), [LB와 확장](LB_AND_SCALING.md)을 참고한다.
+
+CA가 있는 서버 1 장애 시 수동 승계·CA DNS 전환·검증·복귀는 [CA 장애 대응](CA_FAILURE_RUNBOOK.md)을 따른다.
+내장 CA와 백업 기반 수동 복구가 이 절차의 대상이며, 현재 bootstrap의 외부 PKI 구성은 별도 변경·검증이 필요하다.

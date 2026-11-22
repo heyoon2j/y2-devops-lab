@@ -280,6 +280,9 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
 초기 코드는 Puppet 8.10.0에서 Catalog 컴파일로 검증했다.
 실제 Foreman 연동, Agent 적용과 멱등성 검증은 아직 수행하지 않았다.
 
+CA 장애 시 상태 복구·DNS 수동 전환·복귀 절차는 [CA 장애 대응](docs/CA_FAILURE_RUNBOOK.md)을 따른다.
+현재 내장 CA 구성/복구 자동화는 구현 전이며 기존 bootstrap과의 차이를 문서에 명시했다.
+
 ## 추후 TODO
 
 - [ ] 공통 등록 서비스: CSP별 신원 검증·인벤토리/정책 대조 후 Foreman 및 Zabbix에 등록한다.
