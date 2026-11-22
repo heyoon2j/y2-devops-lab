@@ -11,7 +11,7 @@
 bootstrap/
 ├── agent/register.sh                  # Bash CLI: 기본 plan, --apply만 등록
 ├── lib/registration.jq                # Bash 입력/ENC 검증·요청 JSON 구성
-├── user-data/register.bash            # source해서 부르는 직접 API 등록 함수
+├── user-data/register.sh            # source해서 부르는 직접 API 등록 함수
 ├── user-data/go/                      # 독립 Go API 클라이언트
 │   ├── register.go                    # RegisterForeman(ctx, config, apply)
 │   ├── register_test.go               # Go/Bash 공통 HTTPS 시나리오 검증
@@ -122,11 +122,11 @@ API 형식 근거: [Foreman 5.0 hosts/create](https://apidocs.theforeman.org/for
 
 ## 기존 user-data에 함수로 결합하기
 
-Bash는 [`register.bash`](../bootstrap/user-data/register.bash)를 source한다. source만으로 실행되지 않는다.
+Bash는 [`register.sh`](../bootstrap/user-data/register.sh)를 source한다. source만으로 실행되지 않는다.
 실제 입력 파일·사내 CA·curl·jq·coreutils와 필요 시 AWS CLI를 준비한 뒤 함수를 호출한다. 세 번째 인자를 생략하면 plan이다.
 
 ```bash
-source /opt/foreman-puppet/bootstrap/user-data/register.bash
+source /opt/foreman-puppet/bootstrap/user-data/register.sh
 foreman_register /opt/foreman-puppet /etc/foreman-bootstrap/registration.json plan
 # 실제 최초 등록 단계
 foreman_register /opt/foreman-puppet /etc/foreman-bootstrap/registration.json apply

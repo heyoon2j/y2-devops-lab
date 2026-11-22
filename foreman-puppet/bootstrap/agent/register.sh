@@ -16,7 +16,7 @@ if [[ "$mode" == apply && $EUID != 0 ]]; then
   exit 1
 fi
 artifact_root=$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")/../.." && pwd)
-source "$artifact_root/bootstrap/user-data/register.bash"
+source "$artifact_root/bootstrap/user-data/register.sh"
 config_path=$2
 [[ "$config_path" = /* ]] || config_path="$PWD/$config_path"
 foreman_register "$artifact_root" "$config_path" "$mode"

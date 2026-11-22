@@ -226,7 +226,7 @@ func TestDirectClients(t *testing.T) {
 					write(t, config, b)
 					// Exercise the public reusable API function as an unprivileged test user.
 					// CLI root guard is checked separately, without bypasses in production.
-					cmd := exec.Command("bash", "-c", `set -a; pat=old; escaped_pat=old; secret_response=old; source "$1"; foreman_register "$2" "$3" apply`, "test", filepath.Join(root, "bootstrap/user-data/register.bash"), root, config)
+					cmd := exec.Command("bash", "-c", `set -a; pat=old; escaped_pat=old; secret_response=old; source "$1"; foreman_register "$2" "$3" apply`, "test", filepath.Join(root, "bootstrap/user-data/register.sh"), root, config)
 					cmd.Stderr = &diagnostics
 					output, runErr = cmd.Output()
 					if runErr == nil {
@@ -433,7 +433,7 @@ func TestSSMAndSecretGuards(t *testing.T) {
 			b, _ := json.Marshal(c)
 			config := filepath.Join(dir, "input.json")
 			write(t, config, b)
-			cmd := exec.Command("bash", "-c", `source "$1"; foreman_register "$2" "$3" apply`, "test", filepath.Join(root, "bootstrap/user-data/register.bash"), root, config)
+			cmd := exec.Command("bash", "-c", `source "$1"; foreman_register "$2" "$3" apply`, "test", filepath.Join(root, "bootstrap/user-data/register.sh"), root, config)
 			output, err := cmd.CombinedOutput()
 			if (kind == "padded") != (err == nil) {
 				t.Fatalf("Bash secret validation mismatch: %v %s", err, output)
@@ -472,7 +472,7 @@ func TestSSMAndSecretGuards(t *testing.T) {
 		config := filepath.Join(t.TempDir(), "input.json")
 		b, _ := json.Marshal(c)
 		write(t, config, b)
-		output, err := exec.Command("bash", "-c", `source "$1"; foreman_register "$2" "$3" apply`, "test", filepath.Join(root, "bootstrap/user-data/register.bash"), root, config).CombinedOutput()
+		output, err := exec.Command("bash", "-c", `source "$1"; foreman_register "$2" "$3" apply`, "test", filepath.Join(root, "bootstrap/user-data/register.sh"), root, config).CombinedOutput()
 		if err == nil || !bytes.Contains(output, []byte("PAT file")) {
 			t.Fatalf("Bash file guard missing: %v %s", err, output)
 		}
