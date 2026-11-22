@@ -4,14 +4,14 @@
 현재 신규 Role 기준은 [서버 Role 구성](ROLES.md)이다. 기존 GPU 흐름은 호환 예제로 유지한다.
 ## 확정한 구축 순서
 
-1. 개발 EC2 1대 + 로컬 PostgreSQL에 Foreman·Compiler·Smart Proxy를 설치한다. LB는 아직 두지 않는다.
+1. 개발·운영 각각 내부 NLB + Server1 + 로컬 PostgreSQL 16을 구성한다. 검증은 개발 먼저 진행한다.
 2. 대표 소수 Agent로 등록·Facts·ENC·설정 적용·Report·멱등성·제외를 검증한다.
-3. 로컬 DB를 RDS로 이전하고 LB + 고정 EC2 2대로 확장해 개발 1,000~2,000대 및 N-1 부하를 검증한다.
-4. 검증한 설치 절차로 약 250대의 별도 운영 구성을 구축한다. [단계별 구축](PHASED_ROLLOUT.md) 참조.
+3. 각 환경의 로컬 DB를 각각 RDS PostgreSQL 16으로 이전한다. 이때 Server1과 기존 LB는 유지한다.
+4. 다른 AZ에 각 환경의 Server2를 추가하고 개발 1,000~2,000대·운영 약 250대의 N-1 및 CA 복구를 검증한다. [단계별 구축](PHASED_ROLLOUT.md) 참조.
 
 개발은 `development`, 운영은 `production` Puppet Environment를 사용한다.
 Host Group은 CSP만 표현하며, 개발·운영 표시는 계속 `deploy_env` ENC 파라미터를 사용한다.
-아래는 최종 개발·운영 매핑이다. 첫 개발 구축에서 운영 리소스까지 생성하지 않는다.
+아래는 개발·운영 매핑이다. 두 환경은 단계별로 각각 분리 구축하며 개발 검증을 운영에 선행한다.
 운영 관리 구성의 세부 배치는 HA 문서에 따른다.
 
 | Host Group | `deploy_env` ENC 파라미터 | 호스트의 Puppet Environment | 호스트별 Role |

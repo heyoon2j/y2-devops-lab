@@ -12,14 +12,14 @@
 실제 설치·통합 검증은 아직 수행하지 않았다.
 
 관리 서버/대상별 설치 목록·버전과 보안 수정 중심 업데이트 정책은
-[아키텍처 결정](ARCHITECTURE_GUIDE.md#최초-개발-서버-구성과-버전)을 따른다.
+[아키텍처 결정](ARCHITECTURE_GUIDE.md#최초-개발운영-서버-구성과-버전)을 따른다.
 설치 자동화의 Python 의존성을 없애는 방향은 확정했지만 현재 실행기는 아직 전환 전이다.
 
 ## 설치 기준표
 
 | 항목 | 준비 기준 | 상태 |
 | --- | --- | --- |
-| 구성 | EC2 1대에 Foreman·Compiler·Smart Proxy·로컬 PostgreSQL | 합의 완료 |
+| 구성 | 개발 LB + Server1에 Foreman·Compiler·Smart Proxy·로컬 PostgreSQL 16. 운영도 별도 같은 1단계 적용 | 합의 완료 |
 | 관리 OS | Ubuntu 24.04 amd64 | 공식 지원 확인, 제안 기준 |
 | 서버 자원 | 8 vCPU·32 GiB RAM·100 GiB SSD | 소수 Agent 검증용 후보, 성능 보장 아님 |
 | Foreman | 5.0.1 | 공식 설치 경로 확인, 정확한 패키지 revision 미고정 |

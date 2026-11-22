@@ -8,10 +8,10 @@ Foreman·Compiler·Smart Proxy 용어는 [그림 설명](ARCHITECTURE_GUIDE.md)�
 
 | 구분 | 내용 |
 | --- | --- |
-| 개발 | 1단계 EC2 1대 + 로컬 DB → 2단계 LB + 고정 EC2 2대 + RDS |
+| 개발 | 1단계 LB + Server1 + 로컬 DB → 2단계 RDS → 3단계 Server2 추가 |
 | 개발 관리 서버 위치 | AWS. 리전·VPC·CSP 간 접속 경로는 미정 |
 | 관리 노드 수 | 개발 1,000~2,000대, 운영 약 250대 |
-| 운영 | 같은 방식의 LB + 고정 EC2 2대 + 공용 HA DB 구성 |
+| 운영 | 개발과 분리해 동일한 1→2→3단계 적용. 검증은 개발 먼저 |
 | Autoscaling | 현재 도입하지 않고 후속 고도화로 이관 |
 | 2·3단계 DB 권장안 | RDS PostgreSQL Multi-AZ, 두 Foreman이 같은 DB endpoint 사용 |
 | 기능 범위 | Foreman 호스트 관리 + Puppet 계열의 시스템 설정 적용 |
@@ -22,10 +22,10 @@ Foreman·Compiler·Smart Proxy 용어는 [그림 설명](ARCHITECTURE_GUIDE.md)�
 | 모니터링 | Zabbix가 생존·응답 감시와 알림 |
 | 인증서 | 사내 CA 신뢰 체계 사용 계획. 세부 발급 방식/실제 설정은 후속 결정 |
 
-## 2. 2단계 개발 확장 및 운영 목표: 고정 EC2 2대 + LB + RDS
+## 2. 3단계 개발·운영 목표: 고정 EC2 2대 + LB + RDS
 
-1단계는 EC2 1대와 로컬 PostgreSQL로 시작한다. [단계별 구축·DB 이전](PHASED_ROLLOUT.md)을 따른다.
-아래는 로컬 DB를 RDS로 이전한 뒤의 2단계 및 운영 목표다.
+1단계는 환경별 LB + Server1 + 로컬 PostgreSQL 16으로 시작한다. [단계별 구축·DB 이전](PHASED_ROLLOUT.md)을 따른다.
+2단계는 RDS 이전만 수행하고 아래 2대 구성은 3단계 목표다.
 AWS의 서로 다른 AZ에 전용 EC2 2대를 고정 배치한다. 각 EC2에 Foreman·Puppet 계열
 Server/Compiler·Smart Proxy를 함께 설치하는 안으로 시작한다. 관리 OS 후보는 Ubuntu 24.04 amd64다.
 두 Foreman은 로컬 DB를 따로 사용하지 않고 같은 외부 PostgreSQL DB에 연결한다.
@@ -93,7 +93,7 @@ Puppet Intermediate CA를 선택하면 EC2 중 한 대 또는 별도 위치에�
 CA 전환 구현 전에는 EC2 1대 장애에도 신규 등록/서명/폐기를 계속할 수 있다고 보장하지 않는다.
 
 현재는 고정 2대 설계와 RDS 권장안을 문서화한 것이며 실제 설치·생성·failover 시험은 하지 않았다.
-최초 개발은 로컬 DB 1대 구성으로 기능을 확인하고, 2단계에서 RDS 이전·두 번째 EC2·LB를 검증한다.
+개발·운영 모두 1단계부터 LB를 두고, 2단계 RDS 이전과 3단계 Server2 추가·CA 복구를 분리 검증한다.
 Katello·PuppetDB·DHCP/TFTP/PXE는 초기 범위에 추가하지 않는다.
 Redis/작업 실행 계층은 선택한 플러그인이 요구하면 별도 관리형/HA 구성으로 검토한다.
 
@@ -101,10 +101,10 @@ Redis/작업 실행 계층은 선택한 플러그인이 요구하면 별도 관�
 
 개발 예시 이름이며 실제 조직 도메인은 아직 미정이다.
 
-| 논리 이름 | 용도 | 1단계 → 2단계 |
+| 논리 이름 | 용도 | 1단계 → 3단계 |
 | --- | --- | --- |
-| `foreman-dev.example.internal` | 웹·등록 API·ENC·Facts/Report 연동 | 단일 EC2 → 개발 LB의 Foreman target group |
-| `puppet-dev.example.internal` | Agent Catalog 통신 | 단일 EC2 → 개발 LB의 Compiler target group |
+| `foreman-dev.example.internal` | 웹·등록 API·ENC·Facts/Report 연동 | 기존 NLB Foreman TG: Server1 → Server1/2 |
+| `puppet-dev.example.internal` | Agent Catalog 통신 | 기존 NLB Compiler TG: Server1 → Server1/2 |
 | `puppet-ca-dev.example.internal` | Puppet CA 방식의 인증서 요청 | 같은 관리 VM 또는 선택한 CA 구성 |
 
 실제 호스트 FQDN과 DNS·인증서 SAN을 일치시킨다. 처음부터 논리 접속 이름을 사용하면
@@ -139,7 +139,7 @@ CA 발급 모델과 실제 설치 구성에 따라 포트/endpoint는 재검증�
 
 ## 5. 운영 목표
 
-2단계 개발과 운영은 같은 고정 2대 + LB 구조를 목표로 한다. 두 역할은 같은 EC2에 공동 배치할 수 있지만
+3단계 개발·운영은 같은 고정 2대 + LB 구조를 목표로 한다. 두 역할은 같은 EC2에 공동 배치할 수 있지만
 DB·CA·키·작업 계층까지 별도 HA 조건을 충족해야 한다.
 
 | 구성 요소 | 운영 목표 |

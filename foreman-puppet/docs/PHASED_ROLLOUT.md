@@ -1,110 +1,125 @@
-# 개발 단일 서버에서 운영까지의 구축 순서
+# 개발·운영 공통 단계별 구축 계획
 
-상태: 합의한 구축 계획. 실제 서버 설치·DB 이전·LB 생성은 아직 수행하지 않았다.
-시간 제약을 반영해 먼저 개발 단일 서버로 기능을 검증한다. 2단계에서 개발 이중화 구조를
-검증한 뒤 운영을 별도로 구축한다. Autoscaling은 후속 고도화로 유지한다.
+상태: 2026-11-22 변경한 계획. 개발·운영을 각각 분리하고 두 환경 모두 같은 순서로 진행한다.
+실제 LB/EC2/RDS 생성·설치·DB 이전·장애 전환은 아직 수행하지 않았다.
+개발에서 먼저 검증한 절차를 운영에 적용하되, 운영 구축을 3단계까지 기다리는 계획은 아니다.
 
-| 단계 | 구성 | 목표 / 다음 단계 진입 기준 |
-| --- | --- | --- |
-| 1. 개발 최초 구축 | AWS EC2 1대 + 로컬 PostgreSQL, LB 없음 | 대표 노드 등록·Facts·ENC·Catalog·Report·멱등성·제외 흐름 확인 |
-| 2. 개발 확장 | LB + 서로 다른 AZ의 고정 EC2 2대 + RDS PostgreSQL | 로컬 DB 이전·접속 전환·동일 코드·N-1 및 DB 복구/장애 전환 검증 |
-| 3. 운영 구축 | 별도 운영 LB + 고정 EC2 2대 + 별도 RDS, CA 가용성 설계 | 검증한 설치 절차·승인 commit으로 약 250대 단계적 도입 |
+| 단계 | 개발 | 운영 | 완료 기준 |
+| --- | --- | --- | --- |
+| 1. 최초 구축 | 내부 NLB + Server1 + 로컬 PostgreSQL 16 | 별도 내부 NLB + Server1 + 별도 로컬 PostgreSQL 16 | 등록·ENC·Facts·Catalog·Report·멱등성·제외·백업 검증 |
+| 2. DB 분리 | NLB + Server1 + 개발 RDS PostgreSQL 16 | 운영 NLB + Server1 + 운영 RDS PostgreSQL 16 | 일관된 DB 이전·접속 전환·백업/PITR·복구 검증 |
+| 3. 서버 이중화 | 기존 NLB + 다른 AZ의 Server1/2 + 개발 RDS | 기존 운영 NLB + 다른 AZ의 Server1/2 + 운영 RDS | 코드/비밀값 일치·N-1·DB 전환·CA 복구 검증 |
 
-개발 전체 대상은 1,000~2,000대지만 1단계의 단일 서버가 그 규모를 처리한다고 보장하지 않는다.
-처음에는 1~몇 대로 연결하고 부하를 확인하며 확대한다. 전체 규모 및 N-1 시험은 2단계에서 한다.
+Server1/2에는 Foreman·Puppet 플러그인·Smart Proxy·OpenVox Server를 공동 배치한다.
+개발·운영의 서버·DB·endpoint·CA 신원·등록 자격증명은 공유하지 않는다.
+개발 대상은 1,000~2,000대, 운영은 약 250대지만 단일 서버가 이 규모를 처리한다고 보장하지 않는다.
+대표 1~몇 대부터 검증하고 측정된 부하로 확대한다. N-1 전체 규모 시험은 3단계에서 한다.
 
-## 1단계: 지금 진행할 구성
+## 1단계: LB + Server1 + Local DB
 
 ```mermaid
 flowchart LR
-    U["운영자 / 등록 자동화"] -->|443| F
-    A["대표 개발 노드의 Puppet Agent"] -->|8140| P
-    subgraph EC2["AWS 개발 EC2 1대"]
-      F["Foreman"] --> DB["로컬 PostgreSQL"]
-      P["Puppet Server / Compiler"] -->|ENC / Facts / Report| F
-      S["Smart Proxy"]
-      C["선택한 PKI의 CA 연동"]
-      F --> S
-    end
-    A -.->|CA 별도 논리 이름 / 선택한 PKI 경로| C
+    U["운영자 / user-data 등록"] -->|"443"| L["환경별 내부 NLB"]
+    A["대상 Agent"] -->|"8140"| L
+    L -->|"Foreman TG: 대상 1대"| F["Server1: Foreman + Puppet 플러그인"]
+    L -->|"Compiler TG: 대상 1대"| P["Server1: OpenVox Server"]
+    F --> D["Server1: 로컬 PostgreSQL 16"]
+    F --> S["Server1: Smart Proxy"]
+    P -->|"ENC / Facts / Report"| F
+    A -.->|"별도 CA DNS:8140"| C["Server1: 단일 Active CA"]
 ```
 
-- VM에 OS 패키지로 직접 설치한다. 관리 OS 후보는 Ubuntu 24.04 amd64이며
-  Foreman·Puppet/OpenVox·PostgreSQL의 지원 조합과 공급 경로를 설치 전에 확정한다.
-- EC2 사양은 소수 노드 검증부터 산정한다. 8 vCPU·32 GiB RAM·100 GiB SSD를
-  공동 배치 시작 후보로 검토할 수 있으나 보장 사양이나 생성 지시가 아니다.
-  DB·JVM·Report 저장량을 측정해 조정한다.
-- 로컬 PostgreSQL은 이 EC2의 Foreman이 사용한다. 외부 Agent에 DB 포트를 개방하지 않는다.
-- Foreman·Compiler·DB가 함께 중단되는 단일 장애점이며 HA가 아니다.
-  EC2 밖에 DB 백업과 키·설정·CA 상태의 복구 가능한 백업을 둔다.
-- CA/인증서 신뢰는 첫 Agent 연결부터 필요하다. 사내 PKI 세부 구현은 별도 확정하고,
-  CA 개인키/신원을 새로 만드는 작업을 DB 이전과 묶어서 수행하지 않는다.
+NLB를 처음부터 두되 Target Group에는 Server1 한 대만 등록한다. LB가 있어도 Server1과
+로컬 DB는 단일 장애점이다. 서버 중단 시 대체 서버에 DB·코드·설정·비밀값·인증 자료를 복구해야 한다.
 
-### 처음부터 유지할 이름과 상태
+- Foreman용 TCP 443과 Compiler용 TCP 8140을 분리하고 TLS passthrough를 사용한다.
+- CA 전용 DNS는 Server1 사설 주소를 가리키며 일반 Compiler 풀과 분리한다.
+- NLB 동일 대상 hairpin·cross-zone·SG·TLS SAN·내부 API 연동을 [LB 설계](LB_AND_SCALING.md)대로 검증한다.
+- VM에 OS 패키지로 직접 설치한다. Ubuntu 24.04 x86_64 기준이며 실제 사양·지원 조합을 확인한다.
+- 8 vCPU·32 GiB RAM·100 GiB SSD는 시작 후보이고 확정 성능이 아니다. JVM·DB·디스크·Report 부하를 측정한다.
+- 로컬 DB는 같은 EC2의 Foreman만 사용한다. 외부 Agent에 DB 포트를 열지 않는다.
+- 로컬 DB·CA·비밀값의 복구 가능한 백업을 EC2 밖에 보관한다.
+- 내장 CA 운영 절차와 현재 외부 PKI용 bootstrap 사이의 차이는 [장애 대응](FAILURE_RUNBOOK.md)을 따른다.
 
-| 항목 | 1단계 | 2단계 |
-| --- | --- | --- |
-| foreman-dev.example.internal | 단일 EC2의 Foreman | LB의 Foreman 경로 |
-| puppet-dev.example.internal | 단일 EC2의 Compiler | LB의 Compiler 경로 |
-| puppet-ca-dev.example.internal | 선택한 CA 경로 | 기존 CA 신원 유지, 전환은 별도 설계 |
-| DB 연결 | 로컬 PostgreSQL | RDS 쓰기 endpoint |
-| Puppet 코드 | 승인 commit의 development | 두 Compiler에 같은 commit |
+### 처음부터 유지할 접속 이름
 
-위 DNS 이름은 예시다. 실제 도메인·SAN·노드 고유 certname을 설치 전에 정한다.
-논리 이름을 쓴다고 기존 인증서 SAN이 자동 변경되지는 않는다. CA 이름을 Compiler LB 풀에
-무조건 포함하지 않는다. DNS TTL·경로·인증서 검증을 포함해 전환한다.
+| 이름 예시 | 1단계 | 2단계 | 3단계 |
+| --- | --- | --- | --- |
+| foreman-dev.example.internal | 개발 NLB 443, Server1 | 유지 | Server2를 같은 TG에 추가 |
+| puppet-dev.example.internal | 개발 NLB 8140, Server1 | 유지 | Server2를 같은 TG에 추가 |
+| puppet-ca-dev.example.internal | CA 담당 Server1 | 유지 | 수동 승계 후 검증된 CA 서버로 DNS 전환 |
+| Foreman DB 연결 | 로컬 PostgreSQL | RDS 쓰기 endpoint | 같은 환경의 두 Foreman이 같은 RDS 사용 |
+| Puppet 코드 | 검증 commit | 동일 commit 유지 | 두 Compiler에 동일 commit 배포 |
 
-설치 기준표와 읽기 전용 사전 점검은 [개발 서버 설치 준비](DEV_SERVER_INSTALL.md)에 정리했다.
+운영은 별도 운영용 이름을 사용한다. 실제 FQDN·SAN·certname은 설치 전 확정한다.
+논리 이름이 같아도 CA 신원·서비스 인증서·DNS TTL은 자동으로 변경되지 않는다.
 
-### 지금 바로 이어서 할 작업
+### 지금 이어서 할 작업
 
-1. 관리 서버의 OS·제품/버전·FQDN·사양·디스크·보안 그룹·접속 경로를 설치 입력으로 정리한다.
-2. EC2 1대에 로컬 DB 포함 Foreman·Compiler·Smart Proxy를 설치하는 반복 가능한 절차를 만든다.
-3. development 코드와 Classes를 가져오고 aws/gcp/kc Host Group의 csp 및 Boolean
-   puppet_managed=true를 준비한다. 신규 Role 네 가지를 호스트별로 하나만 배정한다.
-4. Ubuntu 24.04 대표 Agent 1대로 등록·인증·Facts·첫 Catalog 적용·Report를 확인한다.
-5. 두 번째 적용 무변경, 설정 드리프트 교정, 제외를 확인한다. 미관리 목표는
-   [Role별 최초 적용](ROLE_LIFECYCLE.md) 성공 후 false → unmanaged로 전환한다.
-6. SSH는 [SSH Profile](SSH_PROFILE.md)의 이미지 전제조건과 새 로그인 검증 후 활성화한다.
-   초기 연결부터 검증되지 않은 SSH 변경을 한꺼번에 켜지 않는다.
+1. 환경별 FQDN·NLB/TG·기존 서버 OS/사양·네트워크·사내 인증서·Agent 인증 경로를 확정한다.
+2. Server1에 로컬 DB 포함 설치 절차를 준비하고 NLB를 통한 웹/API·Agent 연결을 검증한다.
+3. user-data의 Foreman 직접 API 등록과 PAT 공급 경로를 구현한다. 공통 등록 서비스는 고도화 TODO다.
+4. csp Host Group, 단일 Role, deploy_env/team/dr_site와 Boolean puppet_managed를 ENC로 확인한다.
+5. 대표 Agent로 최초 적용과 최신 Report, 두 번째 무변경·드리프트 교정·제외를 확인한다.
+6. SSH는 [SSH Profile](SSH_PROFILE.md)의 전제조건·새 로그인 검증 후 활성화한다.
+7. 개발 검증 절차를 별도 운영 Server1에 적용하고 소수 노드부터 도입한다.
 
-따라서 지금 우선순위는 새로운 설정 Profile을 늘리기보다 **단일 개발 관리 서버의 설치·연동**이다.
-등록·성공 확인·미관리 자동 전환은 아직 구현 전이며, 먼저 수동으로 검증 가능한 경로를 확보한다.
+## DB 엔진 권장안
 
-## 2단계: 로컬 DB → RDS → 두 번째 EC2 → LB
+**로컬은 PostgreSQL 16, 이전 대상은 Amazon RDS for PostgreSQL 16**을 권장한다.
+Ubuntu 24.04의 기본 PostgreSQL 계열이며 현재 bootstrap의 postgresql-16 패키지와 맞는다.
+MySQL/MariaDB 또는 Aurora 전환을 이번 범위에 추가하지 않는다.
 
-위 순서로 변경을 나누어 실패 원인을 분리한다. DB 이전과 Foreman 버전 업그레이드를
-동시에 진행하지 않는다. 이 문서는 이전 체크리스트이며 실행 가능한 마이그레이션 스크립트는 아니다.
+설치 시 보안 수정이 반영된 16.x 패키지 revision을 확인하고 이전 시 선택 리전에 제공되는 RDS 16.x를
+대조한다. 로컬과 RDS의 패치 번호가 반드시 같아야 하는 것은 아니지만 dump/restore 도구 호환성,
+encoding·locale·collation·extension·권한을 시험한다. DB 이전과 major 업그레이드를 동시에 진행하지 않는다.
+RDS 서비스에 제공된다는 사실만으로 Foreman 연동 검증을 대신하지 않는다.
+운영 RDS는 Multi-AZ를 권장하며 개발은 복구/장애 시험 요구와 비용을 기준으로 결정한다.
 
-1. 같은 Foreman 버전에서 지원하는 RDS PostgreSQL 엔진·encoding·locale·권한·extension을
-   확인한다. 로컬/목표 DB 버전에 맞는 pg_dump/pg_restore 도구로 시험 복원한다.
-   RDS private 접근·SG·TLS 신뢰·연결 풀·백업/PITR·보존 기간을 준비한다.
-2. Foreman DB뿐 아니라 암호화 키·세션 비밀값·설정·인증서·코드 commit·별도 CA 상태를 백업한다.
-   DB dump만으로 전체 서비스가 복원된다고 가정하지 않는다.
-3. 이전 중 웹/API/등록·ENC 연동·Facts/Report 업로드·백그라운드 작업 등 DB 쓰기를 멈추고
-   차단 여부를 확인한다. 허용 중단 시간과 Agent 실패/재시도 동작을 미리 정한다.
-4. 최종 일관된 dump를 RDS에 복원하고 권한·스키마·주요 데이터 및 시퀀스를 검증한다.
-   RDS의 제한된 관리자 권한 때문에 owner/ACL 복원이 달라질 수 있어 시험 결과에 맞춰 처리한다.
-5. **기존 EC2 1대부터** RDS로 연결을 바꿔 Foreman과 연동 기능을 검증한다.
-   양쪽 DB로 동시에 쓰지 않으며, 기존 로컬 DB는 쓰기를 막아 보관한다.
-6. 서로 다른 AZ에 두 번째 EC2를 설치한다. 같은 제품 버전·비밀값·코드·설정을 사용하고
-   각 서버에는 고유 certname/개인키를 발급한다. 스키마 초기화/업그레이드는 한 곳에서만 수행한다.
-7. 내부 NLB의 443 Foreman TG와 8140 Compiler TG에 편입한다. 논리 DNS·SAN·
-   Smart Proxy 고유 등록·NLB hairpin 경로를 [LB 설계](LB_AND_SCALING.md)에 따라 검증한다.
-8. 한 EC2 중단·DB 복구/전환·등록·Catalog·Report·부하를 시험한다. RDS Multi-AZ를 권장하며
-   Single-AZ를 선택하면 DB는 여전히 단일 장애점임을 명시한다. CA 전환은 별도 검증 대상이다.
+근거: [Ubuntu Noble PostgreSQL](https://packages.ubuntu.com/noble/postgresql),
+[Foreman 5.0 설치 경로](https://docs.theforeman.org/5.0/Quickstart/index-foreman-deb.html),
+[RDS PostgreSQL 버전](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/PostgreSQL.Concepts.General.DBVersions.html).
 
-RDS에 새 쓰기를 받기 전에는 검증 실패 시 기존 로컬 DB로 되돌리는 경로를 사용할 수 있다.
-새 쓰기를 받은 뒤에는 오래된 로컬 DB로 단순 재접속하면 데이터가 유실된다.
-다시 쓰기를 멈추고 최신 데이터의 역이전/복구 절차로 되돌려야 하며 그 절차도 시험한다.
-이전 완료 후에는 로컬 DB 자동 기동과 설치 자동화의 로컬 DB 재생성을 비활성화한다.
+## 2단계: Local DB → RDS (Server1 유지)
 
-## 3단계: 운영 구축
+DB 이전과 Foreman/엔진 버전 변경을 분리한다. 다음은 체크리스트이며 자동 마이그레이션 스크립트가 아니다.
 
-개발 DB를 운영 DB로 옮기지 않는다. 별도 운영 서버·DB·endpoint·인증 경계에
-검증한 설치 절차와 승인한 production 코드 commit을 배포한다.
-운영용 Host Group·Role·Parameters는 반복 가능한 구성 절차로 생성하며 개발 호스트·토큰을 복사하지 않는다.
-약 250대도 소수부터 확대한다. N-1 용량·DB 복원·CA 가용성·모니터링·보존·롤백을 확인한다.
-LB+서버 2대+RDS만으로 CA와 작업 실행 계층까지 자동 HA가 된다고 보장하지 않는다.
+1. 동일 환경용 RDS 16.x의 private 접근·SG·TLS·사용자/권한·extension·백업/PITR·연결 풀을 준비한다.
+   로컬/대상 버전에 맞는 pg_dump/pg_restore로 먼저 시험 복원한다.
+2. DB뿐 아니라 Foreman 암호화 키·세션 비밀값·설정·코드 commit·인증서·CA 상태를 백업한다.
+3. 최종 이전 중 웹/API/등록·ENC·Facts/Report·백그라운드 작업 등 DB 쓰기를 멈추고 차단을 확인한다.
+   허용 중단 시간과 Agent 실패/재시도 동작을 미리 정한다.
+4. 일관된 최종 dump를 RDS로 복원하고 권한·스키마·주요 데이터·시퀀스를 확인한다.
+   RDS의 제한된 관리자 권한에 맞춰 owner/ACL 복원을 조정한다.
+5. Server1의 Foreman DB 연결을 RDS로 변경하고 NLB를 통한 API/ENC·Catalog·Report를 검증한다.
+   같은 데이터를 양쪽 DB에 동시에 쓰지 않는다. 기존 로컬 DB는 쓰기를 막아 보관한다.
+6. 이전 완료 후 로컬 DB 자동 기동·설치 자동화의 DB 재생성을 비활성화한다.
+   현재 bootstrap의 db_manage=true/localhost 원본도 RDS 구성에 맞게 바꿔야 하며 이 변경 자동화는 후속이다.
 
-현재 단계별 구성·이전 계획만 문서화했다. EC2/LB/RDS 생성, DB 이전, 설치·성능/HA 시험은 후속 작업이다.
+RDS에 새 쓰기를 받기 전에는 검증 실패 시 기존 로컬 DB로 복귀할 수 있다.
+새 쓰기를 받은 뒤에는 옛 로컬 DB에 단순 재접속하지 않는다. 쓰기를 멈추고 최신 데이터 역이전/복구를
+시험한 절차로 수행해야 한다. 개발 DB를 운영 DB로 복사하는 절차가 아니다.
+
+## 3단계: Server2 추가·이중화 (CA 포함)
+
+1. 다른 AZ에 같은 검증 버전의 Server2를 설치하고 같은 환경의 RDS에 연결한다.
+2. Foreman 암호화/세션 비밀값과 코드·모듈·Hiera commit은 일치시킨다. 서버별 certname/개인키는 고유하게 유지한다.
+3. DB 스키마 초기화/업그레이드는 한 곳에서만 수행한다. Smart Proxy도 고유 주소로 각각 등록한다.
+4. Server2의 TLS·ENC·Class·Catalog·CRL·Report를 확인한 뒤 기존 NLB TG에 편입한다.
+5. CA는 단일 Active를 유지한다. 외부 백업·상태 공백 대조·fencing·서버 2 수동 복구/DNS 전환을
+   [장애 대응](FAILURE_RUNBOOK.md)에 따라 리허설한다. 두 CA 동시 발급이나 자동 HA를 가정하지 않는다.
+6. EC2 한 대 중단·N-1 부하·DB 복원/장애 전환·CA 장애·신규 등록을 시험한다.
+   RDS Single-AZ면 DB 단일 장애점이 남는다. CA 복구 시간·RPO도 별도로 기록한다.
+
+## 후속 고도화: API Gateway + Lambda 인증·등록
+
+user-data의 Foreman 직접 PAT 등록에서 **API Gateway + Lambda 기반 신원 검증·등록 대행**으로 전환한다.
+CSP별 신원 증명/인벤토리·허용 Role·환경 검증, Foreman/Zabbix별 등록, 부분 실패 재시도·중복 방지·삭제 정리를
+구현하고 Foreman 자격증명은 관리 측에만 둔다. 지금은 TODO이며 별도 AWS 리소스를 만들지 않는다.
+
+CA 고도화는 먼저 Lambda가 검증한 등록 정보에 따라 기존 Puppet CA API로 CSR 승인·폐기를 대행하는
+방향을 검토한다. API Gateway/Lambda는 자체로 CA 키·발급 상태·CRL·갱신을 제공하지 않는다.
+CA 발급자 자체를 다른 서비스로 교체하려면 별도 서명/상태 저장 기반과 Puppet CA 프로토콜 호환,
+Agent mTLS·신뢰 체인·갱신·폐기·기존 인증서 이전을 검증한 뒤 결정한다. HTTP JWT 인증을 추가했다고
+Agent 인증서가 없어지거나 일반 NLB 8140 통신을 그대로 API Gateway로 옮길 수 있다고 가정하지 않는다.
+Autoscaling도 고도화로 보류한다.

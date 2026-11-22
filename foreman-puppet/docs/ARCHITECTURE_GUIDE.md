@@ -1,18 +1,18 @@
 # Foreman / OpenVox 구성과 아키텍처
 
 이 그림은 설계이며 현재 서버를 설치한 상태가 아니다.
-아래 2노드 그림은 2단계 개발 및 운영 목표다. 최초 개발은 EC2 1대 + 로컬 DB이며 LB가 없다.
+아래 2노드 그림은 3단계 개발·운영 목표다. 두 환경 모두 1단계부터 각자의 LB + Server1 + 로컬 DB를 사용한다.
 [단계별 구축](PHASED_ROLLOUT.md)에서 단일 서버와 이전 흐름을 확인한다.
 개발·운영은 별도 서버·DB·endpoint와 코드 환경을 사용한다.
 
-## 최초 개발 서버 구성과 버전
+## 최초 개발·운영 서버 구성과 버전
 
-2026-11-18 결정 기준이다. **개발 관리 서버 EC2 1대에 Foreman·Smart Proxy·OpenVox Server·
+2026-11-22 변경 기준이다. **개발 관리 서버 EC2 1대에 Foreman·Smart Proxy·OpenVox Server·
 로컬 PostgreSQL을 함께 설치**한다. 대상 서버에는 OpenVox Agent를 설치하며 Foreman Agent나
-Smart Proxy를 별도로 설치하지 않는다. 개발 2단계부터 LB + EC2 2대 + RDS로 확장한다.
+Smart Proxy를 별도로 설치하지 않는다. 개발·운영 각각 처음부터 NLB를 사용하고 2단계에 RDS 이전, 3단계에 Server2를 추가한다.
 
 ```text
-개발 관리 서버 — Ubuntu 24.04 x86_64 / AWS EC2 1대
+개발·운영 각각의 관리 서버 — Ubuntu 24.04 x86_64 / AWS EC2 1대
 ├── Foreman 5.0.1                 # 웹·API·호스트 분류·결과 조회
 │   └── Foreman Puppet 플러그인    # Puppet Class·Environment·Report 관리 기능
 ├── Smart Proxy (foreman-proxy)    # Foreman의 Puppet 관리 API 중계, 별도 서비스
@@ -28,8 +28,10 @@ Smart Proxy를 별도로 설치하지 않는다. 개발 2단계부터 LB + EC2 2
 
 ```mermaid
 flowchart LR
-    U["운영자"] --> F
-    subgraph M["개발 관리 서버 EC2 1대 / LB 없음"]
+    U["운영자"] --> L["환경별 내부 NLB / 대상 Server1 한 대"]
+    L -->|"443"| F
+    L -->|"8140"| P
+    subgraph M["환경별 관리 서버 EC2 1대 / 로컬 DB"]
         F["Foreman 5.0.1 + Puppet 플러그인"]
         S["Smart Proxy / foreman-proxy"]
         P["OpenVox Server 9.2.0
@@ -41,7 +43,7 @@ flowchart LR
         P -->|"ENC 분류 조회 / Facts·Report 전달"| F
     end
     A["대상 서버: OpenVox Agent
-기본 9.4.0 / AL2 8.33.0"] <-->|"Catalog 요청·수신 / Facts·Report"| P
+기본 9.4.0 / AL2 8.33.0"] <-->|"Catalog 요청·수신 / Facts·Report"| L
 ```
 
 Smart Proxy는 Foreman의 플러그인과 다른 프로세스다. 같은 VM에 함께 두지만 나중에 분리할 수 있다.
@@ -234,5 +236,5 @@ CA Active/Standby 상태 복구가 구현되기 전에는 신규 등록까지 �
 
 상세 설계는 [관리 서버 구성](SERVER_TOPOLOGY.md), [LB와 확장](LB_AND_SCALING.md)을 참고한다.
 
-CA가 있는 서버 1 장애 시 수동 승계·CA DNS 전환·검증·복귀는 [CA 장애 대응](CA_FAILURE_RUNBOOK.md)을 따른다.
+서버·LB·DB·인증 장애 및 CA 서버 1 장애 시 수동 승계·DNS 전환·복귀는 [장애 대응](FAILURE_RUNBOOK.md)을 따른다.
 내장 CA와 백업 기반 수동 복구가 이 절차의 대상이며, 현재 bootstrap의 외부 PKI 구성은 별도 변경·검증이 필요하다.

@@ -1,8 +1,38 @@
-# CA 장애 대응: 상태 복구와 DNS 수동 전환
+# 장애 대응
 
 상태: 2026-11-22 합의한 배치를 기준으로 작성한 운영 절차 초안. 실제 장애 전환·복원 시험 전이다.
 개발/운영별 실측 정보와 RTO/RPO를 채우고 리허설한 뒤 실행 절차로 확정한다.
 문서 작성 과정에서 서버·DNS·CA·S3는 변경하지 않았다.
+
+## 단계별 장애 판별과 공통 대응
+
+최신 구축 순서는 개발·운영 각각 ① LB+Server1+로컬 DB ② 로컬 DB→RDS ③ Server2 추가/CA 포함
+이중화다. [단계별 계획](PHASED_ROLLOUT.md)을 따른다. 개발 장애 복구에 운영 DB/CA를 섞지 않는다.
+
+| 장애 | 1단계/2단계 | 3단계 | 우선 대응 |
+| --- | --- | --- | --- |
+| Server1 중단 | 유일한 백엔드 중단. 1단계는 DB도 영향 | 정상 Server2로 일반 요청 처리, CA는 별도 복구 | NLB TG·EC2·디스크·서비스·DB 확인, CA fencing |
+| NLB/네트워크/DNS | 대상이 정상이어도 접속 불가 | 두 서버여도 경로 장애 영향 | listener/TG·SG·routing·DNS·TLS와 동일 대상 hairpin 구분 |
+| 로컬 DB 장애 | Foreman 등록/ENC/Report 중단 | 로컬 DB 사용 안 함 | 디스크·서비스·DB 로그 확인, 일관된 백업과 비밀값으로 복구 |
+| RDS 장애 | 2단계 Foreman 기능 영향 | 같은 환경의 두 Foreman에 영향 | RDS 상태/이벤트·접속/TLS·Multi-AZ 전환 확인 |
+| Compiler/코드 오류 | 최신 Catalog 생성 실패 | 공통 코드 오류면 두 서버 모두 실패 | 오류 Report·서버 로그·commit 확인, 검증된 이전 코드로 복귀 |
+| 인증서/CA/CRL 오류 | 최초 발급과 기존 통신 영향을 분리 | 유효한 신뢰/CRL 없으면 정상 Server2도 실패 | 만료·DNS SAN·체인·폐기 상태 구분, 아래 CA 상세 절차 |
+| API 등록 인증 실패 | user-data 등록 실패 | 동일 | PAT 만료/폐기·계정 권한·비밀 조회·CA 신뢰 확인, 토큰 출력 금지 |
+
+1. 영향 환경·시각·호스트와 변경 이력을 기록하고 배포·신규 등록의 추가 변경을 잠시 멈춘다.
+2. DNS→NLB/TG→서버 서비스→DB/인증→코드 순으로 원인을 나눈다. 무작정 재설치/CA 초기화하지 않는다.
+3. DB 복구는 RDS에 새 쓰기 전/후의 경계를 지킨다. 옛 로컬 DB로 단순 복귀하지 않는다.
+4. 코드 복귀는 두 Compiler에 같은 검증 commit을 사용한다. Puppet 코드 rollback이 이미 적용한
+   노드 설정을 자동 원복하는 것은 아니므로 필요 시 복구 Catalog를 별도로 적용한다.
+5. 복구 후 웹/API·ENC·대표 Agent의 첫/두 번째 적용·최신 Facts/Report·등록·모니터링을 검증한다.
+6. 장애 원인·상태 손실·실제 복구 시간을 기록하고 백업과 재발 방지 항목을 갱신한다.
+
+DB 이전/복구 경계는 [단계별 계획](PHASED_ROLLOUT.md), LB 세부 조건은 [LB 설계](LB_AND_SCALING.md)를
+따른다. 실제 DB 복원·AWS 조작 명령은 환경 정보와 복원 리허설을 준비한 뒤 작성한다.
+
+## CA 장애 상세 절차
+
+이하 CA 상태 승계는 전체 장애 대응 중 CA 영역의 절차다.
 
 ## 적용 범위와 현재 구현의 차이
 
@@ -29,9 +59,9 @@ CA 중단 중 신규 인증서 발급·승인·갱신·폐기는 중단된다. �
 지속하려면 Foreman/DB·코드·Server TLS·CRL 등의 의존성이 정상이어야 한다.
 CA 전용 주소만 바꾸며 Agent의 server/ca_server 설정은 유지한다.
 
-개발 1단계는 LB 없는 EC2 1대+로컬 DB다. 이 서버가 중단되면 전체 기능이 중단되므로
+개발·운영 1단계는 각각 LB + Server1 + 로컬 DB다. LB가 있어도 정상 백엔드가 없으면 서비스할 수 없다. 이 서버가 중단되면 전체 기능이 중단되므로
 대체 서버에 DB·Foreman 설정/비밀값·코드·인증 자료까지 복구해야 한다. CA만 복구해서 완료로 보지 않는다.
-이하 서버 2 승계는 공용 RDS와 검증된 Compiler 2가 있는 2대 단계의 절차다.
+이하 서버 2 승계는 공용 RDS와 검증된 Compiler 2가 있는 3단계(2대 구성)의 절차다.
 
 ## 장애 전에 준비할 정보
 
@@ -177,3 +207,11 @@ CA 담당 목록·DNS·백업 작업과 설정 관리가 새 담당 서버를 �
 근거: [OpenVox 백업·복구](https://docs.openvoxproject.org/openvox-server/latest/backup_restore.html),
 [인증서 갱신·재발급](https://docs.openvoxproject.org/openvox-server/9.x/certificate_renewal.html),
 [CRL 반영](https://docs.openvoxproject.org/openvox-server/latest/crl_refresh.html).
+
+## 고도화 전략: API Gateway + Lambda 인증·CA 연계
+
+직접 PAT 등록을 API Gateway + Lambda의 CSP 신원 검증/등록 대행으로 전환하는 항목은 TODO다.
+추후 Foreman/Zabbix 등록과 CA CSR 승인·폐기를 관리 API로 연계하고 구성 요소별 실패 상태를 기록한다.
+CA 발급자 자체 교체는 서명 키·발급 상태·CRL·갱신과 Puppet 프로토콜/기존 인증서 호환성을 검증한 뒤
+결정한다. API Gateway/Lambda만으로 내장 CA의 모든 역할이 대체되지는 않는다.
+장애 시 API Gateway·Lambda·비밀 저장소·CA 서비스의 상태와 재시도/멱등성도 별도 점검하도록 확장한다.

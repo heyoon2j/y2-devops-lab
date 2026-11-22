@@ -23,7 +23,7 @@ Role별 최초 설정·지속 관리·미관리 전환은 [Role 수명 주기](d
 
 요청한 Banner·패스워드·root 로그인 설정은 [SSH Profile](docs/SSH_PROFILE.md)에 정리했다. 기본 비활성이다.
 
-현재 구축 순서는 **개발 1대 + 로컬 DB → 개발 LB + 2대 + RDS → 별도 운영**이다.
+현재 구축 순서는 **개발·운영 각각 LB + Server1 + 로컬 DB → RDS 이전 → Server2 추가·이중화**이다.
 [단계별 구축과 DB 이전](docs/PHASED_ROLLOUT.md)에 다음 작업과 전환 기준을 정리했다.
 
 1단계 설치 기준·입력 표본·사전 점검은 [개발 서버 설치 준비](docs/DEV_SERVER_INSTALL.md)를 따른다.
@@ -280,12 +280,15 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
 초기 코드는 Puppet 8.10.0에서 Catalog 컴파일로 검증했다.
 실제 Foreman 연동, Agent 적용과 멱등성 검증은 아직 수행하지 않았다.
 
-CA 장애 시 상태 복구·DNS 수동 전환·복귀 절차는 [CA 장애 대응](docs/CA_FAILURE_RUNBOOK.md)을 따른다.
+서버·LB·DB·인증·CA 장애 시 복구·DNS 전환·복귀 절차는 [장애 대응](docs/FAILURE_RUNBOOK.md)을 따른다.
 현재 내장 CA 구성/복구 자동화는 구현 전이며 기존 bootstrap과의 차이를 문서에 명시했다.
 
 ## 추후 TODO
 
-- [ ] 공통 등록 서비스: CSP별 신원 검증·인벤토리/정책 대조 후 Foreman 및 Zabbix에 등록한다.
+- [ ] CA/인증 고도화: API Gateway + Lambda로 등록 인증 및 CSR 승인·폐기 대행을 전환한다.
+  CA 발급자 자체 교체는 별도 서명/상태 저장 기반과 Puppet CA API·갱신/CRL·기존 인증서 이전 검증 후 결정한다.
+
+- [ ] API Gateway + Lambda 공통 인증·등록 서비스: CSP별 신원 검증·인벤토리/정책 대조 후 Foreman 및 Zabbix에 등록한다.
   시스템별 상태·부분 실패 재시도·중복 방지·기존 중앙 정책 보존을 포함한다. 지금은 구축하지 않는다.
 - [ ] Zabbix 연동: 공통 입력을 Host Group·Template·Tags에 별도 매핑하고 첫 데이터 수신을 확인한다.
   등록 서비스는 Agent의 일상 통신을 중계하지 않는다.

@@ -40,7 +40,7 @@ flowchart LR
     P --> R["Agent 주기 실행\n변경 감지 및 유지"]
 ```
 
-개발은 EC2 1대 + 로컬 PostgreSQL로 시작하고, DB를 RDS로 이전한 뒤 LB + 고정 EC2 2대로 확장한다.
+개발·운영 각각 LB + Server1 + 로컬 PostgreSQL로 시작하고, 2단계 RDS 이전 후 3단계에 기존 LB에 Server2를 추가한다.
 그다음 별도 운영을 구축한다. [단계별 구축](PHASED_ROLLOUT.md) 참조.
 RDS PostgreSQL Multi-AZ를 권장하며 ASG는 고도화로 미룬다.
 운영의 여러 Compiler는 같은 코드 환경에 동일 commit을 제공하도록 배포한다.

@@ -7,11 +7,11 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 
 [단계별 구축·로컬 DB 이전](PHASED_ROLLOUT.md)을 함께 따른다.
 
-## 최신 CA 장애 대응 방향
+## 최신 장애 대응 방향
 
 2026-11-22 논의 기준, Foreman 웹/API는 사내 인증서, Agent 통신은 OpenVox 내장 CA를 사용하는
 방향으로 검토한다. 내장 CA는 서버 1 단일 실행·외부 백업, 장애 시 서버 2로 수동 복구·DNS 전환한다.
-세부 절차와 현재 구현의 차이는 [CA 장애 대응](CA_FAILURE_RUNBOOK.md)에 정리했다.
+세부 절차와 현재 구현의 차이는 [장애 대응](FAILURE_RUNBOOK.md)에 정리했다.
 아래 사내 CA 직접 발급/위임 제안은 이전 설계 대안이다. 내장 CA에 그대로 적용된다고 가정하지 않는다.
 현재 bootstrap은 여전히 외부 PKI 사전 발급/내장 CA 비활성이고 이번에는 문서만 추가했다.
 
@@ -19,9 +19,9 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 
 | 단계 | 관리 서버 구성 | 검증 대상 |
 | --- | --- | --- |
-| 1. 개발 기능 검증 | 개발 EC2 1대에 Foreman·Compiler·Smart Proxy·로컬 PostgreSQL 공동 배치. LB 없음 | 사내 인증서, 등록, Facts, ENC, Catalog 적용과 멱등성 |
-| 2. 개발 전체 규모 | 로컬 DB → RDS 이전 후 LB + 고정 EC2 2대. 1,000~2,000대 및 N-1 부하 시험 | 실제 Profile의 처리량·DB·Report/Facts 부하 |
-| 3. 운영 약 250대 | Foreman·Compiler·DB·CA를 아래 HA 설계대로 분리·이중화 | 정상 운영, 한 대 장애, DB·CA 전환, 복구 |
+| 1. 최초 구축 | 개발·운영 각각 LB + Server1 + 로컬 PostgreSQL 16 | 등록·TLS·Facts·ENC·Catalog·멱등성·백업 |
+| 2. DB 분리 | 각 환경의 로컬 DB → RDS PostgreSQL 16, 기존 LB+Server1 유지 | 일관된 이전·복구·백업/PITR |
+| 3. 서버 이중화 | 각 환경의 다른 AZ에 Server2 추가, CA는 단일 Active+수동 복구부터 검증 | N-1·DB/CA 장애·DNS 전환·복귀 |
 
 관리 EC2 2대와 관리 대상 Agent 노드는 별도다. 서버 2대와 LB 외에도 DB·CA·키·작업 계층의
 장애 대응을 구성해야 하며 아직 실제 HA가 검증된 상태는 아니다.
@@ -30,7 +30,7 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 실제 Agent 패키지/이미지 동작은 별도로 검증한다.
 
 ```text
-2단계 개발 및 운영의 목표 구성
+3단계 개발·운영 각각의 목표 구성
 ├── 내부 NLB
 ├── EC2 1 (AZ 1): Foreman + Compiler + Smart Proxy
 ├── EC2 2 (AZ 2): Foreman + Compiler + Smart Proxy
@@ -111,7 +111,7 @@ Puppet 백엔드에는 그 프록시만 접근하도록 제한한다.
 CA 부분은 사내 CA 아래의 Puppet Intermediate CA 발급 방식에 대한 설계다.
 아래 그림의 Foreman 1/Compiler 1과 Foreman 2/Compiler 2는 각각 같은 EC2에 공동 배치한다.
 CA는 해당 EC2 중 한 곳 또는 별도 위치에서 단일 Active로 운영하며 전환을 별도로 검증한다.
-개발은 1단계 단일 EC2·로컬 DB 이후 2단계에서 같은 LB 접속 구조와 고정 EC2 2대로 전환한다. 세부 HA 복제/전환은 후속으로
+개발·운영 모두 1단계부터 LB+Server1+로컬 DB, 2단계 RDS 이전, 3단계 고정 EC2 2대로 전환한다. 세부 HA 복제/전환은 후속으로
 정하고, 지금은 논리 endpoint와 상태 저장 경계를 분리한다. [LB/Scaling](LB_AND_SCALING.md) 참조.
 
 ```mermaid

@@ -1,6 +1,6 @@
 ---
 # Planning inputs only. Not a Hiera file, inventory, or executable installer config.
-phase: development_single_server
+phase: development_lb_server1_local_db
 aws:
   region: null
   use_existing_server: true  # User confirmed a server already exists.
@@ -21,6 +21,12 @@ endpoints:
   foreman_fqdn: null
   puppet_fqdn: null
   ca_fqdn: null
+load_balancer:
+  enabled: true
+  type: internal_nlb
+  initial_targets: [server1]
+  listeners: [443, 8140]
+  ca_uses_separate_dns: true
 software:
   foreman_series_candidate: "5.0"
   engine_choice: openvox  # Open-source product selected.
