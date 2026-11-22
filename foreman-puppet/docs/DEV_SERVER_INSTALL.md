@@ -42,6 +42,9 @@ OpenVox는 Puppet 호환 프로젝트이며 실제 제품/패키지명은 구분
 필요 옵션은 [Foreman 5.0 Manual](https://theforeman.org/manuals/5.0/index.html)과 설치할
 foreman-installer의 --full-help를 대조해야 한다. 모든 설정 조합을 검증한 상태는 아니다.
 
+설치 JSON을 언제 만들고 무엇을 실행하는지는 [입력 파일 생성부터 적용까지](../bootstrap/README.md#입력-파일은-언제-만드는가)를 따른다.
+--config는 이미 만든 파일을 읽으며, 예시 복사·값 입력은 첫 repo 실행 전에 관리자가 수행한다.
+
 ## 입력 파일과 사전 점검
 
 [dev.example.yaml](../server/dev.example.yaml)은 설치 입력을 정리하는 표본이다.

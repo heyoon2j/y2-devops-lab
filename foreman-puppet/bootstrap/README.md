@@ -45,6 +45,57 @@ Agent는 Ubuntu 22/24/26, Rocky 8/9, AL2023의 x86_64/aarch64에 9.4.0, AL2만 8
 examples의 JSON을 Git 제외인 bootstrap/local/ 또는 저장소 밖으로 복사한다.
 null은 미정 값이며 필요한 단계의 --apply를 차단한다. 비밀키·PAT·비밀번호는 입력에 넣지 않는다.
 
+### 입력 파일은 언제 만드는가?
+
+**설치 명령 실행 전에 관리자가 예시를 복사해 직접 만든다.** --config는 파일 생성 옵션이 아니라
+이미 만든 JSON을 읽는 옵션이다. .tmpl 파일도 입력 화면이 아니며 JSON 값을 치환할 설정 원본이다.
+
+```text
+examples/server.json — 기본 구조·미정 null이 있는 예시
+        ↓ 최초에 복사
+local/server.json — 관리자가 실제 값을 입력하는 파일(Git 제외)
+        ↓ --config로 전달
+실행기가 .tmpl의 변수를 치환해 계획 출력
+        ↓ 같은 명령에 --apply 지정
+대상 서버의 설정·패키지에 적용
+```
+
+관리 서버에 프로젝트 파일을 준비한 다음 실행한다. 아래 /path/to는 실제 저장소 경로로 바꾼다.
+최초 복사 예시이며 입력 파일이 이미 있으면 덮어쓰지 말고 기존 파일을 편집한다.
+
+```sh
+cd /path/to/y2-devops-lab/foreman-puppet
+mkdir -p bootstrap/local
+cp bootstrap/examples/server.json bootstrap/local/server.json
+vi bootstrap/local/server.json
+```
+
+처음에는 OS·host_fqdn·Foreman/Puppet/CA 접속 이름·ca_mode·사내 웹 인증서 경로·저장소 키 지문을
+확인해 입력한다. 호스트 이름은 예시가 아닌 실제 값이어야 하고 인증서 파일은 대상 서버에 준비한다.
+repo 단계는 해당 OS와 키 지문이 준비되면 실행할 수 있다. package_versions의 전체 revision을
+아직 모르면 저장소 적용 후 조회해서 **같은 server.json을 다시 편집**한다. install/ca-init/configure
+전에 해당 단계의 필수 값이 모두 준비되어야 한다. null이 있는 모든 단계가 한꺼번에 실행 가능한 것은 아니다.
+
+각 단계는 기본 계획 출력의 unresolved를 먼저 확인한다. unresolved가 비어 있어도 실제 DNS·TLS·
+NLB/SG·계정 권한 검증을 대체하지 않는다. 실제 적용은 대상 서버에서 sudo와 --apply로 실행한다.
+
+```sh
+# 저장소 등록 계획 → 입력 확인 후 실제 등록(예시)
+bash bootstrap/server/foreman-repo.sh --config bootstrap/local/server.json
+sudo bash bootstrap/server/foreman-repo.sh --config bootstrap/local/server.json --apply
+bash bootstrap/server/openvox-repo.sh --config bootstrap/local/server.json
+sudo bash bootstrap/server/openvox-repo.sh --config bootstrap/local/server.json --apply
+
+# 새 저장소에서 실제 배포판 버전 조회 → 같은 입력 파일의 package_versions 수정
+apt-cache policy foreman foreman-installer foreman-proxy ruby-foreman-puppet postgresql-16 openvox-agent openvox-server
+vi bootstrap/local/server.json
+```
+
+그다음 아래 Server1 단계에서 OpenVox 설치 → Foreman 설치 → CA 초기화 → 설정 적용 순으로
+계획/적용을 진행한다. config/ca-init 계획도 OpenVox Agent의 Ruby 설치 후 실행한다.
+처음 입력한 파일을 단계마다 새로 복사하는 것이 아니라 **계속 같은 파일을 사용**한다.
+개발·운영은 다른 서버에서 각자 입력 파일을 만들며 FQDN·인증서·CA 신원을 공유하지 않는다.
+
 | 입력 | 의미 |
 | --- | --- |
 | os.id/version/architecture | 실제 대상 OS/버전/아키텍처, --apply에서 대조 |
@@ -88,6 +139,16 @@ bash bootstrap/server/ca-init.sh --config bootstrap/local/server.json
 bash bootstrap/server/configure.sh --config bootstrap/local/server.json
 ```
 
+계획을 확인한 뒤 실제 적용 명령은 다음과 같다. 앞 절의 저장소 등록과 전체 버전 입력을 완료한 상태에서
+각 단계의 계획/결과를 확인하며 한 줄씩 실행한다. 아래 명령을 로컬 작업 PC에서 실행하지 않는다.
+
+```sh
+sudo bash bootstrap/server/openvox-install.sh --config bootstrap/local/server.json --apply
+sudo bash bootstrap/server/foreman-install.sh --config bootstrap/local/server.json --apply
+sudo bash bootstrap/server/ca-init.sh --config bootstrap/local/server.json --apply
+sudo bash bootstrap/server/configure.sh --config bootstrap/local/server.json --apply
+```
+
 OpenVox 패키지를 먼저 설치해 설정 처리와 Installer가 사용할 Ruby를 확보한다.
 ca-init는 패키지 pin·실제 호스트·입력·서비스 중지 상태를 확인한 후 명시적인 초기화를 수행한다.
 완전한 기존 CA는 검증만 하고 보존한다. 일부만 남은 CA·기존 외부 PKI SSL 상태·이전 CA 경로는
@@ -109,6 +170,21 @@ CA 자동 갱신은 이번 단계에서 활성화하지 않는다. 기본 유효
 자동 갱신은 선택 버전에서 CA/Agent 동작·백업·CRL 반영까지 검증한 후 활성화한다.
 
 ## Agent 설치·인증서 등록
+
+입력 파일은 **Agent를 설치할 대상 서버에서**, 최초 repo 명령 전에 만든다.
+AL2는 agent.json 대신 agent-amzn2.json 예시를 복사한다.
+
+```sh
+cd /path/to/y2-devops-lab/foreman-puppet
+mkdir -p bootstrap/local
+cp bootstrap/examples/agent.json bootstrap/local/agent.json
+vi bootstrap/local/agent.json
+```
+
+OS·puppet_fqdn·ca_fqdn·고유 certname·코드 환경·저장소 키 지문을 입력한다. 저장소 적용 후 실제
+Agent 패키지 전체 버전을 조회해 같은 파일에 기록하고, config 단계 전 신뢰할 경로에서 확인한
+내장 CA 지문도 입력한다. 각 단계의 계획을 확인한 뒤 실제 대상에서만 sudo와 --apply를 사용한다.
+
 
 ```sh
 bash bootstrap/agent/repo.sh --config bootstrap/local/agent.json
