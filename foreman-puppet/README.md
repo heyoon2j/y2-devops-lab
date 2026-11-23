@@ -296,7 +296,7 @@ Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별
   테스트·등록 예시를 함께 확장한다. sandbox 파라미터 추가만으로 코드 환경이 자동 생성되지는 않는다.
 
 당장 준비할 항목은 Foreman의 deploy_env/team/dr_site API 배정 및 null·상속·ENC 전달 검증,
-GPU/MIG 자동 수집 및 조회 실패 처리, 최초 Foreman API 등록과 재등록 시 중앙 정책 보존이다.
+GPU/MIG 자동 수집 및 조회 실패 처리, 최초 Foreman API 등록과 중복/응답 유실 시 수동 확인 절차다.
 Facts 개수를 더 늘리기보다 현재 항목의 수집·변경·등록 흐름을 먼저 검증한다.
 user-data/자동 수집/외부 Facts의 차이는 [분리 기준과 수집 방식](docs/LOOKUP_AND_REGISTRATION.md)을 따른다.
 
@@ -305,4 +305,4 @@ API 인증은 [등록 인증 설계](docs/LOOKUP_AND_REGISTRATION.md#최초-user
 권장한 전용 계정+유효기간이 있는 PAT를 기준으로 검토한다. 등록 실행기는 [user-data 등록](docs/USER_DATA_REGISTRATION.md)에 구현했으며 실제 개발 서버 통합 검증이 다음 단계다.
 
 최초 등록은 [Bash/Go 직접 API 구현](docs/USER_DATA_REGISTRATION.md)을 제공한다. Bash 함수는 curl+jq를,
-Go 함수는 net/http를 사용한다. 기존 Ruby 등록 실행기는 제거했으며 두 구현은 같은 입력 JSON과 중앙 정책 보존 기준을 사용한다.
+Go 함수는 net/http를 사용한다. 기존 Ruby 등록 실행기는 제거했으며 두 구현은 변수로 입력을 받아 POST를 한 번만 보내고 overwrite=false로 기존 호스트를 덮어쓰지 않는다.

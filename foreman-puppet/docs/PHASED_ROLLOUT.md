@@ -58,7 +58,7 @@ NLB를 처음부터 두되 Target Group에는 Server1 한 대만 등록한다. L
 
 1. 환경별 FQDN·NLB/TG·기존 서버 OS/사양·네트워크·사내 인증서·Agent 인증 경로를 확정한다.
 2. Server1에 로컬 DB 포함 설치 절차를 준비하고 NLB를 통한 웹/API·Agent 연결을 검증한다.
-3. [user-data Foreman 등록 실행기](USER_DATA_REGISTRATION.md)의 SSM PAT 공급·신규 생성·재등록 정책 보존을 실제 개발 서버에서 검증한다. 공통 등록 서비스는 고도화 TODO다.
+3. [user-data Foreman 등록 실행기](USER_DATA_REGISTRATION.md)의 호출자 SSM PAT 공급·신규 생성·중복 실패 처리을 실제 개발 서버에서 검증한다. 공통 등록 서비스는 고도화 TODO다.
 4. csp Host Group, 단일 Role, deploy_env/team/dr_site와 Boolean puppet_managed를 ENC로 확인한다.
 5. 대표 Agent로 최초 적용과 최신 Report, 두 번째 무변경·드리프트 교정·제외를 확인한다.
 6. SSH는 [SSH Profile](SSH_PROFILE.md)의 전제조건·새 로그인 검증 후 활성화한다.

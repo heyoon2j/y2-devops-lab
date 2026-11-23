@@ -1,8 +1,5 @@
 #cloud-config
-# Prerequisite: place the reviewed bootstrap artifact under /opt/foreman-puppet
-# and prepare curl/jq/coreutils, the corporate CA and AWS CLI (for SSM).
-# Registration itself does not require the OpenVox agent or Ruby.
-# IaC must render registration.json for this particular instance before runcmd.
-# Never insert a PAT into this file. Disable shell tracing in any surrounding script.
-runcmd:
-  - [bash, /opt/foreman-puppet/bootstrap/agent/register.sh, --config, /etc/foreman-bootstrap/registration.json, --apply]
+# Integrate bootstrap/examples/register.sh into your existing user-data.
+# It sets variables, reads the PAT from SSM, then calls foreman_register once.
+# Place the reviewed register.sh function and corporate CA on the node first.
+# No JSON input file, plan/apply mode, agent invocation or CA approval here.

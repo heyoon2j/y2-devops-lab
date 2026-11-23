@@ -22,13 +22,11 @@ bootstrap/
 │   └── configure.sh                     # 두 answers를 함께 적용
 │       # foreman-config.sh와 openvox-config.sh도 같은 전체 구성의 호환 진입점
 ├── agent/repo.sh / install.sh / config.sh
-│   └── register.sh                       # 최초 API 등록/기존 중앙 정책 검증
 ├── user-data/                           # cloud-init·직접 API 호출 Bash 함수·독립 Go 구현
 ├── examples/                            # 비밀값 없는 입력
 └── lib/
     ├── bootstrap.sh                     # Bash+jq: 저장소·패키지 단계 및 진입점
-    ├── configure.rb                     # OpenVox의 Ruby 표준 라이브러리: 설정·CA 처리
-    └── registration.jq                  # Bash 등록 입력/ENC 검증·API payload
+    └── configure.rb                     # OpenVox의 Ruby 표준 라이브러리: 설정·CA 처리
 ```
 
 **Python/PyYAML은 사용하지 않는다.** 초기 repo/install에는 Bash·jq·curl·GnuPG·OpenSSL·coreutils(timeout)·
@@ -220,17 +218,11 @@ examples/foreman-host.json은 등록 자동화의 논리 입력이며 현재 실
 
 ## user-data 최초 Foreman 등록
 
-Agent 설치와 실제 입력 작성 후 `agent/register.sh`를 실행한다. 인증·ID 입력·재실행 정책과
-cloud-init/Bash 함수 예시는 [user-data 등록](../docs/USER_DATA_REGISTRATION.md)을 따른다.
-
-```sh
-# 입력 파일은 이 명령 전에 예시를 복사하고 실제 값으로 수정한다.
-bash bootstrap/agent/register.sh --config bootstrap/local/registration.json
-sudo bash bootstrap/agent/register.sh --config bootstrap/local/registration.json --apply
-```
-
-등록기는 PAT를 실행 시 조회하고 신규 호스트만 생성한다. 기존 호스트의 중앙 정책은 보존한다.
-API 등록 성공 후 인증서 승인과 첫 Catalog/Report 확인은 별도 단계다.
+[user-data 등록 함수](../docs/USER_DATA_REGISTRATION.md)는 설치 실행기와 별도로 사용한다.
+Shell은 `bootstrap/user-data/register.sh`를 source한 뒤 변수 설정 후 `foreman_register`를 호출한다.
+Go는 Config 변수를 채워 `RegisterForeman(ctx, cfg)`를 호출한다. 두 구현은 POST를 한 번만 보낸다.
+입력 파일·plan/apply·Agent 설치는 등록 함수의 실행 조건이 아니다.
+[전체 변수/호출 예시](examples/register.sh)를 기존 user-data에 통합한다.
 
 ## 검증과 한계
 
@@ -239,7 +231,7 @@ bundle exec ruby tests/bootstrap_test.rb
 bash tests/registration_test.sh
 ```
 
-테스트는 repo/install 계획에 Bash+jq, config 계획에 Ruby만 사용한다. 12개 wrapper, 7개 OS×2개 CPU,
+테스트는 repo/install 계획에 Bash+jq, config 계획에 Ruby만 사용한다. 11개 wrapper, 7개 OS×2개 CPU,
 AL2 예외·전체 버전 pin·미정 값·CA/manual approval 정책·신뢰 지문·기존 비밀값/INI 보존·시간 제한을 검증한다.
 실제 키 다운로드·패키지 설치·CA 생성·인증서 등록·서비스·TLS·Foreman/OpenVox 9 통합은 실행하지 않는다.
 
@@ -251,18 +243,3 @@ RPM scriptlet은 공급 패키지 정책에 따르므로 최초 등록 전에 �
 근거: [Foreman Installer](https://theforeman.org/manuals/5.0/index.html),
 [OpenVox CA 초기화 예](https://theforeman.github.io/foreman-infra/bootstrap/),
 [OpenVox Agent SSL bootstrap](https://docs.openvoxproject.org/openvox/9.x/man/ssl.html).
-
-## user-data Foreman API 등록
-
-Agent 설치 후 `agent/register.sh --config /etc/foreman-bootstrap/registration.json`으로 계획을 확인한다.
-실제 입력을 먼저 복사·수정하고 `--apply`를 명시해야 등록한다. PAT는 SSM SecureString에서 조회한다.
-[입력 작성 시점·전체 명령·cloud-init 예시·실패 처리](../docs/USER_DATA_REGISTRATION.md)를 따른다.
-기존 호스트는 조회만 하며 중앙 정책을 덮어쓰지 않는다. 인증서 승인과 첫 적용은 별도 단계다.
-
-```sh
-bash tests/registration_test.sh
-```
-
-등록은 Bash(curl+jq) 또는 Go(net/http) 중 하나를 선택한다. 두 구현 모두 Ruby 없이 API를 직접 호출하며,
-Go 노드에는 컴파일한 바이너리만 배포한다. Agent 자체의 내장 Ruby 및 서버 config/ca-init의 Ruby 사용은 유지한다.
-구현 선택·빌드·함수 호출은 [user-data 등록](../docs/USER_DATA_REGISTRATION.md)을 따른다.

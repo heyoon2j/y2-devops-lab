@@ -27,7 +27,7 @@ Foreman Boolean puppet_managed가 true일 때 아래 설정을 적용한다. fal
 
 ```mermaid
 flowchart LR
-    U["user-data 입력\naws / role::gpu_svr / dev / development"] --> R["등록 자동화\nagent/register.sh"]
+    U["user-data 입력\naws / role::gpu_svr / dev / development"] --> R["등록 자동화\nuser-data/register.sh"]
     R --> F["Foreman 호스트\nHost Group: aws\nRole: role::gpu_svr\nEnvironment: development"]
     R --> A["Agent 접속 설정"]
     A -->|"Catalog 요청 + Facts"| P["Puppet Server"]

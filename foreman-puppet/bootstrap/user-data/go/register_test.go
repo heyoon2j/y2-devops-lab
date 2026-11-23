@@ -12,469 +12,174 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"sync"
 	"testing"
 )
 
-const testToken = `test-token-"\-value-12345`
+const testToken = `example-token-"\-$-123456789`
 
-func fixture(t *testing.T) Config {
+func config() Config {
+	return Config{URL: "https://foreman.example.internal", CACert: "/missing/ca.pem", Username: "bootstrap_dev", Token: testToken, Name: "node.dev.internal", OrganizationID: 1, LocationID: 2, HostgroupID: 3, EnvironmentID: 4, RoleID: 5, ProxyID: 6, CAProxyID: 7, DeployEnv: "dev", DRSite: "primary", Managed: true}
+}
+func quote(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'" }
+func bashCall(t *testing.T, c Config) ([]byte, error) {
 	t.Helper()
-	b, err := os.ReadFile("../../examples/registration.json")
-	if err != nil {
-		t.Fatal(err)
+	root, _ := filepath.Abs("../../..")
+	script := `set +x; set -a
+source "$1"
+`
+	for _, p := range []struct{ name, value string }{{"FOREMAN_URL", c.URL}, {"FOREMAN_CA_CERT", c.CACert}, {"FOREMAN_USERNAME", c.Username}, {"FOREMAN_PAT", c.Token}, {"NODE_NAME", c.Name}, {"ORGANIZATION_ID", fmt.Sprint(c.OrganizationID)}, {"LOCATION_ID", fmt.Sprint(c.LocationID)}, {"HOSTGROUP_ID", fmt.Sprint(c.HostgroupID)}, {"ENVIRONMENT_ID", fmt.Sprint(c.EnvironmentID)}, {"ROLE_ID", fmt.Sprint(c.RoleID)}, {"PUPPET_PROXY_ID", fmt.Sprint(c.ProxyID)}, {"PUPPET_CA_PROXY_ID", fmt.Sprint(c.CAProxyID)}, {"DEPLOY_ENV", c.DeployEnv}, {"TEAM", c.Team}, {"DR_SITE", c.DRSite}, {"PUPPET_MANAGED", fmt.Sprint(c.Managed)}} {
+		script += p.name + "=" + quote(p.value) + "\n"
 	}
-	b = bytes.ReplaceAll(b, []byte("i-EXAMPLE"), []byte("i-123"))
-	c, err := LoadConfig(bytes.NewReader(b))
-	if err != nil {
-		t.Fatal(err)
-	}
-	return c
+	script += "foreman_register\n"
+	cmd := exec.Command("bash", "-s", "--", filepath.Join(root, "bootstrap/user-data/register.sh"))
+	cmd.Stdin = strings.NewReader(script)
+	return cmd.CombinedOutput()
 }
-func write(t *testing.T, path string, data []byte) {
-	t.Helper()
-	if err := os.WriteFile(path, data, 0600); err != nil {
-		t.Fatal(err)
-	}
-}
-
-type mockForeman struct {
-	sync.Mutex
-	scenario string
-	present  bool
-	calls    []string
-	post     map[string]any
-	host     Host
-	badAuth  bool
-}
-
-func (m *mockForeman) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	m.Lock()
-	defer m.Unlock()
-	m.calls = append(m.calls, r.Method+" "+r.URL.Path)
-	username, token, ok := r.BasicAuth()
-	if !ok || username != "bootstrap_dev" || token != testToken {
-		m.badAuth = true
-		w.WriteHeader(401)
-		return
-	}
-	send := func(v any) { w.Header().Set("Content-Type", "application/json"); json.NewEncoder(w).Encode(v) }
-	if m.scenario == "get403" {
-		w.WriteHeader(403)
-		return
-	}
-	if m.scenario == "redirect" {
-		w.Header().Set("Location", "https://elsewhere.invalid/")
-		w.WriteHeader(302)
-		return
-	}
-	if m.scenario == "badjson" {
-		w.Write([]byte("not json"))
-		return
-	}
-	if r.Method == "POST" {
-		if r.URL.Path != "/api/hosts" {
-			w.WriteHeader(404)
-			return
-		}
-		if m.scenario == "post403" {
-			w.WriteHeader(403)
-			return
-		}
-		if json.NewDecoder(r.Body).Decode(&m.post) != nil {
-			w.WriteHeader(400)
-			return
-		}
-		m.present = true
-		if m.scenario == "ambiguous" {
-			w.WriteHeader(503)
-			return
-		}
-		send(map[string]any{"id": 42})
-		return
-	}
-	if r.Method != "GET" {
-		w.WriteHeader(405)
-		return
-	}
-	switch r.URL.Path {
-	case "/api/hosts":
-		if r.URL.Query().Get("search") != `name="`+m.host.Name+`"` {
-			w.WriteHeader(422)
-			return
-		}
-		results := []any{}
-		if m.present {
-			results = append(results, map[string]any{"id": 42, "name": m.host.Name})
-		}
-		send(map[string]any{"subtotal": len(results), "results": results})
-	case "/api/hosts/42":
-		org := m.host.OrganizationID
-		if m.scenario == "orgcollision" {
-			org++
-		}
-		send(map[string]any{"id": 42, "name": m.host.Name, "organization_id": org, "location_id": m.host.LocationID})
-	case "/api/hosts/42/enc":
-		p := map[string]any{"csp": m.host.CSP, "bootstrap_identity": m.host.Identity, "deploy_env": m.host.Parameters.DeployEnv, "puppet_managed": *m.host.Parameters.Managed, "dr_site": "primary"}
-		env, role := m.host.Environment, m.host.Role
-		switch m.scenario {
-		case "existing":
-			p["team"] = "devops"
-			p["deploy_env"] = "prd"
-			env = "production"
-			role = "role::devops"
-		case "identitycollision":
-			p["bootstrap_identity"] = "aws/another-instance"
-		case "stringbool":
-			p["puppet_managed"] = "true"
-		case "nullinherit":
-			p["team"] = "inherited"
-		case "badenv":
-			env = "production"
-		case "baddr":
-			p["dr_site"] = "invalid"
-		case "unmanagedtrue":
-			role = "role::unmanaged"
-		}
-		classes := map[string]any{role: map[string]any{}}
-		if m.scenario == "twoRoles" {
-			classes["role::devops"] = map[string]any{}
-		}
-		send(map[string]any{"data": map[string]any{"environment": env, "parameters": p, "classes": classes}})
-	case "/api/hostgroups/1":
-		name := m.host.CSP
-		if m.scenario == "badreference" {
-			name = "gcp"
-		}
-		send(map[string]any{"name": name})
-	case "/api/environments/1":
-		send(map[string]any{"name": m.host.Environment})
-	case "/api/puppetclasses/1":
-		send(map[string]any{"name": m.host.Role})
-	default:
-		w.WriteHeader(404)
-	}
-}
-
-func TestDirectClients(t *testing.T) {
-	root, err := filepath.Abs("../../..")
-	if err != nil {
-		t.Fatal(err)
-	}
+func TestOneCreateRequest(t *testing.T) {
 	curl, err := exec.LookPath("curl")
 	if err != nil {
 		t.Fatal(err)
 	}
-	for _, implementation := range []string{"go", "bash"} {
-		for _, scenario := range []string{"new", "new_unmanaged", "new_data_infra", "new_devops", "existing", "identitycollision", "orgcollision", "stringbool", "nullinherit", "badenv", "baddr", "unmanagedtrue", "twoRoles", "badreference", "ambiguous", "get403", "post403", "redirect", "badjson", "untrusted"} {
+	for _, implementation := range []string{"bash", "go"} {
+		for _, scenario := range []string{"created", "unmanaged", "team", "duplicate", "denied", "servererror", "redirect", "untrusted"} {
 			t.Run(implementation+"/"+scenario, func(t *testing.T) {
-				c := fixture(t)
-				switch scenario {
-				case "new_unmanaged":
-					c.Host.Role = "role::unmanaged"
-					v := false
-					c.Host.Parameters.Managed = &v
-				case "new_data_infra":
-					c.Host.Role = "role::data_infra"
-				case "new_devops":
-					c.Host.Role = "role::devops"
+				c := config()
+				if scenario == "unmanaged" {
+					c.Managed = false
 				}
-				dir := t.TempDir()
-				mock := &mockForeman{scenario: scenario, host: c.Host}
-				switch scenario {
-				case "existing", "identitycollision", "orgcollision", "stringbool", "badenv", "baddr", "unmanagedtrue", "twoRoles":
-					mock.present = true
+				if scenario == "team" {
+					c.Team = "data_infra"
 				}
-				server := httptest.NewTLSServer(mock)
+				requests := 0
+				server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+					requests++
+					if r.Method != "POST" || r.URL.Path != "/api/hosts" {
+						t.Error("unexpected API request", r.Method, r.URL.Path)
+					}
+					user, token, ok := r.BasicAuth()
+					if !ok || user != c.Username || token != c.Token {
+						t.Error("wrong credentials")
+					}
+					var payload map[string]any
+					if json.NewDecoder(r.Body).Decode(&payload) != nil {
+						t.Error("invalid payload")
+						w.WriteHeader(400)
+						return
+					}
+					h := payload["host"].(map[string]any)
+					if h["overwrite"] != false || h["managed"] != false || h["build"] != false {
+						t.Error("unsafe creation flags")
+					}
+					if h["name"] != c.Name || h["organization_id"] != float64(c.OrganizationID) || h["hostgroup_id"] != float64(c.HostgroupID) {
+						t.Error("wrong host fields")
+					}
+					puppet := h["puppet_attributes"].(map[string]any)
+					if puppet["environment_id"] != float64(c.EnvironmentID) || puppet["puppetclass_ids"].([]any)[0] != float64(c.RoleID) {
+						t.Error("wrong plugin payload")
+					}
+					params := map[string]map[string]any{}
+					for _, raw := range h["host_parameters_attributes"].([]any) {
+						p := raw.(map[string]any)
+						params[p["name"].(string)] = p
+					}
+					if params["puppet_managed"]["value"] != fmt.Sprint(c.Managed) || params["puppet_managed"]["parameter_type"] != "boolean" || params["deploy_env"]["value"] != "dev" {
+						t.Error("wrong parameter types/values")
+					}
+					if c.Team == "" {
+						if _, ok := params["team"]; ok {
+							t.Error("empty team should be omitted")
+						}
+					} else if params["team"]["value"] != c.Team {
+						t.Error("wrong team")
+					}
+					status := 201
+					switch scenario {
+					case "duplicate":
+						status = 422
+					case "denied":
+						status = 403
+					case "servererror":
+						status = 500
+					case "redirect":
+						status = 302
+						w.Header().Set("Location", "https://elsewhere.invalid/")
+					}
+					w.WriteHeader(status)
+					w.Write([]byte("response must not be logged: " + testToken))
+				}))
 				defer server.Close()
-				c.Foreman.URL = server.URL
-				c.Foreman.CACert = filepath.Join(dir, "ca.pem")
+				c.URL = server.URL
+				dir := t.TempDir()
+				c.CACert = filepath.Join(dir, "ca.pem")
+				os.WriteFile(c.CACert, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw}), 0600)
 				if scenario == "untrusted" {
-					other := httptest.NewTLSServer(http.HandlerFunc(func(http.ResponseWriter, *http.Request) {}))
-					defer other.Close()
-					write(t, c.Foreman.CACert, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: other.Certificate().Raw}))
-					// httptest uses the same static certificate for all servers; system trust
-					// excludes its issuer, so use the system bundle for this negative case.
-					c.Foreman.CACert = "/etc/ssl/certs/ca-certificates.crt"
-				} else {
-					write(t, c.Foreman.CACert, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw}))
+					c.CACert = "/etc/ssl/certs/ca-certificates.crt"
 				}
-				response, _ := json.Marshal(map[string]any{"Parameter": map[string]any{"Type": "SecureString", "Value": testToken}})
-				secretFile := filepath.Join(dir, "ssm.json")
-				write(t, secretFile, response)
-				// Only the fake SSM child reads this fixture, never a real AWS account.
-				aws := filepath.Join(dir, "aws")
-				write(t, aws, []byte("#!/bin/bash\nprintf '%s\\n' \"$@\" > \"$TEST_ARGS\"\ncat \"$TEST_SSM\"\n"))
-				os.Chmod(aws, 0700)
-				// Record process argv/environment to guard against accidental token exports.
-				wrapper := filepath.Join(dir, "curl")
-				write(t, wrapper, []byte("#!/bin/bash\nprintf '%s\\n' \"$@\" >> \"$TEST_ARGS\"\nenv >> \"$TEST_ARGS\"\nexec \"$TEST_CURL\" \"$@\"\n"))
-				os.Chmod(wrapper, 0700)
+				// Inspect curl's argv/environment: PAT must only arrive through its pipe.
+				log := filepath.Join(dir, "curl.log")
+				wrapper := []byte("#!/bin/bash\nprintf '%s\\n' \"$@\" > \"$TEST_LOG\"\nenv >> \"$TEST_LOG\"\nexec \"$TEST_CURL\" \"$@\"\n")
+				os.WriteFile(filepath.Join(dir, "curl"), wrapper, 0700)
 				t.Setenv("PATH", dir+":"+os.Getenv("PATH"))
-				t.Setenv("TEST_ARGS", filepath.Join(dir, "args"))
-				t.Setenv("TEST_SSM", secretFile)
+				t.Setenv("TEST_LOG", log)
 				t.Setenv("TEST_CURL", curl)
-				var result Result
-				var runErr error
 				var output []byte
-				var diagnostics bytes.Buffer
-				if implementation == "go" {
-					result, runErr = RegisterForeman(context.Background(), c, true)
+				var err error
+				if implementation == "bash" {
+					output, err = bashCall(t, c)
 				} else {
-					config := filepath.Join(dir, "input.json")
-					b, _ := json.Marshal(c)
-					write(t, config, b)
-					// Exercise the public reusable API function as an unprivileged test user.
-					// CLI root guard is checked separately, without bypasses in production.
-					cmd := exec.Command("bash", "-c", `set -a; pat=old; escaped_pat=old; secret_response=old; source "$1"; foreman_register "$2" "$3" apply`, "test", filepath.Join(root, "bootstrap/user-data/register.sh"), root, config)
-					cmd.Stderr = &diagnostics
-					output, runErr = cmd.Output()
-					if runErr == nil {
-						if err := json.Unmarshal(output, &result); err != nil {
-							t.Fatalf("invalid result: %s", output)
-						}
+					err = RegisterForeman(context.Background(), c)
+					if err != nil {
+						output = []byte(err.Error())
 					}
 				}
-				success := strings.HasPrefix(scenario, "new") || scenario == "existing" || scenario == "ambiguous"
-				if success != (runErr == nil) {
-					t.Fatalf("success=%v, got %v, output=%s", success, runErr, append(output, diagnostics.Bytes()...))
+				success := scenario == "created" || scenario == "unmanaged" || scenario == "team"
+				if success != (err == nil) {
+					t.Fatalf("unexpected outcome: %v %s", err, output)
 				}
-				if success {
-					want := "existing_preserved"
-					if strings.HasPrefix(scenario, "new") {
-						want = "created"
-					}
-					if result.Status != want {
-						t.Fatalf("status: %s", result.Status)
-					}
+				if bytes.Contains(output, []byte(testToken)) {
+					t.Fatal("token/response leaked to output")
 				}
-				if bytes.Contains(append(output, diagnostics.Bytes()...), []byte(testToken)) {
-					t.Fatal("token leaked to output")
+				metadata, _ := os.ReadFile(log)
+				if bytes.Contains(metadata, []byte(testToken)) {
+					t.Fatal("token leaked to argv/environment")
 				}
-				args, _ := os.ReadFile(filepath.Join(dir, "args"))
-				if bytes.Contains(args, []byte(testToken)) {
-					t.Fatal("token leaked to process argv/environment")
+				want := 1
+				if scenario == "untrusted" {
+					want = 0
 				}
-				mock.Lock()
-				defer mock.Unlock()
-				if mock.badAuth {
-					t.Fatal("wrong Basic auth encoding")
-				}
-				posts := 0
-				for _, call := range mock.calls {
-					if strings.HasPrefix(call, "POST ") {
-						posts++
-					}
-					if !strings.HasPrefix(call, "POST ") && !strings.HasPrefix(call, "GET ") {
-						t.Fatal("unexpected mutation", call)
-					}
-				}
-				if posts > 1 {
-					t.Fatal("POST retried")
-				}
-				if scenario == "existing" && posts != 0 {
-					t.Fatal("existing host mutated")
-				}
-				if scenario == "badreference" && posts != 0 {
-					t.Fatal("bad reference created host")
-				}
-				if mock.post != nil {
-					h := mock.post["host"].(map[string]any)
-					if h["overwrite"] != false || h["managed"] != false {
-						t.Fatal("unsafe creation flags")
-					}
-					params := h["host_parameters_attributes"].([]any)
-					typed := false
-					for _, value := range params {
-						p := value.(map[string]any)
-						if p["name"] == "team" {
-							t.Fatal("null team not omitted")
-						}
-						if p["name"] == "puppet_managed" {
-							typed = p["parameter_type"] == "boolean" && p["value"] == fmt.Sprint(*c.Host.Parameters.Managed)
-						}
-					}
-					if !typed {
-						t.Fatal("missing typed Boolean")
-					}
+				if requests != want {
+					t.Fatalf("expected %d request, got %d", want, requests)
 				}
 			})
 		}
 	}
 }
-
-func TestPlanAndValidation(t *testing.T) {
-	c := fixture(t)
-	c.Auth = Auth{Source: "file", Path: "/nonexistent/pat"}
-	result, err := RegisterForeman(context.Background(), c, false)
-	if err != nil || result.Mode != "plan" {
-		t.Fatal("offline plan failed", err)
-	}
-	root, _ := filepath.Abs("../../..")
-	config := filepath.Join(t.TempDir(), "input with spaces.json")
-	b, _ := json.Marshal(c)
-	write(t, config, b)
-	output, err := exec.Command("bash", filepath.Join(root, "bootstrap/agent/register.sh"), "--config", config).CombinedOutput()
-	if err != nil || json.Unmarshal(output, &result) != nil || result.Mode != "plan" {
-		t.Fatalf("Bash plan failed %v %s", err, output)
-	}
-	relative, _ := filepath.Rel(root, config)
-	relativeCmd := exec.Command("bash", "bootstrap/agent/register.sh", "--config", relative)
-	relativeCmd.Dir = root
-	if out, err := relativeCmd.CombinedOutput(); err != nil {
-		t.Fatalf("relative CLI input failed: %v %s", err, out)
-	}
-	if os.Geteuid() != 0 {
-		output, err = exec.Command("bash", filepath.Join(root, "bootstrap/agent/register.sh"), "--config", config, "--apply").CombinedOutput()
-		if err == nil || !bytes.Contains(output, []byte("requires root")) {
-			t.Fatal("CLI root guard missing")
-		}
-	}
-	for _, kind := range []string{"sandbox", "http", "userinfo", "unknownrole", "unmanaged", "environment", "boolean", "unknownparam"} {
+func TestInvalidInputNeverRequests(t *testing.T) {
+	for _, kind := range []string{"url", "token", "id", "env", "team", "dr_site", "name"} {
 		t.Run(kind, func(t *testing.T) {
-			b, _ := json.Marshal(fixture(t))
-			var obj map[string]any
-			json.Unmarshal(b, &obj)
-			h := obj["host"].(map[string]any)
-			p := h["parameters"].(map[string]any)
-			f := obj["foreman"].(map[string]any)
+			c := config()
 			switch kind {
-			case "sandbox":
-				p["deploy_env"] = "sandbox"
-			case "http":
-				f["url"] = "http://localhost"
-			case "userinfo":
-				f["url"] = "https://user:token@localhost"
-			case "unknownrole":
-				h["role"] = "role::other"
-			case "unmanaged":
-				h["role"] = "role::unmanaged"
-			case "environment":
-				h["environment"] = "production"
-			case "boolean":
-				p["puppet_managed"] = "false"
-			case "unknownparam":
-				p["extra"] = true
+			case "url":
+				c.URL = "http://localhost"
+			case "token":
+				c.Token = "bad\n"
+			case "id":
+				c.RoleID = 0
+			case "env":
+				c.DeployEnv = "sandbox"
+			case "team":
+				c.Team = "bad team"
+			case "dr_site":
+				c.DRSite = "unknown"
+			case "name":
+				c.Name = ""
 			}
-			bad, _ := json.Marshal(obj)
-			if _, err := LoadConfig(bytes.NewReader(bad)); err == nil {
+			if err := RegisterForeman(context.Background(), c); err == nil {
 				t.Fatal("Go accepted invalid input")
 			}
-			write(t, config, bad)
-			if out, err := exec.Command("bash", filepath.Join(root, "bootstrap/agent/register.sh"), "--config", config).CombinedOutput(); err == nil {
-				t.Fatalf("Bash accepted invalid input: %s", out)
+			if out, err := bashCall(t, c); err == nil {
+				t.Fatalf("Shell accepted invalid input: %s", out)
 			}
 		})
-	}
-}
-
-func TestTokenFileGuards(t *testing.T) {
-	file := filepath.Join(t.TempDir(), "pat")
-	write(t, file, []byte(testToken))
-	os.Chmod(file, 0644)
-	if _, err := loadToken(context.Background(), Auth{Source: "file", Path: file}); err == nil {
-		t.Fatal("unsafe mode accepted")
-	}
-	link := file + ".link"
-	os.Symlink(file, link)
-	if _, err := loadToken(context.Background(), Auth{Source: "file", Path: link}); err == nil {
-		t.Fatal("symlink accepted")
-	}
-	os.Chmod(file, 0600)
-	token, err := loadToken(context.Background(), Auth{Source: "file", Path: file})
-	if os.Geteuid() == 0 {
-		if err != nil || token != testToken {
-			t.Fatal("safe file rejected", err)
-		}
-	} else if err == nil {
-		t.Fatal("non-root-owned token accepted")
-	}
-}
-
-func TestSSMAndSecretGuards(t *testing.T) {
-	root, _ := filepath.Abs("../../..")
-	for _, kind := range []string{"plaintext", "short", "nul", "too_long", "padded"} {
-		t.Run(kind, func(t *testing.T) {
-			c := fixture(t)
-			dir := t.TempDir()
-			mock := &mockForeman{scenario: "new", host: c.Host}
-			server := httptest.NewTLSServer(mock)
-			defer server.Close()
-			c.Foreman.URL = server.URL
-			c.Foreman.CACert = filepath.Join(dir, "ca.pem")
-			write(t, c.Foreman.CACert, pem.EncodeToMemory(&pem.Block{Type: "CERTIFICATE", Bytes: server.Certificate().Raw}))
-			value, paramType := testToken, "SecureString"
-			switch kind {
-			case "plaintext":
-				paramType = "String"
-			case "short":
-				value = "short"
-			case "nul":
-				value = testToken + "\x00"
-			case "too_long":
-				value = strings.Repeat("x", 2049)
-			case "padded":
-				value = " \t" + testToken + "\r\n"
-			}
-			response, _ := json.Marshal(map[string]any{"Parameter": map[string]any{"Type": paramType, "Value": value}})
-			write(t, filepath.Join(dir, "ssm.json"), response)
-			write(t, filepath.Join(dir, "aws"), []byte("#!/bin/bash\ncat \"$TEST_SSM\"\n"))
-			os.Chmod(filepath.Join(dir, "aws"), 0700)
-			t.Setenv("PATH", dir+":"+os.Getenv("PATH"))
-			t.Setenv("TEST_SSM", filepath.Join(dir, "ssm.json"))
-			token, err := loadToken(context.Background(), c.Auth)
-			if kind == "padded" {
-				if err != nil || token != testToken {
-					t.Fatal("Go trim mismatch", err)
-				}
-			} else if err == nil {
-				t.Fatal("Go accepted unsafe secret")
-			}
-			b, _ := json.Marshal(c)
-			config := filepath.Join(dir, "input.json")
-			write(t, config, b)
-			cmd := exec.Command("bash", "-c", `source "$1"; foreman_register "$2" "$3" apply`, "test", filepath.Join(root, "bootstrap/user-data/register.sh"), root, config)
-			output, err := cmd.CombinedOutput()
-			if (kind == "padded") != (err == nil) {
-				t.Fatalf("Bash secret validation mismatch: %v %s", err, output)
-			}
-			if kind != "padded" {
-				mock.Lock()
-				calls := len(mock.calls)
-				mock.Unlock()
-				if calls != 0 {
-					t.Fatal("unsafe secret sent to API")
-				}
-			}
-			if bytes.Contains(output, []byte(testToken)) {
-				t.Fatal("secret leaked to output")
-			}
-		})
-	}
-	// Bash also rejects file permissions, ownership and symlinks before networking.
-	file := filepath.Join(t.TempDir(), "pat")
-	write(t, file, []byte(testToken))
-	for _, kind := range []string{"mode", "symlink", "owner"} {
-		if kind == "owner" && os.Geteuid() == 0 {
-			continue
-		}
-		path := file
-		os.Chmod(file, 0600)
-		if kind == "mode" {
-			os.Chmod(file, 0644)
-		}
-		if kind == "symlink" {
-			path = file + ".link"
-			os.Symlink(file, path)
-		}
-		c := fixture(t)
-		c.Auth = Auth{Source: "file", Path: path}
-		config := filepath.Join(t.TempDir(), "input.json")
-		b, _ := json.Marshal(c)
-		write(t, config, b)
-		output, err := exec.Command("bash", "-c", `source "$1"; foreman_register "$2" "$3" apply`, "test", filepath.Join(root, "bootstrap/user-data/register.sh"), root, config).CombinedOutput()
-		if err == nil || !bytes.Contains(output, []byte("PAT file")) {
-			t.Fatalf("Bash file guard missing: %v %s", err, output)
-		}
 	}
 }

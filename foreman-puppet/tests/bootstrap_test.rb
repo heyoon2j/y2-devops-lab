@@ -38,7 +38,7 @@ end
 
 # Every public wrapper remains read-only unless --apply is supplied.
 wrappers = Dir.glob(File.join(ROOT, '{server,agent}', '*.sh')).sort
-check(wrappers.size == 12, 'Missing stage wrapper')
+check(wrappers.size == 11, 'Missing stage wrapper')
 wrappers.each do |path|
   check(system('bash', '-n', path), "Bash syntax: #{path}")
   check(system('bash', path, '--help', out: File::NULL), "Help failed: #{path}")
@@ -159,4 +159,4 @@ check(raised, 'Missing input did not block apply')
 started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 raised = false; begin Bootstrap.run([RbConfig.ruby, '-e', 'sleep 20'], seconds: 0.1); rescue StandardError; raised = true; end
 check(raised && Process.clock_gettime(Process::CLOCK_MONOTONIC) - started < 5, 'Timeout did not bound process lifetime')
-puts 'Passed: 12 wrappers; all stages plan-only; 7 OS x 2 architectures; exact pins; internal CA/manual approval/trust anchor; native templates; merge/guards; timeout.'
+puts 'Passed: 11 wrappers; all stages plan-only; 7 OS x 2 architectures; exact pins; internal CA/manual approval/trust anchor; native templates; merge/guards; timeout.'
