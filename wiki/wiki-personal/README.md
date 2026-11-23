@@ -4,7 +4,7 @@
 
 ## 시작하기
 
-1. [RESPONSIBILITIES.md](RESPONSIBILITIES.md)에 업무의 담당자, 범위, 실행 시점과 완료 기준을 적습니다.
+1. [RESPONSIBILITIES.md](RESPONSIBILITIES.md)에 업무의 범위, 실행 시점과 완료 기준을 적습니다.
 2. [STATUS.md](STATUS.md)에 같은 업무 ID로 행을 추가하고, 아직 실행한 적이 없으면 마지막 완료일과 근거에 `—`를 적습니다.
 3. 실행하거나 차단된 일이 생기면 [LOG.md](LOG.md)에 기록합니다.
 4. Codex에서 이 폴더를 열고 `$wiki-personal-log-sync로 오늘 업무일지를 상태에 반영해줘.`라고 요청합니다. 날짜를 지정해 특정 일지를 반영할 수도 있습니다. [스킬 지침](.agents/skills/wiki-personal-log-sync/SKILL.md)
