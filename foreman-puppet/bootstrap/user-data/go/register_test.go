@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/pem"
-	"io"
+	"fmt"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -17,16 +17,10 @@ import (
 
 const testToken = `example-token-"\-$-123456789`
 
-func payload(managed bool, team string) []byte {
-	params := []map[string]string{{"name": "deploy_env", "value": "dev", "parameter_type": "string"}, {"name": "puppet_managed", "value": "true", "parameter_type": "boolean"}}
-	if !managed {
-		params[1]["value"] = "false"
-	}
-	if team != "" {
-		params = append(params, map[string]string{"name": "team", "value": team, "parameter_type": "string"})
-	}
-	body, _ := json.Marshal(map[string]any{"host": map[string]any{"name": "node.dev.internal", "managed": false, "build": false, "overwrite": false, "organization_id": 1, "location_id": 2, "hostgroup_id": 3, "puppet_proxy_id": 6, "puppet_ca_proxy_id": 7, "puppet_attributes": map[string]any{"environment_id": 4, "puppetclass_ids": []int{5}}, "host_parameters_attributes": params}})
-	return body
+func config() Config {
+	return Config{Username: "bootstrap_dev", Token: testToken, Name: "node.dev.internal",
+		OrganizationID: 1, LocationID: 2, HostgroupID: 3, EnvironmentID: 4, RoleID: 5, ProxyID: 6, CAProxyID: 7,
+		DeployEnv: "dev", DRSite: "primary", Managed: true}
 }
 func quote(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'" }
 func bashCall(t *testing.T, c Config) ([]byte, error) {
@@ -35,10 +29,20 @@ func bashCall(t *testing.T, c Config) ([]byte, error) {
 	script := `set +x; set -a
 source "$1"
 `
-	for _, p := range []struct{ name, value string }{{"FOREMAN_URL", c.URL}, {"FOREMAN_CA_CERT", c.CACert}, {"FOREMAN_USERNAME", c.Username}, {"FOREMAN_PAT", c.Token}, {"PAYLOAD", string(c.Payload)}} {
-		script += p.name + "=" + quote(p.value) + "\n"
+	// Supply the token through the shell function, never a process command line.
+	script += "FOREMAN_PAT=" + quote(c.Token) + "\nforeman_register"
+	args := []string{c.URL, c.CACert, c.Username, c.Token, c.Name,
+		fmt.Sprint(c.OrganizationID), fmt.Sprint(c.LocationID), fmt.Sprint(c.HostgroupID),
+		fmt.Sprint(c.EnvironmentID), fmt.Sprint(c.RoleID), fmt.Sprint(c.ProxyID), fmt.Sprint(c.CAProxyID),
+		c.DeployEnv, fmt.Sprint(c.Managed), c.Team, c.DRSite}
+	if c.Team == "" && c.DRSite == "" {
+		args = args[:14]
 	}
-	script += "foreman_register\n"
+	for _, arg := range args {
+		script += " " + quote(arg)
+	}
+	script += "\n"
+
 	cmd := exec.Command("bash", "-s", "--", filepath.Join(root, "bootstrap/user-data/register.sh"))
 	cmd.Stdin = strings.NewReader(script)
 	return cmd.CombinedOutput()
@@ -49,11 +53,20 @@ func TestOneCreateRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, implementation := range []string{"bash", "go"} {
-		for _, scenario := range []string{"created", "unmanaged", "team", "duplicate", "denied", "servererror", "redirect", "untrusted", "http"} {
+		for _, scenario := range []string{"created", "unmanaged", "team", "duplicate", "denied", "servererror", "redirect", "untrusted", "http", "optional_empty", "escaped"} {
 			t.Run(implementation+"/"+scenario, func(t *testing.T) {
-				c := Config{Username: "bootstrap_dev", Token: testToken, Payload: payload(scenario != "unmanaged", "")}
+				c := config()
+				if scenario == "unmanaged" {
+					c.Managed = false
+				}
+				if scenario == "optional_empty" {
+					c.DRSite = ""
+				}
+				if scenario == "escaped" {
+					c.Team = "devops\"\\"
+				}
 				if scenario == "team" {
-					c.Payload = payload(true, "data_infra")
+					c.Team = "data_infra"
 				}
 				requests := 0
 				server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -65,9 +78,42 @@ func TestOneCreateRequest(t *testing.T) {
 					if !ok || user != c.Username || token != c.Token {
 						t.Error("wrong credentials")
 					}
-					body, _ := io.ReadAll(r.Body)
-					if !bytes.Equal(body, c.Payload) {
-						t.Error("caller payload changed")
+					var body map[string]any
+					if json.NewDecoder(r.Body).Decode(&body) != nil {
+						t.Error("invalid JSON payload")
+						w.WriteHeader(400)
+						return
+					}
+					h := body["host"].(map[string]any)
+					if h["name"] != c.Name || h["overwrite"] != false || h["build"] != false || h["managed"] != false {
+						t.Error("wrong host/creation flags")
+					}
+					for key, want := range map[string]int{"organization_id": c.OrganizationID, "location_id": c.LocationID, "hostgroup_id": c.HostgroupID, "puppet_proxy_id": c.ProxyID, "puppet_ca_proxy_id": c.CAProxyID} {
+						if h[key] != float64(want) {
+							t.Error("wrong ID", key, h[key])
+						}
+					}
+					puppet := h["puppet_attributes"].(map[string]any)
+					ids := puppet["puppetclass_ids"].([]any)
+					if puppet["environment_id"] != float64(c.EnvironmentID) || len(ids) != 1 || ids[0] != float64(c.RoleID) {
+						t.Error("wrong Puppet environment/role")
+					}
+					params := map[string]map[string]any{}
+					for _, raw := range h["host_parameters_attributes"].([]any) {
+						p := raw.(map[string]any)
+						params[p["name"].(string)] = p
+					}
+					if params["deploy_env"]["value"] != c.DeployEnv || params["puppet_managed"]["value"] != fmt.Sprint(c.Managed) || params["puppet_managed"]["parameter_type"] != "boolean" {
+						t.Error("wrong typed parameters")
+					}
+					for key, want := range map[string]string{"team": c.Team, "dr_site": c.DRSite} {
+						if want == "" {
+							if _, ok := params[key]; ok {
+								t.Error("empty optional parameter not omitted", key)
+							}
+						} else if params[key]["value"] != want {
+							t.Error("wrong optional parameter", key)
+						}
 					}
 					status := 201
 					switch scenario {
@@ -111,7 +157,7 @@ func TestOneCreateRequest(t *testing.T) {
 						output = []byte(err.Error())
 					}
 				}
-				success := scenario == "created" || scenario == "unmanaged" || scenario == "team"
+				success := scenario == "created" || scenario == "unmanaged" || scenario == "team" || scenario == "optional_empty" || scenario == "escaped"
 				if success != (err == nil) {
 					t.Fatalf("unexpected outcome: %v %s", err, output)
 				}
@@ -135,9 +181,17 @@ func TestOneCreateRequest(t *testing.T) {
 }
 func TestShellRejectsCredentialConfigInjection(t *testing.T) {
 	for _, token := range []string{"bad\n", "bad\r", "bad\t"} {
-		_, err := bashCall(t, Config{URL: "https://localhost", Username: "bootstrap", Token: token, Payload: payload(true, "")})
+		_, err := bashCall(t, Config{URL: "https://localhost", Username: "bootstrap", Token: token})
 		if err == nil {
 			t.Fatal("unsafe curl config credential accepted")
 		}
+	}
+}
+
+func TestShellRequiresArguments(t *testing.T) {
+	root, _ := filepath.Abs("../../..")
+	cmd := exec.Command("bash", "-c", `source "$1"; foreman_register`, "test", filepath.Join(root, "bootstrap/user-data/register.sh"))
+	if err := cmd.Run(); err == nil {
+		t.Fatal("accepted missing function arguments")
 	}
 }
