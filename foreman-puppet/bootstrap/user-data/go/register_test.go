@@ -5,7 +5,7 @@ import (
 	"context"
 	"encoding/json"
 	"encoding/pem"
-	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"os"
@@ -17,8 +17,16 @@ import (
 
 const testToken = `example-token-"\-$-123456789`
 
-func config() Config {
-	return Config{URL: "https://foreman.example.internal", CACert: "/missing/ca.pem", Username: "bootstrap_dev", Token: testToken, Name: "node.dev.internal", OrganizationID: 1, LocationID: 2, HostgroupID: 3, EnvironmentID: 4, RoleID: 5, ProxyID: 6, CAProxyID: 7, DeployEnv: "dev", DRSite: "primary", Managed: true}
+func payload(managed bool, team string) []byte {
+	params := []map[string]string{{"name": "deploy_env", "value": "dev", "parameter_type": "string"}, {"name": "puppet_managed", "value": "true", "parameter_type": "boolean"}}
+	if !managed {
+		params[1]["value"] = "false"
+	}
+	if team != "" {
+		params = append(params, map[string]string{"name": "team", "value": team, "parameter_type": "string"})
+	}
+	body, _ := json.Marshal(map[string]any{"host": map[string]any{"name": "node.dev.internal", "managed": false, "build": false, "overwrite": false, "organization_id": 1, "location_id": 2, "hostgroup_id": 3, "puppet_proxy_id": 6, "puppet_ca_proxy_id": 7, "puppet_attributes": map[string]any{"environment_id": 4, "puppetclass_ids": []int{5}}, "host_parameters_attributes": params}})
+	return body
 }
 func quote(s string) string { return "'" + strings.ReplaceAll(s, "'", "'\"'\"'") + "'" }
 func bashCall(t *testing.T, c Config) ([]byte, error) {
@@ -27,7 +35,7 @@ func bashCall(t *testing.T, c Config) ([]byte, error) {
 	script := `set +x; set -a
 source "$1"
 `
-	for _, p := range []struct{ name, value string }{{"FOREMAN_URL", c.URL}, {"FOREMAN_CA_CERT", c.CACert}, {"FOREMAN_USERNAME", c.Username}, {"FOREMAN_PAT", c.Token}, {"NODE_NAME", c.Name}, {"ORGANIZATION_ID", fmt.Sprint(c.OrganizationID)}, {"LOCATION_ID", fmt.Sprint(c.LocationID)}, {"HOSTGROUP_ID", fmt.Sprint(c.HostgroupID)}, {"ENVIRONMENT_ID", fmt.Sprint(c.EnvironmentID)}, {"ROLE_ID", fmt.Sprint(c.RoleID)}, {"PUPPET_PROXY_ID", fmt.Sprint(c.ProxyID)}, {"PUPPET_CA_PROXY_ID", fmt.Sprint(c.CAProxyID)}, {"DEPLOY_ENV", c.DeployEnv}, {"TEAM", c.Team}, {"DR_SITE", c.DRSite}, {"PUPPET_MANAGED", fmt.Sprint(c.Managed)}} {
+	for _, p := range []struct{ name, value string }{{"FOREMAN_URL", c.URL}, {"FOREMAN_CA_CERT", c.CACert}, {"FOREMAN_USERNAME", c.Username}, {"FOREMAN_PAT", c.Token}, {"PAYLOAD", string(c.Payload)}} {
 		script += p.name + "=" + quote(p.value) + "\n"
 	}
 	script += "foreman_register\n"
@@ -41,14 +49,11 @@ func TestOneCreateRequest(t *testing.T) {
 		t.Fatal(err)
 	}
 	for _, implementation := range []string{"bash", "go"} {
-		for _, scenario := range []string{"created", "unmanaged", "team", "duplicate", "denied", "servererror", "redirect", "untrusted"} {
+		for _, scenario := range []string{"created", "unmanaged", "team", "duplicate", "denied", "servererror", "redirect", "untrusted", "http"} {
 			t.Run(implementation+"/"+scenario, func(t *testing.T) {
-				c := config()
-				if scenario == "unmanaged" {
-					c.Managed = false
-				}
+				c := Config{Username: "bootstrap_dev", Token: testToken, Payload: payload(scenario != "unmanaged", "")}
 				if scenario == "team" {
-					c.Team = "data_infra"
+					c.Payload = payload(true, "data_infra")
 				}
 				requests := 0
 				server := httptest.NewTLSServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -60,37 +65,9 @@ func TestOneCreateRequest(t *testing.T) {
 					if !ok || user != c.Username || token != c.Token {
 						t.Error("wrong credentials")
 					}
-					var payload map[string]any
-					if json.NewDecoder(r.Body).Decode(&payload) != nil {
-						t.Error("invalid payload")
-						w.WriteHeader(400)
-						return
-					}
-					h := payload["host"].(map[string]any)
-					if h["overwrite"] != false || h["managed"] != false || h["build"] != false {
-						t.Error("unsafe creation flags")
-					}
-					if h["name"] != c.Name || h["organization_id"] != float64(c.OrganizationID) || h["hostgroup_id"] != float64(c.HostgroupID) {
-						t.Error("wrong host fields")
-					}
-					puppet := h["puppet_attributes"].(map[string]any)
-					if puppet["environment_id"] != float64(c.EnvironmentID) || puppet["puppetclass_ids"].([]any)[0] != float64(c.RoleID) {
-						t.Error("wrong plugin payload")
-					}
-					params := map[string]map[string]any{}
-					for _, raw := range h["host_parameters_attributes"].([]any) {
-						p := raw.(map[string]any)
-						params[p["name"].(string)] = p
-					}
-					if params["puppet_managed"]["value"] != fmt.Sprint(c.Managed) || params["puppet_managed"]["parameter_type"] != "boolean" || params["deploy_env"]["value"] != "dev" {
-						t.Error("wrong parameter types/values")
-					}
-					if c.Team == "" {
-						if _, ok := params["team"]; ok {
-							t.Error("empty team should be omitted")
-						}
-					} else if params["team"]["value"] != c.Team {
-						t.Error("wrong team")
+					body, _ := io.ReadAll(r.Body)
+					if !bytes.Equal(body, c.Payload) {
+						t.Error("caller payload changed")
 					}
 					status := 201
 					switch scenario {
@@ -115,7 +92,9 @@ func TestOneCreateRequest(t *testing.T) {
 				if scenario == "untrusted" {
 					c.CACert = "/etc/ssl/certs/ca-certificates.crt"
 				}
-				// Inspect curl's argv/environment: PAT must only arrive through its pipe.
+				if scenario == "http" {
+					c.URL = strings.Replace(c.URL, "https:", "http:", 1)
+				}
 				log := filepath.Join(dir, "curl.log")
 				wrapper := []byte("#!/bin/bash\nprintf '%s\\n' \"$@\" > \"$TEST_LOG\"\nenv >> \"$TEST_LOG\"\nexec \"$TEST_CURL\" \"$@\"\n")
 				os.WriteFile(filepath.Join(dir, "curl"), wrapper, 0700)
@@ -144,7 +123,7 @@ func TestOneCreateRequest(t *testing.T) {
 					t.Fatal("token leaked to argv/environment")
 				}
 				want := 1
-				if scenario == "untrusted" {
+				if scenario == "untrusted" || scenario == "http" {
 					want = 0
 				}
 				if requests != want {
@@ -154,32 +133,11 @@ func TestOneCreateRequest(t *testing.T) {
 		}
 	}
 }
-func TestInvalidInputNeverRequests(t *testing.T) {
-	for _, kind := range []string{"url", "token", "id", "env", "team", "dr_site", "name"} {
-		t.Run(kind, func(t *testing.T) {
-			c := config()
-			switch kind {
-			case "url":
-				c.URL = "http://localhost"
-			case "token":
-				c.Token = "bad\n"
-			case "id":
-				c.RoleID = 0
-			case "env":
-				c.DeployEnv = "sandbox"
-			case "team":
-				c.Team = "bad team"
-			case "dr_site":
-				c.DRSite = "unknown"
-			case "name":
-				c.Name = ""
-			}
-			if err := RegisterForeman(context.Background(), c); err == nil {
-				t.Fatal("Go accepted invalid input")
-			}
-			if out, err := bashCall(t, c); err == nil {
-				t.Fatalf("Shell accepted invalid input: %s", out)
-			}
-		})
+func TestShellRejectsCredentialConfigInjection(t *testing.T) {
+	for _, token := range []string{"bad\n", "bad\r", "bad\t"} {
+		_, err := bashCall(t, Config{URL: "https://localhost", Username: "bootstrap", Token: token, Payload: payload(true, "")})
+		if err == nil {
+			t.Fatal("unsafe curl config credential accepted")
+		}
 	}
 }

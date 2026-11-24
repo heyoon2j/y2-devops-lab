@@ -305,4 +305,4 @@ API 인증은 [등록 인증 설계](docs/LOOKUP_AND_REGISTRATION.md#최초-user
 권장한 전용 계정+유효기간이 있는 PAT를 기준으로 검토한다. 등록 실행기는 [user-data 등록](docs/USER_DATA_REGISTRATION.md)에 구현했으며 실제 개발 서버 통합 검증이 다음 단계다.
 
 최초 등록은 [Bash/Go 직접 API 구현](docs/USER_DATA_REGISTRATION.md)을 제공한다. Bash 함수는 curl+jq를,
-Go 함수는 net/http를 사용한다. 기존 Ruby 등록 실행기는 제거했으며 두 구현은 변수로 입력을 받아 POST를 한 번만 보내고 overwrite=false로 기존 호스트를 덮어쓰지 않는다.
+Go 함수는 net/http를 사용한다. 기존 Ruby 등록 실행기는 제거했으며 두 구현은 호출자가 준비한 요청 JSON을 POST로 한 번만 보낸다. 요청의 overwrite=false는 호출자가 지정한다.

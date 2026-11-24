@@ -219,8 +219,8 @@ examples/foreman-host.json은 등록 자동화의 논리 입력이며 현재 실
 ## user-data 최초 Foreman 등록
 
 [user-data 등록 함수](../docs/USER_DATA_REGISTRATION.md)는 설치 실행기와 별도로 사용한다.
-Shell은 `bootstrap/user-data/register.sh`를 source한 뒤 변수 설정 후 `foreman_register`를 호출한다.
-Go는 Config 변수를 채워 `RegisterForeman(ctx, cfg)`를 호출한다. 두 구현은 POST를 한 번만 보낸다.
+Shell은 `bootstrap/user-data/register.sh`를 source한 뒤 접속 변수와 PAYLOAD를 준비하고 `foreman_register`를 호출한다.
+Go는 접속 변수와 Payload를 Config에 채워 `RegisterForeman(ctx, cfg)`를 호출한다. 두 구현은 POST를 한 번만 보낸다.
 입력 파일·plan/apply·Agent 설치는 등록 함수의 실행 조건이 아니다.
 [전체 변수/호출 예시](examples/register.sh)를 기존 user-data에 통합한다.
 
