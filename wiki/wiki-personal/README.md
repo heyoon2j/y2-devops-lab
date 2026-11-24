@@ -29,3 +29,7 @@
 | [RESPONSIBILITIES.md](RESPONSIBILITIES.md) | 계속 맡는 업무, 반복 주기 또는 실행 조건, 회차별 완료 기준 |
 | [STATUS.md](STATUS.md) | 업무별 마지막 완료일, 다음 실행, 지금 할 일 |
 | [LOG.md](LOG.md) | 날짜별 실행 결과와 근거 |
+
+## 가상 일지로 검증하기
+
+이 폴더에서 `bash tests/test.sh`를 실행합니다. 임시 폴더의 가상 일지를 두 번 반영해 일회성 업무 완료, 반복 업무의 다음 일정과 중복 반영 여부를 검사합니다. Codex CLI와 Python 3가 필요합니다.
