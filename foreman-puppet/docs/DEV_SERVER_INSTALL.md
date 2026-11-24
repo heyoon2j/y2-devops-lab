@@ -52,7 +52,7 @@ Hiera나 foreman-installer가 자동으로 읽는 파일이 아니다. null은 �
 대체해 실제 설치하지 않는다. 비밀번호·관리 토큰·개인키는 기록하지 않는다.
 
 [server-preflight.sh](../scripts/server-preflight.sh)는 대상 개발 VM에서 실행하는 읽기 전용 점검이다.
-실제 네 이름을 인자로 전달한다. 아래 이름은 형식 설명용이며 스크립트는 예시 도메인을 거부한다.
+실제 다섯 이름을 인자로 전달한다. 아래 이름은 형식 설명용이며 스크립트는 예시 도메인을 거부한다.
 
 ```sh
 bash scripts/server-preflight.sh --help
@@ -61,16 +61,17 @@ bash scripts/server-preflight.sh \
   mgmt-dev-01.example.internal \
   foreman-dev.example.internal \
   puppet-dev.example.internal \
-  puppet-ca-dev.example.internal
+  puppet-ca-dev.example.internal \
+  foreman-svc-dev.example.internal
 ```
 
-확인 대상은 OS/아키텍처, CPU·메모리·/var 여유 공간, hostname -f, 네 이름의 IPv4 주소 해석(host/CA는 VM, Foreman/Puppet은 NLB 경로), 443/8140/8443/5432 기존 리스너다. 이미 서비스가 있는 서버는 새 설치를 멈추고
+확인 대상은 OS/아키텍처, CPU·메모리·/var 여유 공간, hostname -f, 다섯 이름의 IPv4 주소 해석(host/CA는 VM, Foreman/Puppet/Foreman 서비스는 NLB 경로), 443/8140/8443/5432 기존 리스너다. 이미 서비스가 있는 서버는 새 설치를 멈추고
 상태를 확인한다. AWS API·SG·상대 노드 연결·IPv6·TLS·PKI·패키지 가용성은 점검하지 않는다.
 이 스크립트의 자원 임계치는 프로젝트의 소수 노드 검증 기준이며 벤더 공식 최소 사양이 아니다.
 
 시간 동기화, forward/PTR DNS, Agent 경로에서의 DNS/접속, 저장소 접근, 사내 신뢰 체인,
 백업 목적지는 별도로 확인한다. VM hostname/certname과 서비스 접속 별칭을 구분하고
-인증서에 필요한 SAN을 넣는다. 1단계도 host/CA는 Server1, Foreman/Puppet 별칭은 NLB를 가리킨다. 스크립트는 원격 DNS가 실제 NLB인지 AWS API로 확인하지 않는다.
+인증서에 필요한 SAN을 넣는다. 1단계도 host/CA는 Server1, Foreman/Puppet/서비스 별칭은 NLB를 가리킨다. 스크립트는 원격 DNS가 실제 NLB인지 AWS API로 확인하지 않는다.
 
 ## 다음 설치 절차에서 구현할 내용
 
@@ -90,3 +91,6 @@ bash scripts/server-preflight.sh \
 
 위 절차 중 저장소·패키지·설정 실행기는 bootstrap에 분리 구현했다. 실제 입력값·PKI 발급·분류 자동화와 OS 설치 검증은 남아 있다. 실제 입력이 준비되면 계획을 검토하고 bootstrap의 개별 단계를 대상 서버에서 검증한다.
 Foreman 웹/API는 NLB ACM, backend/Proxy 서비스는 별도 내부 인증서, Agent 통신은 OpenVox 내장 CA를 사용한다. [연결 경로](ACM_AND_BACKEND_TLS.md)를 따른다. bootstrap은 별도 ca-init에서 최초 CA를 명시적으로 초기화하며 configure는 기존 CA를 검증한다. Agent 서명·갱신·정기 실행은 별도 검증 후 진행한다.
+
+내부 서비스 FQDN은 서버 입력의 foreman_service_fqdn이다. NLB 8444의 대상은 backend 443이며
+VM에서 새 8444 프로세스를 띄우지 않는다. 서비스 TG의 client IP preservation 해제와 readiness는 별도 확인한다.

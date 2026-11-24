@@ -19,6 +19,7 @@ host:
   proposed_disk_gib: 100
 endpoints:
   foreman_fqdn: null
+  foreman_service_fqdn: null # Same NLB, TCP 8444, end-to-end service certificates.
   puppet_fqdn: null
   ca_fqdn: null
 load_balancer:
@@ -27,15 +28,35 @@ load_balancer:
   initial_targets: [server1]
   listeners:
     - port: 443
+      target_group: foreman_web
       protocol: TLS
       acm_certificate_arn: null
       target_protocol: TLS
       target_port: 443
+    - port: 8444
+      target_group: foreman_service
+      protocol: TCP
+      target_protocol: TCP
+      target_port: 443
+      preserve_client_ip_enabled: false # Required for same-instance NLB hairpin.
+      proxy_protocol_v2_enabled: false
+      allowed_clients: management_servers_only
     - port: 8140
       protocol: TCP
       target_protocol: TCP
       target_port: 8140
   ca_uses_separate_dns: true
+  foreman_readiness:
+    protocol: HTTPS
+    port: 443
+    path: null # Must validate app + DB, not just an open TCP port.
+    expected_status: 200
+    applies_to: [foreman_web, foreman_service]
+    status: design_only_not_implemented
+  compiler_readiness:
+    initial_port_check: TCP_8140
+    application_and_enc_probe: null # Required before claiming phase-3 HA.
+    status: integration_probe_pending
 software:
   foreman_series_candidate: "5.0"
   engine_choice: openvox  # Open-source product selected.
@@ -54,6 +75,7 @@ pki:
   foreman_web_trust: acm_listener_chain
   backend_service_trust: internal_service_ca
   backend_certificates_supplied_separately: true
+  backend_required_sans: [host.fqdn, endpoints.foreman_service_fqdn]
   agent_trust: openvox_internal_ca
   issuance_model: internal_primary
   autosign: false

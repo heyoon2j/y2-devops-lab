@@ -27,5 +27,6 @@
     "host_key": null
   },
   "ca_fqdn": null,
-  "ca_mode": "internal_primary"
+  "ca_mode": "internal_primary",
+  "foreman_service_fqdn": null
 }

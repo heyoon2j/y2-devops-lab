@@ -247,7 +247,7 @@ user-data에는 환경에 맞는 접속 대상을 전달한다. 노드가 보낸
 | --- | --- | --- |
 | 노드 → Foreman | 443 | HTTPS 등록 |
 | 노드 → Puppet Server / CA | 8140 | 인증서 요청, Facts, Catalog, Report |
-| Puppet Server → Foreman | 443 | 내부 host_fqdn 직접 HTTPS로 ENC/Facts/Report, ACM 종료 우회 |
+| Puppet/Proxy → Foreman 서비스 | 8444 | NLB TCP → backend 443으로 ENC/Facts/Report mTLS 유지 |
 | Foreman → Smart Proxy | 일반적으로 8443 | 활성화한 Puppet/CA 관리 기능. 실제 배포 설정에 맞춰 제한 |
 
 노드와 관리 서버의 DNS, 시간 동기화, TLS 신뢰 체인을 준비한다.
@@ -307,5 +307,5 @@ API 인증은 [등록 인증 설계](docs/LOOKUP_AND_REGISTRATION.md#최초-user
 최초 등록은 [Bash/Go 직접 API 구현](docs/USER_DATA_REGISTRATION.md)을 제공한다. Bash 함수는 curl+jq를,
 Go 함수는 net/http를 사용한다. 기존 Ruby 등록 실행기는 제거했으며 두 구현은 함수 입력값으로 JSON을 생성하고 POST를 한 번 보낸다. overwrite=false는 함수에서 고정한다.
 
-웹/API는 NLB TLS 443의 ACM → TLS backend 443, Agent는 TCP 8140 passthrough다.
+1단계부터 같은 NLB의 웹 443(ACM)·내부 연동 8444(TCP → 443)·Agent 8140(TCP)을 사용한다.
 [구간별 인증서·설치 연결 경로](docs/ACM_AND_BACKEND_TLS.md)를 따른다.

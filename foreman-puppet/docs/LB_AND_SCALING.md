@@ -8,7 +8,7 @@
 아래는 3단계 개발·운영 각각의 LB 뒤 고정 EC2 2대 목표다. 각 EC2에 Foreman·Compiler를 함께 배치하고
 공용 RDS PostgreSQL Multi-AZ를 권장한다. LB만으로 DB/CA까지 HA가 되는 것은 아니다.
 
-웹/API는 **NLB TLS 443 + ACM → TLS target 443**, Agent는 **TCP 8140 passthrough**를 사용한다.
+웹/API는 **NLB TLS 443 + ACM → TLS target 443**, 내부 Foreman 연동은 **TCP 8444 → TCP 443**, Agent는 **TCP 8140 passthrough**를 1단계부터 사용한다.
 [인증서 소유·내부 연동 경로](ACM_AND_BACKEND_TLS.md)가 현재 기준이다.
 
 | 논리 endpoint | listener | target group | 초기 대상 |
@@ -16,14 +16,15 @@
 | Foreman 웹/PAT API | TLS 443, ACM 인증서 | TLS 443, 서버 내부용 인증서 | Server1 한 대, 3단계 두 대 |
 | Puppet Agent | TCP 8140 | TCP 8140, 내장 CA mTLS | Server1 한 대, 3단계 두 대 |
 | CA | 별도 CA DNS 8140 | 일반 Compiler pool과 분리 | 단일 Active CA |
-| ENC/Facts/Report·Proxy 연동 | host_fqdn 내부 직접 443/8443 | ACM listener 우회 | 현재 Server1, HA는 별도 검증 |
+| ENC/Facts/Report·Proxy→Foreman | foreman_service_fqdn:8444 | 별도 TCP 443 TG | Server1 → 3단계 Server1/2 |
+| Foreman→각 Proxy | host_fqdn:8443 직접 | NLB 우회 | Proxy별 고유 주소 |
 
 NLB에서 종료된 TLS 클라이언트 인증서가 backend TLS로 자동 전달된다고 가정하지 않는다.
 Puppet/Proxy의 인증서 인증 경로를 웹/PAT listener로 바꾸지 않는다. NLB가 backend 인증서의 체인/이름을
 검증하는 것도 아니므로 SG와 내부 클라이언트의 CA/이름 검증을 별도로 유지한다.
 여러 AZ의 대상 분산·없는 AZ의 전달·cross-zone과 SG를 검증한다.
-동일 대상이 public LB 주소를 호출하는 관리/검증 경로에는 NLB hairpin 제약이 있을 수 있으므로
-대상 유형·client IP preservation 지원과 실제 호출을 확인한다. Proxy Protocol v2는 backend가 준비되지 않으면 켜지 않는다.
+1단계부터 관리 서버가 자신을 대상으로 하는 NLB 8444를 호출하므로 해당 TCP TG의 client IP preservation을 끈다.
+인증서 신원은 TLS로 유지하고 실제 동일 서버 반환·교차 AZ 연결을 검증한다. Proxy Protocol v2는 backend가 준비되지 않으면 켜지 않는다.
 
 CA는 초기에는 Controller의 별도 사설 DNS endpoint로 둘 수 있다. 이후 HA를 정할 때
 전용 LB 또는 장애 전환 경로를 설계한다. CA 이름을 Compiler NLB의 같은 8140 listener로
@@ -37,7 +38,8 @@ flowchart LR
     L -->|"TLS 443 + ACM / TLS 443 TG"| F["Foreman\n고정 EC2 2대의 Foreman"]
     L -->|"TCP 8140 / Compiler TG"| P["Compiler\n같은 고정 EC2 2대의 Compiler"]
     F --> D["PostgreSQL\n공용 RDS PostgreSQL Multi-AZ 권장"]
-    P -->|"내부 직접 HTTPS / ENC·Facts·Report"| F
+    P -->|"8444 / ENC·Facts·Report"| L
+    L -->|"TCP 8444 → TCP 443 / 서비스 TG"| F
     A -.->|"별도 ca_server"| C["CA endpoint\n단일 Active / 별도 상태 관리"]
 ```
 
@@ -86,3 +88,5 @@ ASG의 고정 대수 운영과 부하에 따른 동적 증감은 구분한다. m
 - [ASG 인스턴스 수명 주기](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-lifecycle.html)
 
 - [NLB 동일 대상 연결/hairpin 제한](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-troubleshooting.html)
+
+장애 예시와 앱/DB health check·NLB fail-open 조건은 [3포트 구성](ACM_AND_BACKEND_TLS.md#장애-예시)을 따른다.

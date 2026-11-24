@@ -152,7 +152,7 @@ module Bootstrap
     end
     def values
       result = {}
-      %w[host_fqdn foreman_fqdn puppet_fqdn puppet_certname ca_fqdn].each { |key| result[key] = host(key) }
+      %w[host_fqdn foreman_fqdn foreman_service_fqdn puppet_fqdn puppet_certname ca_fqdn].each { |key| result[key] = host(key) }
       result
     end
     def build
@@ -200,11 +200,15 @@ module Bootstrap
           end
           required = { 'puppet' => { 'server' => true, 'server_ca' => true, 'autosign' => false, 'manage_packages' => false,
                                      'client_package' => 'openvox-agent', 'server_package' => 'openvox-server',
-                                     'server_foreman_url' => 'https://' + v['host_fqdn'] },
+                                     'server_foreman_url' => 'https://' + v['foreman_service_fqdn'] + ':8444' },
                        'foreman' => { 'db_manage' => true, 'ssl' => true, 'server_ssl_port' => 443, 'server_ssl_verify_client' => 'optional' },
-                       'foreman_proxy' => { 'puppetca' => true, 'foreman_base_url' => 'https://' + v['host_fqdn'] } }
+                       'foreman_proxy' => { 'puppetca' => true, 'foreman_base_url' => 'https://' + v['foreman_service_fqdn'] + ':8444' } }
           required.each do |mod, entries|
             entries.each { |key, value| errors << "Required answers setting: #{mod}.#{key}" unless overlay.fetch(mod, {})[key] == value }
+          end
+          aliases = overlay.fetch('foreman', {})['serveraliases']
+          [v['host_fqdn'], v['foreman_service_fqdn']].each do |name|
+            errors << 'Keep host and internal service DNS aliases on the Foreman vhost' unless aliases.is_a?(Array) && aliases.include?(name)
           end
           overlay.each_value do |settings|
             next unless settings.is_a?(Hash)
@@ -313,7 +317,7 @@ module Bootstrap
         when 'installer'
           verify_ca(plan.cfg)
           tls = plan.cfg.fetch('tls')
-          verify_pair(tls.fetch('host_cert'), tls.fetch('host_key'), tls.fetch('ca_cert'), [plan.cfg['host_fqdn']])
+          verify_pair(tls.fetch('host_cert'), tls.fetch('host_key'), tls.fetch('ca_cert'), [plan.cfg['host_fqdn'], plan.cfg['foreman_service_fqdn']])
           help = run(['foreman-installer', '--full-help'], seconds: 120).gsub('--[no-]', '--')
           operation[:answers_overlay].each do |mod, settings|
             prefix = mod.tr(':', '-').gsub('--', '-').tr('_', '-')

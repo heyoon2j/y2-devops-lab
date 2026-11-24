@@ -14,7 +14,7 @@ end
 def fixture(agent: false)
   cfg = JSON.parse(File.read(File.join(ROOT, 'examples', agent ? 'agent.json' : 'server.json')))
   cfg.merge!('host_fqdn' => 'mgmt.dev.internal', 'puppet_certname' => 'mgmt.dev.internal',
-             'foreman_fqdn' => 'foreman.dev.internal', 'puppet_fqdn' => 'puppet.dev.internal',
+             'foreman_fqdn' => 'foreman.dev.internal', 'foreman_service_fqdn' => 'foreman-svc.dev.internal', 'puppet_fqdn' => 'puppet.dev.internal',
              'ca_fqdn' => 'ca.dev.internal', 'certname' => 'node.dev.internal')
   if agent
     cfg['puppet_ca_fingerprint'] = (['AB'] * 32).join(':')
@@ -98,16 +98,34 @@ check(overlay['puppet']['server_foreman_ssl_ca'] == '/opt/pki/ca.pem', 'Internal
 check(overlay['foreman']['ssl'] == true && overlay['foreman']['server_ssl_port'] == 443, 'NLB backend must remain HTTPS')
 check(overlay['foreman']['server_ssl_verify_client'] == 'optional', 'PAT/UI path must allow NLB without client cert')
 check(overlay['foreman']['foreman_url'] == 'https://foreman.dev.internal', 'Public Foreman URL lost')
-check(overlay['foreman']['serveraliases'].include?('mgmt.dev.internal'), 'Internal vhost alias missing')
-check(overlay['puppet']['server_foreman_url'] == 'https://mgmt.dev.internal', 'ENC/Facts/Reports must bypass ACM listener')
-check(overlay['foreman_proxy']['foreman_base_url'] == 'https://mgmt.dev.internal', 'Proxy must bypass ACM listener')
+check(overlay['foreman']['serveraliases'].include?('mgmt.dev.internal') && overlay['foreman']['serveraliases'].include?('foreman-svc.dev.internal'), 'Internal vhost aliases missing')
+check(overlay['puppet']['server_foreman_url'] == 'https://foreman-svc.dev.internal:8444', 'ENC/Facts/Reports must use TCP 8444')
+check(overlay['foreman_proxy']['foreman_base_url'] == 'https://foreman-svc.dev.internal:8444', 'Proxy must use TCP 8444')
 Dir.mktmpdir do |dir|
   FileUtils.cp_r(File.join(ROOT, 'config'), dir)
   config_root = File.join(dir, 'config')
   template = File.join(config_root, 'server/openvox.answers.yaml.tmpl')
-  File.write(template, File.read(template).gsub('https://{{host_fqdn}}', 'https://{{foreman_fqdn}}'))
+  File.write(template, File.read(template).gsub('https://{{foreman_service_fqdn}}:8444', 'https://{{foreman_fqdn}}'))
   check(!Bootstrap::Plan.new(fixture, 'openvox-config', config_root: config_root).build.errors.empty?, 'Service mTLS accidentally routed through terminating NLB')
 end
+check(!Bootstrap::Plan.new(fixture.merge('foreman_service_fqdn' => nil), 'openvox-config').build.errors.empty?, 'Missing internal service DNS accepted')
+check(!Bootstrap::Plan.new(fixture.reject { |key, _| key == 'foreman_service_fqdn' }, 'openvox-config').build.errors.empty?, 'Missing internal service DNS accepted')
+check(!Bootstrap::Plan.new(fixture.reject { |key, _| key == 'foreman_service_fqdn' }, 'openvox-config').build.errors.empty?, 'Missing 8444 service DNS accepted')
+Dir.mktmpdir do |dir|
+  FileUtils.cp_r(File.join(ROOT, 'config'), dir)
+  config_root = File.join(dir, 'config')
+  template = File.join(config_root, 'server/foreman.answers.yaml.tmpl')
+  File.write(template, File.read(template).gsub("  - '{{foreman_service_fqdn}}'\n", ''))
+  check(!Bootstrap::Plan.new(fixture, 'openvox-config', config_root: config_root).build.errors.empty?, 'Missing service vhost alias accepted')
+end
+# The AWS YAML is a plan, not an AWS mutation. Keep its protocols consistent
+# with client URLs: separate TLS web / TCP service / TCP compiler target groups.
+topology = Bootstrap.yaml(File.read(File.expand_path('../server/dev.example.yaml', __dir__)))
+listeners = topology.fetch('load_balancer').fetch('listeners').to_h { |item| [item.fetch('port'), item] }
+check(listeners.keys.sort == [443, 8140, 8444], 'Three-port NLB plan missing')
+check(listeners[443].values_at('protocol', 'target_protocol', 'target_port') == ['TLS', 'TLS', 443], 'Web TLS plan mismatch')
+check(listeners[8444].values_at('protocol', 'target_protocol', 'target_port', 'preserve_client_ip_enabled') == ['TCP', 'TCP', 443, false], '8444 passthrough/hairpin plan mismatch')
+check(listeners[8140].values_at('protocol', 'target_protocol', 'target_port') == ['TCP', 'TCP', 8140], 'Agent passthrough plan mismatch')
 check(Bootstrap::Plan.new(fixture, 'foreman-config').build.operations == server.operations, 'Config aliases diverged')
 check(!Bootstrap::Plan.new(fixture.merge('ca_mode' => 'external'), 'openvox-config').build.errors.empty?, 'Implicit PKI migration accepted')
 init = Bootstrap::Plan.new(fixture, 'ca-init').build
@@ -182,7 +200,7 @@ Dir.mktmpdir do |dir|
     'ip' => "echo '2: eth0 inet 10.1.0.10/24'\n",
     'getent' => <<~SH,
       case "$2" in
-        foreman.dev.internal|puppet.dev.internal) echo "${TEST_SERVICE_IP:-10.1.0.99} STREAM $2" ;;
+        foreman.dev.internal|puppet.dev.internal|foreman-svc.dev.internal) echo "${TEST_SERVICE_IP:-10.1.0.99} STREAM $2" ;;
         ca.dev.internal) echo "${TEST_CA_IP:-10.1.0.10} STREAM $2" ;;
         *) echo "10.1.0.10 STREAM $2" ;;
       esac
@@ -190,12 +208,13 @@ Dir.mktmpdir do |dir|
   }
   stubs.each { |name, code| path = File.join(dir, name); File.write(path, "#!/bin/bash\n" + code); File.chmod(0o700, path) }
   script = File.expand_path('../scripts/server-preflight.sh', __dir__)
-  args = %w[mgmt.dev.internal foreman.dev.internal puppet.dev.internal ca.dev.internal]
+  args = %w[mgmt.dev.internal foreman.dev.internal puppet.dev.internal ca.dev.internal foreman-svc.dev.internal]
   env = { 'PATH' => dir + ':' + ENV.fetch('PATH') }
   out, = Open3.capture3(env, 'bash', script, *args)
   check(out.include?('PASS Host/CA DNS reaches this VM: mgmt.dev.internal') &&
         out.include?('PASS Host/CA DNS reaches this VM: ca.dev.internal') &&
-        out.include?('PASS Service DNS resolves off-VM; confirm NLB alias separately: foreman.dev.internal'), 'NLB DNS roles rejected')
+        out.include?('PASS Service DNS resolves off-VM; confirm NLB alias separately: foreman.dev.internal') &&
+        out.include?('PASS Service DNS resolves off-VM; confirm NLB alias separately: foreman-svc.dev.internal'), 'NLB DNS roles rejected')
   out, = Open3.capture3(env.merge('TEST_SERVICE_IP' => '10.1.0.10'), 'bash', script, *args)
   check(out.include?('FAIL Service DNS bypasses NLB'), 'Direct service DNS accepted as NLB')
   out, = Open3.capture3(env.merge('TEST_CA_IP' => '10.1.0.99'), 'bash', script, *args)

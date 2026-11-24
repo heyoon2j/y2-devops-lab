@@ -4,14 +4,14 @@ set -euo pipefail
 export LC_ALL=C
 usage() {
   cat <<'HELP'
-Usage: bash scripts/server-preflight.sh HOST_FQDN FOREMAN_FQDN PUPPET_FQDN CA_FQDN
-Checks Ubuntu 24.04 amd64: HOST/CA resolve locally, FOREMAN/PUPPET via NLB.
+Usage: bash scripts/server-preflight.sh HOST_FQDN FOREMAN_FQDN PUPPET_FQDN CA_FQDN FOREMAN_SERVICE_FQDN
+Checks Ubuntu 24.04 amd64: HOST/CA resolve locally, FOREMAN/PUPPET/SERVICE via NLB.
 Reads OS/resources/DNS/listening ports only; does not install or change anything.
 Exit 0: checks passed (review WARN/manual items); 1: failed check; 2: invalid input.
 HELP
 }
 if [[ ${1:-} == --help || ${1:-} == -h ]]; then usage; exit 0; fi
-if (( $# != 4 )); then usage >&2; exit 2; fi
+if (( $# != 5 )); then usage >&2; exit 2; fi
 for name in "$@"; do
   if (( ${#name} > 253 )) || [[ ! $name =~ ^([a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9]([a-z0-9-]{0,61}[a-z0-9])?$ ]]; then
     echo "Invalid lowercase FQDN: $name" >&2; exit 2
@@ -69,6 +69,7 @@ for port in 443 8140 8443 5432; do
     pass "Port $port not already listening"
   fi
 done
+warn 'NLB-only 8444 must forward TCP to backend 443; do not start a local 8444 service'
 warn 'Manual: dedicated VM, time sync, forward/PTR DNS, SG/routes from Agent, repository access, PKI/SAN, backup destination'
 warn 'This checks local IPv4 only; it does not verify inbound access, AWS resources, package compatibility or TLS'
 printf 'Failed checks: %s\n' "$failures"

@@ -71,7 +71,7 @@ cp bootstrap/examples/server.json bootstrap/local/server.json
 vi bootstrap/local/server.json
 ```
 
-처음에는 OS·host_fqdn·Foreman/Puppet/CA 접속 이름·ca_mode·서버 내부용 인증서 경로·저장소 키 지문을
+처음에는 OS·host_fqdn·Foreman 웹/내부 서비스/Puppet/CA 접속 이름·ca_mode·서버 내부용 인증서 경로·저장소 키 지문을
 확인해 입력한다. 호스트 이름은 예시가 아닌 실제 값이어야 하고 인증서 파일은 대상 서버에 준비한다.
 repo 단계는 해당 OS와 키 지문이 준비되면 실행할 수 있다. package_versions의 전체 revision을
 아직 모르면 저장소 적용 후 조회해서 **같은 server.json을 다시 편집**한다. install/ca-init/configure
@@ -101,7 +101,7 @@ vi bootstrap/local/server.json
 | --- | --- |
 | os.id/version/architecture | 실제 대상 OS/버전/아키텍처, --apply에서 대조 |
 | host_fqdn | 관리 VM hostname -f와 같은 고유 이름 |
-| foreman_fqdn / puppet_fqdn / ca_fqdn | Foreman NLB·Compiler NLB·단일 CA의 논리 이름 |
+| foreman_fqdn / foreman_service_fqdn / puppet_fqdn / ca_fqdn | 웹 443·내부 연동 8444·Agent 8140 NLB 이름과 단일 CA 이름 |
 | puppet_certname | 최초 관리 서버에서 host_fqdn과 같아야 함 |
 | ca_mode | 최초 관리 서버는 internal_primary만 지원. Server2/Standby는 후속 단계 |
 | tls.ca_cert/host_cert/host_key | 서버 내부 HTTPS/서비스 인증용 CA·인증서·키 경로. NLB ACM 인증서와 별도 |
@@ -111,7 +111,7 @@ vi bootstrap/local/server.json
 | repository_keys | 저장소 서명키 primary fingerprint. Foreman 키의 실측값은 별도 확인 |
 | package_versions | 저장소에서 조회한 전체 Version-Release 문자열. 배포판 revision을 추정하지 않음 |
 
-NLB ACM 인증서의 SAN에는 foreman_fqdn을, 서버 내부용 인증서 SAN에는 host_fqdn(직접 Foreman/Proxy 주소)을 포함한다. 필요한 웹/클라이언트 EKU·
+NLB ACM 인증서의 SAN에는 foreman_fqdn을, 서버 내부용 인증서 SAN에는 host_fqdn과 foreman_service_fqdn(8444 접속 이름)을 포함한다. 필요한 웹/클라이언트 EKU·
 서비스별 허용 목록·읽기 권한은 실제 PKI/설치 환경에서 추가 검증한다.
 내장 CA 서버 인증서는 host_fqdn, puppet_fqdn, ca_fqdn을 포함하도록 초기화한다.
 서버별 인증서와 CA 키를 구분하고 개발 CA를 운영에 복제하지 않는다.
@@ -165,8 +165,8 @@ DB는 아직 localhost/db_manage=true이며 RDS 이전·Server2 설치는 별도
 
 내장 CA 발급은 autosign=false로 시작한다. Smart Proxy의 CA 기능을 켜되 자동 등록은 토큰 없이 수행하지 않는다.
 설치 뒤 Proxy 등록·Puppet/CA 기능·Foreman 허용 목록·환경/Class API·ENC·Facts/Report를 실제 검증한다.
-웹/API는 NLB TLS 443의 ACM → TLS backend 443을 사용한다. ENC/Facts/Report·Proxy 서비스 인증은
-host_fqdn 내부 HTTPS로 직접 연결하고 tls.* 자료를 사용한다. Proxy→Puppet API와 Agent는 내장 CA 신원을 사용한다.
+웹/API는 NLB TLS 443의 ACM → TLS backend 443, 내부 연동은 TCP 8444 → backend 443을 사용한다. ENC/Facts/Report·Proxy 서비스 인증은
+foreman_service_fqdn:8444의 NLB TCP passthrough로 연결하고 tls.* 자료를 사용한다. Proxy→Puppet API와 Agent는 내장 CA 신원을 사용한다.
 ACM ARN은 [계획 입력](../server/dev.example.yaml)의 NLB 항목에 두며 이 설치 실행기가 AWS에 적용하지 않는다.
 서버 내부용 인증서도 별도로 준비해야 한다. [ACM/내부 TLS](../docs/ACM_AND_BACKEND_TLS.md)를 따른다.
 CA 자동 갱신은 이번 단계에서 활성화하지 않는다. 기본 유효기간·만료 감시와 수동 갱신/폐기를 준비하고
@@ -245,3 +245,7 @@ RPM scriptlet은 공급 패키지 정책에 따르므로 최초 등록 전에 �
 근거: [Foreman Installer](https://theforeman.org/manuals/5.0/index.html),
 [OpenVox CA 초기화 예](https://theforeman.github.io/foreman-infra/bootstrap/),
 [OpenVox Agent SSL bootstrap](https://docs.openvoxproject.org/openvox/9.x/man/ssl.html).
+
+1단계부터 foreman_service_fqdn을 서버 입력 JSON에 지정하고 backend 인증서 SAN에도 포함한다.
+동일 NLB의 8444 TCP Target Group은 client IP preservation을 끄고 동일 VM으로 돌아오는 경로를 검증한다.
+8444는 NLB 전용 포트이며 서버의 별도 listener가 아니다.

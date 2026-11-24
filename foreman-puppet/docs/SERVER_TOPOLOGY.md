@@ -43,15 +43,15 @@ flowchart TB
       F2["Foreman 2"]
       P2["Compiler 2 / Smart Proxy 2"]
     end
-    L -->|"TLS 443 + ACM → TLS 443"| F1
-    L -->|"TLS 443 + ACM → TLS 443"| F2
+    L -->|"443 TLS + ACM / 8444 TCP → 443"| F1
+    L -->|"443 TLS + ACM / 8444 TCP → 443"| F2
     L -->|"TCP 8140"| P1
     L -->|"TCP 8140"| P2
     F1 --> D["같은 RDS PostgreSQL endpoint
 Multi-AZ DB instance: Primary + Standby"]
     F2 --> D
-    P1 -->|"내부 HTTPS / ENC·Facts·Report"| F1
-    P2 -->|"내부 HTTPS / ENC·Facts·Report"| F2
+    P1 -->|"8444 / ENC·Facts·Report"| L
+    P2 -->|"8444 / ENC·Facts·Report"| L
     A -.->|"별도 ca_server / PKI 방식에 따름"| C["CA: 단일 Active
 장애 전환은 별도 구현"]
 ```
@@ -103,7 +103,8 @@ Redis/작업 실행 계층은 선택한 플러그인이 요구하면 별도 관�
 
 | 논리 이름 | 용도 | 1단계 → 3단계 |
 | --- | --- | --- |
-| `foreman-dev.example.internal` | ACM 웹·PAT 등록 API. ENC/Facts/Report는 내부 host_fqdn 직접 | 기존 NLB Foreman TG: Server1 → Server1/2 |
+| `foreman-dev.example.internal` | ACM 웹·PAT 등록 API | 기존 NLB Foreman TG: Server1 → Server1/2 |
+| `foreman-svc-dev.example.internal` | ENC/Facts/Report·Proxy→Foreman mTLS, TCP 8444 | 기존 NLB 서비스 TG: Server1 → Server1/2 |
 | `puppet-dev.example.internal` | Agent Catalog 통신 | 기존 NLB Compiler TG: Server1 → Server1/2 |
 | `puppet-ca-dev.example.internal` | Puppet CA 방식의 인증서 요청 | 같은 관리 VM 또는 선택한 CA 구성 |
 

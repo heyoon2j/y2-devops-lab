@@ -9,6 +9,7 @@ foreman:
   servername: '{{foreman_fqdn}}'
   serveraliases:
   - '{{host_fqdn}}'
+  - '{{foreman_service_fqdn}}'
   foreman_url: https://{{foreman_fqdn}}
   server_ssl_ca: '{{ca_cert}}'
   server_ssl_cert: '{{host_cert}}'

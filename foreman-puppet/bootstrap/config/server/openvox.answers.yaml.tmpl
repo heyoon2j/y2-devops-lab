@@ -20,14 +20,14 @@ puppet:
   server_foreman_facts: true
   server_reports:
   - foreman
-  # Certificate-authenticated ENC/Facts/Reports bypass NLB TLS termination.
-  server_foreman_url: https://{{host_fqdn}}
+  # TCP 8444 preserves client certificates and uses the shared Foreman pool.
+  server_foreman_url: https://{{foreman_service_fqdn}}:8444
   server_foreman_ssl_ca: '{{ca_cert}}'
   server_foreman_ssl_cert: '{{host_cert}}'
   server_foreman_ssl_key: '{{host_key}}'
 foreman_proxy:
-  # Proxy certificate identity is preserved on the direct internal HTTPS path.
-  foreman_base_url: https://{{host_fqdn}}
+  # The internal listener passes TLS through instead of terminating at ACM.
+  foreman_base_url: https://{{foreman_service_fqdn}}:8444
   ssl: true
   http: false
   ssl_ca: '{{ca_cert}}'
