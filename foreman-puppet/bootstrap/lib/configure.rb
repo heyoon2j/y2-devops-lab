@@ -199,8 +199,10 @@ module Bootstrap
             overlay.merge!(part)
           end
           required = { 'puppet' => { 'server' => true, 'server_ca' => true, 'autosign' => false, 'manage_packages' => false,
-                                     'client_package' => 'openvox-agent', 'server_package' => 'openvox-server' },
-                       'foreman' => { 'db_manage' => true }, 'foreman_proxy' => { 'puppetca' => true } }
+                                     'client_package' => 'openvox-agent', 'server_package' => 'openvox-server',
+                                     'server_foreman_url' => 'https://' + v['host_fqdn'] },
+                       'foreman' => { 'db_manage' => true, 'ssl' => true, 'server_ssl_port' => 443, 'server_ssl_verify_client' => 'optional' },
+                       'foreman_proxy' => { 'puppetca' => true, 'foreman_base_url' => 'https://' + v['host_fqdn'] } }
           required.each do |mod, entries|
             entries.each { |key, value| errors << "Required answers setting: #{mod}.#{key}" unless overlay.fetch(mod, {})[key] == value }
           end
@@ -311,7 +313,7 @@ module Bootstrap
         when 'installer'
           verify_ca(plan.cfg)
           tls = plan.cfg.fetch('tls')
-          verify_pair(tls.fetch('host_cert'), tls.fetch('host_key'), tls.fetch('ca_cert'), [plan.cfg['foreman_fqdn'], plan.cfg['host_fqdn']])
+          verify_pair(tls.fetch('host_cert'), tls.fetch('host_key'), tls.fetch('ca_cert'), [plan.cfg['host_fqdn']])
           help = run(['foreman-installer', '--full-help'], seconds: 120).gsub('--[no-]', '--')
           operation[:answers_overlay].each do |mod, settings|
             prefix = mod.tr(':', '-').gsub('--', '-').tr('_', '-')

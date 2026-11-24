@@ -6,7 +6,7 @@ set +a
 source /opt/foreman-puppet/bootstrap/user-data/register.sh
 
 FOREMAN_URL="https://foreman.dev.example.internal"
-FOREMAN_CA_CERT="/etc/company-pki/ca.pem"
+FOREMAN_CA_CERT="/etc/company-pki/ca.pem" # Trust the ACM listener issuer, not necessarily the backend CA.
 FOREMAN_USERNAME="bootstrap_dev"
 # Do not export the PAT or put its literal value into user-data.
 FOREMAN_PAT=$(aws ssm get-parameter --name /foreman/dev/bootstrap-pat \

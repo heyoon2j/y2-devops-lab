@@ -10,7 +10,7 @@ bootstrap/
 ├── config/
 │   ├── repos/apt/                       # Ubuntu deb822 .sources 원본
 │   ├── repos/yum/                       # Rocky/Amazon Linux .repo 원본
-│   ├── server/foreman.answers.yaml.tmpl  # 사내 웹 PKI·로컬 PostgreSQL
+│   ├── server/foreman.answers.yaml.tmpl  # 내부 HTTPS·로컬 PostgreSQL
 │   ├── server/openvox.answers.yaml.tmpl  # 내장 CA·Compiler·Proxy·연동
 │   ├── agent/puppet.conf.tmpl            # Agent 접속·실행 설정, 인증서는 기본 SSL 경로
 │   ├── packages/                        # 설치할 패키지 목록
@@ -71,7 +71,7 @@ cp bootstrap/examples/server.json bootstrap/local/server.json
 vi bootstrap/local/server.json
 ```
 
-처음에는 OS·host_fqdn·Foreman/Puppet/CA 접속 이름·ca_mode·사내 웹 인증서 경로·저장소 키 지문을
+처음에는 OS·host_fqdn·Foreman/Puppet/CA 접속 이름·ca_mode·서버 내부용 인증서 경로·저장소 키 지문을
 확인해 입력한다. 호스트 이름은 예시가 아닌 실제 값이어야 하고 인증서 파일은 대상 서버에 준비한다.
 repo 단계는 해당 OS와 키 지문이 준비되면 실행할 수 있다. package_versions의 전체 revision을
 아직 모르면 저장소 적용 후 조회해서 **같은 server.json을 다시 편집**한다. install/ca-init/configure
@@ -104,14 +104,14 @@ vi bootstrap/local/server.json
 | foreman_fqdn / puppet_fqdn / ca_fqdn | Foreman NLB·Compiler NLB·단일 CA의 논리 이름 |
 | puppet_certname | 최초 관리 서버에서 host_fqdn과 같아야 함 |
 | ca_mode | 최초 관리 서버는 internal_primary만 지원. Server2/Standby는 후속 단계 |
-| tls.ca_cert/host_cert/host_key | 서버 입력에만 사용. 사내 CA 체인·Foreman/Proxy 인증서·개인키 경로 |
+| tls.ca_cert/host_cert/host_key | 서버 내부 HTTPS/서비스 인증용 CA·인증서·키 경로. NLB ACM 인증서와 별도 |
 | certname | Agent 고유 이름, 이미지에서 인증서/개인키를 공유하지 않음 |
 | puppet_environment | Agent 최초 코드 환경 development/production |
 | puppet_ca_fingerprint | Agent 입력에만 사용. 신뢰할 별도 경로에서 확인한 CA SHA-256 지문(콜론 구분) |
 | repository_keys | 저장소 서명키 primary fingerprint. Foreman 키의 실측값은 별도 확인 |
 | package_versions | 저장소에서 조회한 전체 Version-Release 문자열. 배포판 revision을 추정하지 않음 |
 
-사내 인증서의 SAN에는 foreman_fqdn과 host_fqdn(Proxy 주소)을 포함한다. 필요한 웹/클라이언트 EKU·
+NLB ACM 인증서의 SAN에는 foreman_fqdn을, 서버 내부용 인증서 SAN에는 host_fqdn(직접 Foreman/Proxy 주소)을 포함한다. 필요한 웹/클라이언트 EKU·
 서비스별 허용 목록·읽기 권한은 실제 PKI/설치 환경에서 추가 검증한다.
 내장 CA 서버 인증서는 host_fqdn, puppet_fqdn, ca_fqdn을 포함하도록 초기화한다.
 서버별 인증서와 CA 키를 구분하고 개발 CA를 운영에 복제하지 않는다.
@@ -165,8 +165,10 @@ DB는 아직 localhost/db_manage=true이며 RDS 이전·Server2 설치는 별도
 
 내장 CA 발급은 autosign=false로 시작한다. Smart Proxy의 CA 기능을 켜되 자동 등록은 토큰 없이 수행하지 않는다.
 설치 뒤 Proxy 등록·Puppet/CA 기능·Foreman 허용 목록·환경/Class API·ENC·Facts/Report를 실제 검증한다.
-Foreman 웹/API와 해당 연동 클라이언트는 사내 PKI, Proxy→Puppet API는 내장 CA 신원을 사용한다.
-이 둘의 인증서 신뢰·키 읽기 권한이 자동으로 해결됐다고 가정하지 않는다.
+웹/API는 NLB TLS 443의 ACM → TLS backend 443을 사용한다. ENC/Facts/Report·Proxy 서비스 인증은
+host_fqdn 내부 HTTPS로 직접 연결하고 tls.* 자료를 사용한다. Proxy→Puppet API와 Agent는 내장 CA 신원을 사용한다.
+ACM ARN은 [계획 입력](../server/dev.example.yaml)의 NLB 항목에 두며 이 설치 실행기가 AWS에 적용하지 않는다.
+서버 내부용 인증서도 별도로 준비해야 한다. [ACM/내부 TLS](../docs/ACM_AND_BACKEND_TLS.md)를 따른다.
 CA 자동 갱신은 이번 단계에서 활성화하지 않는다. 기본 유효기간·만료 감시와 수동 갱신/폐기를 준비하고
 자동 갱신은 선택 버전에서 CA/Agent 동작·백업·CRL 반영까지 검증한 후 활성화한다.
 

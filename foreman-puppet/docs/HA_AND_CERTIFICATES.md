@@ -9,8 +9,8 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 
 ## 최신 장애 대응 방향
 
-2026-11-22 논의 기준, Foreman 웹/API는 사내 인증서, Agent 통신은 OpenVox 내장 CA를 사용하는
-방향으로 검토한다. 내장 CA는 서버 1 단일 실행·외부 백업, 장애 시 서버 2로 수동 복구·DNS 전환한다.
+2026-11-24 기준, Foreman 웹/API는 NLB ACM → TLS backend, 내부 서비스는 별도 인증서와 직접 HTTPS,
+Agent는 내장 CA의 TCP passthrough를 사용한다. [ACM/내부 TLS](ACM_AND_BACKEND_TLS.md)를 따른다. 내장 CA는 서버 1 단일 실행·외부 백업, 장애 시 서버 2로 수동 복구·DNS 전환한다.
 세부 절차와 현재 구현의 차이는 [장애 대응](FAILURE_RUNBOOK.md)에 정리했다.
 아래 사내 CA 직접 발급/위임 제안은 이전 설계 대안이다. 내장 CA에 그대로 적용된다고 가정하지 않는다.
 현재 bootstrap은 최초 Server1의 명시적 내장 CA 초기화·구성을 지원한다. 백업·복구·Server2 전환 자동화와 실제 설치 검증은 후속 작업이다.
@@ -38,22 +38,22 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 └── CA: PKI 모델에 따른 단일 Active + 별도 장애 전환 설계
 ```
 
-처음부터 Foreman·Puppet·CA에 각각 논리 DNS 이름을 정한다. 개발에서는 같은 IP를
-가리켜도 된다. 이후 운영 LB/CA endpoint에는 운영용 이름을 사용한다.
+처음부터 Foreman·Puppet·CA에 각각 논리 DNS 이름을 정한다. Foreman/Puppet은 NLB를,
+최초 host/CA 이름은 Server1을 가리킨다. 이후 운영 LB/CA endpoint에는 운영용 이름을 사용한다.
 개발·운영의 CA 키와 Agent 인증서는 별도로 관리하고, 개발 CA 개인키를 운영에 복제하지 않는다.
 사내 Root CA는 공통이어도 별도 발급 CA와 허용 정책으로 개발·운영 신원을 구분한다.
 
-## 인증서: 사내 웹 PKI와 OpenVox 내장 CA
+## 인증서: NLB ACM·내부 서비스 PKI·OpenVox 내장 CA
 
-Foreman 웹/API 및 해당 서비스 연동 인증 자료는 사내 PKI를 사용하고,
+Foreman 외부 웹/API 인증서는 NLB ACM에 적용하고, 서버 내부 서비스 인증서는 별도로 준비한다.
 Agent↔OpenVox Server는 내장 CA가 발급한 노드별 인증서로 상호 인증한다.
 서버 최초 CA 생성은 bootstrap/server/ca-init.sh의 --apply에서만 명시적으로 수행한다.
 기존 CA는 검증·보존하고 외부 PKI 설치/기존 Agent 인증서를 자동 변환하지 않는다.
 
 | 구간 | 인증 자료 |
 | --- | --- |
-| 사용자/user-data → Foreman | 사내 웹 인증서 검증 + 전용 계정/PAT |
-| Foreman ↔ Proxy, Puppet → Foreman | 사내 서비스 인증서·CA 신뢰·클라이언트 허용 목록 |
+| 사용자/user-data → Foreman | NLB ACM 체인 검증 + 전용 계정/PAT, backend는 TLS 443 |
+| Foreman ↔ Proxy, Puppet → Foreman | ACM 종료 우회, 내부 직접 HTTPS·서비스 CA/인증서·허용 목록 |
 | Proxy → Puppet 관리 API | 내장 CA 신원·Server/CA API의 별도 인가 |
 | Agent ↔ OpenVox Server/CA | 내장 CA의 노드별 인증서·체인·CRL |
 
@@ -87,7 +87,7 @@ Catalog·Facts·파일 다운로드·Report를 포함한 전체 Agent 실행이 
 미인증 관리 API를 열면 노드 신원과 권한을 보호할 별도 설계가 필요하다.
 외부 TLS 종료의 인증 헤더는 프록시가 검증 결과로 생성하고 사용자 제공 헤더는 신뢰하지 않는다.
 Puppet 백엔드에는 그 프록시만 접근하도록 제한한다.
-현재는 무인증 API 허용이나 TLS 종료 방식으로 변경하지 않는다.
+현재 Agent 8140을 무인증 API나 TLS 종료 방식으로 바꾸지 않는다. 웹/API 443의 ACM 종료는 별개다.
 
 공식 문서:
 
@@ -107,7 +107,7 @@ CA는 해당 EC2 중 한 곳 또는 별도 위치에서 단일 Active로 운영�
 
 ```mermaid
 flowchart TB
-    A["Agents: AWS / GCP / KC"] -->|"443 등록"| FLB["Foreman HA LB"]
+    A["Agents: AWS / GCP / KC"] -->|"443 등록"| FLB["웹/PAT NLB TLS 443 / ACM"]
     U["운영자"] -->|"443"| FLB
     FLB --> F1["Foreman 1"]
     FLB --> F2["Foreman 2"]
@@ -118,8 +118,8 @@ flowchart TB
     A -->|"8140 TCP / TLS passthrough"| PLB["Puppet HA LB"]
     PLB --> P1["Puppet Compiler 1"]
     PLB --> P2["Puppet Compiler 2"]
-    P1 -->|"ENC / Facts / Reports"| FLB
-    P2 -->|"ENC / Facts / Reports"| FLB
+    P1 -->|"내부 직접 HTTPS / ENC·Facts·Reports"| F1
+    P2 -->|"내부 직접 HTTPS / ENC·Facts·Reports"| F2
     A -->|"ca_server / 인증서 요청"| C["안정적인 Puppet CA endpoint"]
     C --> CA1["CA Active"]
     CA1 -.->|"상태 복제 / 백업과 fencing 기반 전환"| CA2["CA Standby"]
@@ -127,11 +127,13 @@ flowchart TB
     G --> P2
 ```
 
+내부 직접 endpoint는 현재 Server1 기준이다. 3단계에서 로컬 Foreman 장애 시 Compiler readiness/격리 또는 인증서 신원을 보존하는 내부 endpoint를 별도 검증한다.
+
 ### 구성 요소별 방식
 
 | 구성 요소 | 권장 방식 | 조건 |
 | --- | --- | --- |
-| Foreman UI / API / ENC | 2대 Active/Active + HTTPS LB | 같은 DB, 동일 버전·플러그인·암호화 키·세션 서명 비밀값 및 관련 설정 |
+| Foreman UI / PAT API | 2대 Active/Active + ACM/TLS backend LB, 서비스 경로는 별도 | 같은 DB, 동일 버전·플러그인·암호화 키·세션 서명 비밀값 및 관련 설정 |
 | Foreman PostgreSQL | 관리형 Multi-AZ DB 또는 검증된 Primary/Standby 구성 | 쓰기 endpoint 전환, 백업·복구, 복제 지연·데이터 손실 정책 검증 |
 | Redis / 작업 실행 계층 | 사용하는 기능에 맞게 별도 HA | 캐시와 작업 큐의 요구를 구분. 플러그인/Dynflow의 작업 소유권·복구·중복 실행 검증 |
 | Puppet Compiler | 2대 이상 Active/Active + L4 LB | CA 기능 비활성화, 동일 코드·모듈·Hiera·ENC 연동 |

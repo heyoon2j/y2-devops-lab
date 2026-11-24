@@ -1,8 +1,14 @@
 # Native foreman-installer answers overlay. Edit settings here.
 foreman:
+  # NLB TLS:443 (ACM) re-encrypts to this HTTPS vhost.
+  ssl: true
+  server_ssl_port: 443
+  server_ssl_verify_client: optional
   db_manage: true
   db_host: localhost
   servername: '{{foreman_fqdn}}'
+  serveraliases:
+  - '{{host_fqdn}}'
   foreman_url: https://{{foreman_fqdn}}
   server_ssl_ca: '{{ca_cert}}'
   server_ssl_cert: '{{host_cert}}'

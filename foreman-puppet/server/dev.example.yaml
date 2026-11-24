@@ -25,7 +25,16 @@ load_balancer:
   enabled: true
   type: internal_nlb
   initial_targets: [server1]
-  listeners: [443, 8140]
+  listeners:
+    - port: 443
+      protocol: TLS
+      acm_certificate_arn: null
+      target_protocol: TLS
+      target_port: 443
+    - port: 8140
+      protocol: TCP
+      target_protocol: TCP
+      target_port: 8140
   ca_uses_separate_dns: true
 software:
   foreman_series_candidate: "5.0"
@@ -42,7 +51,9 @@ database:
   name: foreman
   # Keep credentials and certificate private keys out of this file and Git.
 pki:
-  foreman_web_trust: corporate_ca
+  foreman_web_trust: acm_listener_chain
+  backend_service_trust: internal_service_ca
+  backend_certificates_supplied_separately: true
   agent_trust: openvox_internal_ca
   issuance_model: internal_primary
   autosign: false

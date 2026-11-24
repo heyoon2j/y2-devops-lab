@@ -26,7 +26,7 @@
 | Puppet 계열 엔진 | OpenVox Server 9.2.0 / Agent 9.4.0, AL2 Agent 8.33.0 | 제품·계열 선택, 통합 검증 전 |
 | DB | Ubuntu 기본 PostgreSQL 16 계열, 로컬 전용 | 기본 패키지 확인, 실제 의존성·설치 검증 전 |
 | 기존 서버 | 사용자가 서버 보유 확인. 새 EC2 생성 제외 | 실제 FQDN·AWS 위치·OS·사양 확인 대기 |
-| 인증서 | 사내 웹 PKI + 내장 CA, SAN·최초 서명·CA 지문 공급 검증 | 첫 연결 전 필요 |
+| 인증서 | NLB ACM + backend 내부 서비스 인증서 + Agent 내장 CA, 각각 SAN·신뢰 검증 | 첫 연결 전 필요 |
 | 최초 Agent | Ubuntu 24.04 1대, development/dev, role::base | 실제 노드 미정 |
 
 Foreman 공식 Quickstart는 Ubuntu 24.04와 OpenVox 8 저장소 경로를 제공한다.
@@ -64,14 +64,13 @@ bash scripts/server-preflight.sh \
   puppet-ca-dev.example.internal
 ```
 
-확인 대상은 OS/아키텍처, CPU·메모리·/var 여유 공간, hostname -f, 네 이름의 로컬 IPv4
-주소 해석, 443/8140/8443/5432 기존 리스너다. 이미 서비스가 있는 서버는 새 설치를 멈추고
+확인 대상은 OS/아키텍처, CPU·메모리·/var 여유 공간, hostname -f, 네 이름의 IPv4 주소 해석(host/CA는 VM, Foreman/Puppet은 NLB 경로), 443/8140/8443/5432 기존 리스너다. 이미 서비스가 있는 서버는 새 설치를 멈추고
 상태를 확인한다. AWS API·SG·상대 노드 연결·IPv6·TLS·PKI·패키지 가용성은 점검하지 않는다.
 이 스크립트의 자원 임계치는 프로젝트의 소수 노드 검증 기준이며 벤더 공식 최소 사양이 아니다.
 
 시간 동기화, forward/PTR DNS, Agent 경로에서의 DNS/접속, 저장소 접근, 사내 신뢰 체인,
 백업 목적지는 별도로 확인한다. VM hostname/certname과 서비스 접속 별칭을 구분하고
-인증서에 필요한 SAN을 넣는다. 1단계의 네 이름은 같은 VM을 가리킬 수 있다.
+인증서에 필요한 SAN을 넣는다. 1단계도 host/CA는 Server1, Foreman/Puppet 별칭은 NLB를 가리킨다. 스크립트는 원격 DNS가 실제 NLB인지 AWS API로 확인하지 않는다.
 
 ## 다음 설치 절차에서 구현할 내용
 
@@ -83,11 +82,11 @@ bash scripts/server-preflight.sh \
 3. 설치할 installer의 옵션에서 로컬 DB·Foreman Puppet 플러그인·Puppet Server 및
    ENC/Facts/Report 연동·Smart Proxy 기능을 명시적으로 확인한다.
    foreman-installer 기본 실행만으로 원하는 Puppet 통합이 모두 구성됐다고 판단하지 않는다.
-4. 사내 PKI 발급/신뢰 및 기존 CA 존재 여부를 확인하고 설치한다. 잘못된 이름의 CA를
+4. NLB ACM 연결·backend PKI 발급/신뢰 및 기존 내장 CA 존재 여부를 확인하고 설치한다. 잘못된 이름의 CA를
    먼저 생성한 뒤 인증서를 삭제해 재설치하는 절차를 기본 경로로 사용하지 않는다.
 5. Foreman 접속·Smart Proxy 기능·DB 연결·개발 코드 환경을 확인한 뒤 Host Group과 Role을 구성한다.
 6. 첫 Agent 연결·0/2 종료 코드·동일 실행 Report·두 번째 적용 무변경을 확인한다.
    role::unmanaged는 최초부터 배정하지 않고 [최초 설정 흐름](ROLE_LIFECYCLE.md)을 따른다.
 
 위 절차 중 저장소·패키지·설정 실행기는 bootstrap에 분리 구현했다. 실제 입력값·PKI 발급·분류 자동화와 OS 설치 검증은 남아 있다. 실제 입력이 준비되면 계획을 검토하고 bootstrap의 개별 단계를 대상 서버에서 검증한다.
-Foreman 웹/API·Proxy는 사내 인증서, Agent 통신은 OpenVox 내장 CA를 사용한다. bootstrap은 별도 ca-init에서 최초 CA를 명시적으로 초기화하며 configure는 기존 CA를 검증한다. Agent 서명·갱신·정기 실행은 별도 검증 후 진행한다.
+Foreman 웹/API는 NLB ACM, backend/Proxy 서비스는 별도 내부 인증서, Agent 통신은 OpenVox 내장 CA를 사용한다. [연결 경로](ACM_AND_BACKEND_TLS.md)를 따른다. bootstrap은 별도 ca-init에서 최초 CA를 명시적으로 초기화하며 configure는 기존 CA를 검증한다. Agent 서명·갱신·정기 실행은 별도 검증 후 진행한다.

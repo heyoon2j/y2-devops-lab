@@ -1,6 +1,6 @@
 # 개발·운영 공통 단계별 구축 계획
 
-상태: 2026-11-22 변경한 계획. 개발·운영을 각각 분리하고 두 환경 모두 같은 순서로 진행한다.
+상태: 2026-11-24 ACM/NLB 인증서 경로까지 반영한 계획. 개발·운영을 각각 분리하고 두 환경 모두 같은 순서로 진행한다.
 실제 LB/EC2/RDS 생성·설치·DB 이전·장애 전환은 아직 수행하지 않았다.
 개발에서 먼저 검증한 절차를 운영에 적용하되, 운영 구축을 3단계까지 기다리는 계획은 아니다.
 
@@ -21,8 +21,8 @@ Server1/2에는 Foreman·Puppet 플러그인·Smart Proxy·OpenVox Server를 공
 flowchart LR
     U["운영자 / user-data 등록"] -->|"443"| L["환경별 내부 NLB"]
     A["대상 Agent"] -->|"8140"| L
-    L -->|"Foreman TG: 대상 1대"| F["Server1: Foreman + Puppet 플러그인"]
-    L -->|"Compiler TG: 대상 1대"| P["Server1: OpenVox Server"]
+    L -->|"TLS 443 → TLS 443 / ACM"| F["Server1: Foreman + Puppet 플러그인"]
+    L -->|"TCP 8140 passthrough"| P["Server1: OpenVox Server"]
     F --> D["Server1: 로컬 PostgreSQL 16"]
     F --> S["Server1: Smart Proxy"]
     P -->|"ENC / Facts / Report"| F
@@ -32,7 +32,8 @@ flowchart LR
 NLB를 처음부터 두되 Target Group에는 Server1 한 대만 등록한다. LB가 있어도 Server1과
 로컬 DB는 단일 장애점이다. 서버 중단 시 대체 서버에 DB·코드·설정·비밀값·인증 자료를 복구해야 한다.
 
-- Foreman용 TCP 443과 Compiler용 TCP 8140을 분리하고 TLS passthrough를 사용한다.
+- 웹/API는 NLB TLS 443(ACM) → TLS target 443, Agent는 TCP 8140 passthrough로 분리한다.
+- ENC/Facts/Report·Proxy의 인증서 인증은 host_fqdn 내부 HTTPS로 직접 연결한다. [ACM/내부 TLS](ACM_AND_BACKEND_TLS.md)를 따른다.
 - CA 전용 DNS는 Server1 사설 주소를 가리키며 일반 Compiler 풀과 분리한다.
 - NLB 동일 대상 hairpin·cross-zone·SG·TLS SAN·내부 API 연동을 [LB 설계](LB_AND_SCALING.md)대로 검증한다.
 - VM에 OS 패키지로 직접 설치한다. Ubuntu 24.04 x86_64 기준이며 실제 사양·지원 조합을 확인한다.
@@ -56,7 +57,7 @@ NLB를 처음부터 두되 Target Group에는 Server1 한 대만 등록한다. L
 
 ### 지금 이어서 할 작업
 
-1. 환경별 FQDN·NLB/TG·기존 서버 OS/사양·네트워크·사내 인증서·Agent 인증 경로를 확정한다.
+1. 환경별 FQDN·NLB/TG·기존 서버 OS/사양·네트워크·ACM 인증서·backend 서비스 인증서·Agent 인증 경로를 확정한다.
 2. Server1에 로컬 DB 포함 설치 절차를 준비하고 NLB를 통한 웹/API·Agent 연결을 검증한다.
 3. [user-data Foreman 등록 실행기](USER_DATA_REGISTRATION.md)의 호출자 SSM PAT 공급·신규 생성·중복 실패 처리을 실제 개발 서버에서 검증한다. 공통 등록 서비스는 고도화 TODO다.
 4. csp Host Group, 단일 Role, deploy_env/team/dr_site와 Boolean puppet_managed를 ENC로 확인한다.

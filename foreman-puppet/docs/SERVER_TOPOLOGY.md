@@ -20,7 +20,7 @@ Foreman·Compiler·Smart Proxy 용어는 [그림 설명](ARCHITECTURE_GUIDE.md)�
 | Role | user-data 등록 입력으로 base/unmanaged/devops/data_infra 중 하나 선택 |
 | 설정 변경 | Puppet이 변경 감지·검증·조건부 반영 |
 | 모니터링 | Zabbix가 생존·응답 감시와 알림 |
-| 인증서 | Foreman/서비스 웹 PKI는 사내 인증서, Agent 구간은 OpenVox 내장 CA. 실제 발급/연동 검증 전 |
+| 인증서 | 웹/API는 NLB ACM, backend 서비스는 내부 인증서, Agent 구간은 OpenVox 내장 CA. 실제 발급/연동 검증 전 |
 
 ## 2. 3단계 개발·운영 목표: 고정 EC2 2대 + LB + RDS
 
@@ -43,15 +43,15 @@ flowchart TB
       F2["Foreman 2"]
       P2["Compiler 2 / Smart Proxy 2"]
     end
-    L -->|"TCP 443"| F1
-    L -->|"TCP 443"| F2
+    L -->|"TLS 443 + ACM → TLS 443"| F1
+    L -->|"TLS 443 + ACM → TLS 443"| F2
     L -->|"TCP 8140"| P1
     L -->|"TCP 8140"| P2
     F1 --> D["같은 RDS PostgreSQL endpoint
 Multi-AZ DB instance: Primary + Standby"]
     F2 --> D
-    P1 -->|"ENC / Facts / Report"| L
-    P2 -->|"ENC / Facts / Report"| L
+    P1 -->|"내부 HTTPS / ENC·Facts·Report"| F1
+    P2 -->|"내부 HTTPS / ENC·Facts·Report"| F2
     A -.->|"별도 ca_server / PKI 방식에 따름"| C["CA: 단일 Active
 장애 전환은 별도 구현"]
 ```
@@ -103,7 +103,7 @@ Redis/작업 실행 계층은 선택한 플러그인이 요구하면 별도 관�
 
 | 논리 이름 | 용도 | 1단계 → 3단계 |
 | --- | --- | --- |
-| `foreman-dev.example.internal` | 웹·등록 API·ENC·Facts/Report 연동 | 기존 NLB Foreman TG: Server1 → Server1/2 |
+| `foreman-dev.example.internal` | ACM 웹·PAT 등록 API. ENC/Facts/Report는 내부 host_fqdn 직접 | 기존 NLB Foreman TG: Server1 → Server1/2 |
 | `puppet-dev.example.internal` | Agent Catalog 통신 | 기존 NLB Compiler TG: Server1 → Server1/2 |
 | `puppet-ca-dev.example.internal` | Puppet CA 방식의 인증서 요청 | 같은 관리 VM 또는 선택한 CA 구성 |
 
@@ -161,7 +161,7 @@ DB·CA·키·작업 계층까지 별도 HA 조건을 충족해야 한다.
 4. 관리 EC2 사양·디스크·FQDN·접속 주소와 RDS 버전·사양·보존 기간
 5. Foreman 및 실제 Puppet/OpenVox Server·Agent 버전과 패키지 공급 경로
    개발·운영 LB 및 확장 경계는 [LB/Scaling](LB_AND_SCALING.md), 실행 옵션은 [Agent 운영](AGENT_OPERATIONS.md) 참조
-6. 사내 웹 PKI와 내장 CA 신원, DNS/SAN, 최초 승인·갱신·백업/복구 절차
+6. ACM/내부 서비스 PKI와 내장 CA 신원, DNS/SAN, 최초 승인·갱신·백업/복구 절차
 7. 설치·서버 구성·코드 승격 자동화의 실행 위치와 인증 방식
 
 적용·제외 및 SSH 공통 제어는 구현했다. 지금 다음 작업은 1단계 단일 개발 서버의 설치·연동 절차다.
@@ -178,3 +178,5 @@ DB·CA·키·작업 계층까지 별도 HA 조건을 충족해야 한다.
 
 - [Foreman 다중 인스턴스의 공용 DB와 키](https://theforeman.org/manuals/5.0/index.html#5.8MultipleForemaninstances)
 - [RDS Multi-AZ DB instance](https://docs.aws.amazon.com/AmazonRDS/latest/UserGuide/Concepts.MultiAZSingleStandby.html)
+
+웹/API·내부 서비스의 최신 인증 경로는 [ACM/내부 TLS](ACM_AND_BACKEND_TLS.md)를 따른다.

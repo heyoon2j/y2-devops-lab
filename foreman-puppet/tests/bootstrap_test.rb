@@ -92,7 +92,22 @@ overlay = server.operations.first[:answers_overlay]
 check(overlay['puppet']['server_ca'] == true && overlay['puppet']['autosign'] == false, 'CA/autosign policy')
 check(overlay['foreman_proxy']['puppetca'] == true, 'CA Proxy disabled')
 check(overlay['foreman_proxy']['puppet_ssl_cert'].include?('mgmt.dev.internal'), 'Proxy must use internal identity for Puppet API')
-check(overlay['puppet']['server_foreman_ssl_ca'] == '/opt/pki/ca.pem', 'Corporate Foreman trust lost')
+check(overlay['puppet']['server_foreman_ssl_ca'] == '/opt/pki/ca.pem', 'Internal service CA trust lost')
+# Public UI/API uses ACM at the NLB. Certificate-authenticated service calls
+# must bypass that listener or the original client certificate identity is lost.
+check(overlay['foreman']['ssl'] == true && overlay['foreman']['server_ssl_port'] == 443, 'NLB backend must remain HTTPS')
+check(overlay['foreman']['server_ssl_verify_client'] == 'optional', 'PAT/UI path must allow NLB without client cert')
+check(overlay['foreman']['foreman_url'] == 'https://foreman.dev.internal', 'Public Foreman URL lost')
+check(overlay['foreman']['serveraliases'].include?('mgmt.dev.internal'), 'Internal vhost alias missing')
+check(overlay['puppet']['server_foreman_url'] == 'https://mgmt.dev.internal', 'ENC/Facts/Reports must bypass ACM listener')
+check(overlay['foreman_proxy']['foreman_base_url'] == 'https://mgmt.dev.internal', 'Proxy must bypass ACM listener')
+Dir.mktmpdir do |dir|
+  FileUtils.cp_r(File.join(ROOT, 'config'), dir)
+  config_root = File.join(dir, 'config')
+  template = File.join(config_root, 'server/openvox.answers.yaml.tmpl')
+  File.write(template, File.read(template).gsub('https://{{host_fqdn}}', 'https://{{foreman_fqdn}}'))
+  check(!Bootstrap::Plan.new(fixture, 'openvox-config', config_root: config_root).build.errors.empty?, 'Service mTLS accidentally routed through terminating NLB')
+end
 check(Bootstrap::Plan.new(fixture, 'foreman-config').build.operations == server.operations, 'Config aliases diverged')
 check(!Bootstrap::Plan.new(fixture.merge('ca_mode' => 'external'), 'openvox-config').build.errors.empty?, 'Implicit PKI migration accepted')
 init = Bootstrap::Plan.new(fixture, 'ca-init').build
@@ -159,4 +174,31 @@ check(raised, 'Missing input did not block apply')
 started = Process.clock_gettime(Process::CLOCK_MONOTONIC)
 raised = false; begin Bootstrap.run([RbConfig.ruby, '-e', 'sleep 20'], seconds: 0.1); rescue StandardError; raised = true; end
 check(raised && Process.clock_gettime(Process::CLOCK_MONOTONIC) - started < 5, 'Timeout did not bound process lifetime')
-puts 'Passed: 11 wrappers; all stages plan-only; 7 OS x 2 architectures; exact pins; internal CA/manual approval/trust anchor; native templates; merge/guards; timeout.'
+# Stub only the local DNS/interface view; other read-only OS/resource checks
+# may fail on this test machine. Assert DNS roles without pretending to run AWS.
+Dir.mktmpdir do |dir|
+  stubs = {
+    'hostname' => "echo mgmt.dev.internal\n",
+    'ip' => "echo '2: eth0 inet 10.1.0.10/24'\n",
+    'getent' => <<~SH,
+      case "$2" in
+        foreman.dev.internal|puppet.dev.internal) echo "${TEST_SERVICE_IP:-10.1.0.99} STREAM $2" ;;
+        ca.dev.internal) echo "${TEST_CA_IP:-10.1.0.10} STREAM $2" ;;
+        *) echo "10.1.0.10 STREAM $2" ;;
+      esac
+    SH
+  }
+  stubs.each { |name, code| path = File.join(dir, name); File.write(path, "#!/bin/bash\n" + code); File.chmod(0o700, path) }
+  script = File.expand_path('../scripts/server-preflight.sh', __dir__)
+  args = %w[mgmt.dev.internal foreman.dev.internal puppet.dev.internal ca.dev.internal]
+  env = { 'PATH' => dir + ':' + ENV.fetch('PATH') }
+  out, = Open3.capture3(env, 'bash', script, *args)
+  check(out.include?('PASS Host/CA DNS reaches this VM: mgmt.dev.internal') &&
+        out.include?('PASS Host/CA DNS reaches this VM: ca.dev.internal') &&
+        out.include?('PASS Service DNS resolves off-VM; confirm NLB alias separately: foreman.dev.internal'), 'NLB DNS roles rejected')
+  out, = Open3.capture3(env.merge('TEST_SERVICE_IP' => '10.1.0.10'), 'bash', script, *args)
+  check(out.include?('FAIL Service DNS bypasses NLB'), 'Direct service DNS accepted as NLB')
+  out, = Open3.capture3(env.merge('TEST_CA_IP' => '10.1.0.99'), 'bash', script, *args)
+  check(out.include?('FAIL Host/CA DNS does not resolve to this VM: ca.dev.internal'), 'CA DNS incorrectly pooled')
+end
+puts 'Passed: 11 wrappers; all stages plan-only; 7 OS x 2 architectures; exact pins; internal CA/manual approval/trust anchor; native templates; merge/guards; timeout; NLB/backend TLS and DNS roles.'

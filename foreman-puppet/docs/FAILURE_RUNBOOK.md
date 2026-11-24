@@ -30,6 +30,16 @@
 DB 이전/복구 경계는 [단계별 계획](PHASED_ROLLOUT.md), LB 세부 조건은 [LB 설계](LB_AND_SCALING.md)를
 따른다. 실제 DB 복원·AWS 조작 명령은 환경 정보와 복원 리허설을 준비한 뒤 작성한다.
 
+## 웹/API·내부 서비스 TLS 장애 구분
+
+- LB 443 장애: ACM ARN·만료/SAN·listener TLS 정책·TLS target 443/health·SG를 확인한다.
+- backend 장애: 서버 내부용 cert/key/CA·host_fqdn SAN·443/8443 listener와 서비스 허용 목록을 확인한다.
+- ENC/Facts/Report만 실패하면 서비스 URL이 ACM listener 대신 host_fqdn 직접 HTTPS인지 확인한다.
+- 8140/CSR 장애: TCP passthrough·내장 CA 지문/만료/CRL·CA Active를 확인한다.
+- ACM 갱신, backend PKI 갱신, Agent 내장 CA 갱신은 별도 절차다. 인증 자료를 서로 덮어쓰지 않는다.
+
+[구간별 신뢰·인증서 소유](ACM_AND_BACKEND_TLS.md)를 따른다. LB health 통과만으로 인증 연동 정상이라고 판단하지 않는다.
+
 ## CA 장애 상세 절차
 
 이하 CA 상태 승계는 전체 장애 대응 중 CA 영역의 절차다.
@@ -37,7 +47,7 @@ DB 이전/복구 경계는 [단계별 계획](PHASED_ROLLOUT.md), LB 세부 조�
 ## 적용 범위와 현재 구현의 차이
 
 이 절차는 **OpenVox 내장 CA를 서버 1에서만 실행하고, 장애 시 같은 CA 상태를 서버 2로 수동 승계**하는
-구성을 대상으로 한다. Foreman 웹/API는 사내 인증서를 사용하고 Agent 통신용 내장 CA와 구분한다.
+구성을 대상으로 한다. Foreman 웹/API는 NLB ACM → TLS backend, 서버간 연동은 내부 직접 HTTPS이며 Agent 내장 CA와 구분한다.
 개발/운영 CA는 각각 독립적이며 개발 CA 상태를 운영에 복원하지 않는다.
 
 현재 bootstrap은 Server1의 명시적 ca-init와 내장 CA 설정을 지원한다. 실제 설치 검증과

@@ -70,6 +70,10 @@ Go 표준 라이브러리만 사용하며 별도 CLI·Bash·Ruby를 호출하지
 ID·환경·Role의 연결 관계와 분류 정책은 호출자가 확인한다. 함수는 managed/build/overwrite를 false로 고정하고 JSON 타입과 문자열 이스케이프를 처리한다.
 team/dr_site를 생략하면 상위 값이 상속될 수 있다. 명시적 null로 상속을 차단하지 않는다.
 
+등록 함수의 FOREMAN_CA_CERT/Go CACert는 **NLB ACM 인증서의 발급 체인**을 검증하는 번들이다.
+공개 ACM 체인은 OS CA 번들, ACM Private CA/가져온 인증서는 해당 발급 CA를 준비한다.
+서버 설치 입력의 tls.ca_cert는 backend 서비스 CA로 별도다. [구간별 TLS](ACM_AND_BACKEND_TLS.md)를 따른다.
+
 ## 반환과 범위
 
 HTTP 2xx면 Shell은 0, Go는 nil을 반환한다. 그 외 상태·통신 실패는 실패로 반환한다.

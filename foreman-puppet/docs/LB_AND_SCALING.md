@@ -8,30 +8,22 @@
 아래는 3단계 개발·운영 각각의 LB 뒤 고정 EC2 2대 목표다. 각 EC2에 Foreman·Compiler를 함께 배치하고
 공용 RDS PostgreSQL Multi-AZ를 권장한다. LB만으로 DB/CA까지 HA가 되는 것은 아니다.
 
-AWS 내부 NLB의 TCP passthrough를 기본 권장안으로 둔다.
-프론트엔드 TLS listener에서 TLS를 종료하는 방식과 구분한다.
-이 방식은 서버/프록시가 기존 TLS·클라이언트 인증서를 검증하게 해 인증 연동 변경을 줄인다.
-ALB/L7 TLS 종료를 선택하려면 Foreman/Puppet 연동의 클라이언트 신원 전달과 신뢰 헤더를
-추가 설계해야 하므로 단순 교체하지 않는다.
-
-하나의 내부 NLB에 포트별 listener와 target group을 분리하는 구성을 후보로 한다.
+웹/API는 **NLB TLS 443 + ACM → TLS target 443**, Agent는 **TCP 8140 passthrough**를 사용한다.
+[인증서 소유·내부 연동 경로](ACM_AND_BACKEND_TLS.md)가 현재 기준이다.
 
 | 논리 endpoint | listener | target group | 초기 대상 |
 | --- | --- | --- | --- |
-| Foreman DNS 이름 | TCP 443 | Foreman HTTPS | 관리 EC2 2대 |
-| Puppet DNS 이름 | TCP 8140 | Puppet Compiler | 같은 관리 EC2 2대 |
-| CA DNS 이름 | CA 전용 경로 | Compiler pool과 분리 | 선택한 CA 모델의 발급 서버 |
+| Foreman 웹/PAT API | TLS 443, ACM 인증서 | TLS 443, 서버 내부용 인증서 | Server1 한 대, 3단계 두 대 |
+| Puppet Agent | TCP 8140 | TCP 8140, 내장 CA mTLS | Server1 한 대, 3단계 두 대 |
+| CA | 별도 CA DNS 8140 | 일반 Compiler pool과 분리 | 단일 Active CA |
+| ENC/Facts/Report·Proxy 연동 | host_fqdn 내부 직접 443/8443 | ACM listener 우회 | 현재 Server1, HA는 별도 검증 |
 
-Foreman/Puppet DNS 이름은 같은 NLB를 가리킬 수 있다. 서버 인증서 SAN에 실제 접속 이름을
-포함하고 대상 그룹은 실제 백엔드 포트로 전달한다. SG·NLB 배치·cross-zone 설정은 네트워크
-설계 시 검증한다. 여러 AZ에 배치할 때 대상이 없는 AZ의 전달 동작도 확인한다.
-
-공동 배치 EC2에서 Puppet Server가 Foreman LB를 호출하면 요청이 같은 EC2로 돌아올 수 있다.
-NLB의 client IP preservation이 켜진 동일 대상 hairpin 경로는 지원되지 않으므로,
-이 경로의 target group에서 보존을 끄는 등 설계와 실제 호출 시험이 필요하다.
-보존을 끄면 백엔드에 보이는 source IP가 달라지므로 접근 정책·로그도 함께 검토한다.
-Proxy Protocol v2는 백엔드가 지원하도록 설정하지 않은 상태에서 활성화하지 않는다.
-TLS passthrough와 클라이언트 인증서 검증은 별도로 유지한다.
+NLB에서 종료된 TLS 클라이언트 인증서가 backend TLS로 자동 전달된다고 가정하지 않는다.
+Puppet/Proxy의 인증서 인증 경로를 웹/PAT listener로 바꾸지 않는다. NLB가 backend 인증서의 체인/이름을
+검증하는 것도 아니므로 SG와 내부 클라이언트의 CA/이름 검증을 별도로 유지한다.
+여러 AZ의 대상 분산·없는 AZ의 전달·cross-zone과 SG를 검증한다.
+동일 대상이 public LB 주소를 호출하는 관리/검증 경로에는 NLB hairpin 제약이 있을 수 있으므로
+대상 유형·client IP preservation 지원과 실제 호출을 확인한다. Proxy Protocol v2는 backend가 준비되지 않으면 켜지 않는다.
 
 CA는 초기에는 Controller의 별도 사설 DNS endpoint로 둘 수 있다. 이후 HA를 정할 때
 전용 LB 또는 장애 전환 경로를 설계한다. CA 이름을 Compiler NLB의 같은 8140 listener로
@@ -42,10 +34,10 @@ CA는 초기에는 Controller의 별도 사설 DNS endpoint로 둘 수 있다. �
 flowchart LR
     A["개발 또는 운영 Agent"] --> L["환경별 내부 NLB"]
     U["운영자 / 등록 자동화"] --> L
-    L -->|"TCP 443 / Foreman TG"| F["Foreman\n고정 EC2 2대의 Foreman"]
+    L -->|"TLS 443 + ACM / TLS 443 TG"| F["Foreman\n고정 EC2 2대의 Foreman"]
     L -->|"TCP 8140 / Compiler TG"| P["Compiler\n같은 고정 EC2 2대의 Compiler"]
     F --> D["PostgreSQL\n공용 RDS PostgreSQL Multi-AZ 권장"]
-    P -->|"ENC / Facts / Report"| F
+    P -->|"내부 직접 HTTPS / ENC·Facts·Report"| F
     A -.->|"별도 ca_server"| C["CA endpoint\n단일 Active / 별도 상태 관리"]
 ```
 
@@ -88,7 +80,7 @@ ASG의 고정 대수 운영과 부하에 따른 동적 증감은 구분한다. m
 
 ## 참고
 
-- [AWS NLB listener와 TLS passthrough](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-listeners.html)
+- [AWS NLB TLS listener와 TCP passthrough](https://docs.aws.amazon.com/elasticloadbalancing/latest/network/load-balancer-listeners.html)
 - [Puppet Server 확장과 CA 분리](https://help.puppet.com/core/current/Content/PuppetCore/server/scaling_puppet_server.htm)
 - [ASG lifecycle hooks](https://docs.aws.amazon.com/autoscaling/ec2/userguide/lifecycle-hooks.html)
 - [ASG 인스턴스 수명 주기](https://docs.aws.amazon.com/autoscaling/ec2/userguide/ec2-auto-scaling-lifecycle.html)

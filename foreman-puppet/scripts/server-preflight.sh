@@ -5,7 +5,7 @@ export LC_ALL=C
 usage() {
   cat <<'HELP'
 Usage: bash scripts/server-preflight.sh HOST_FQDN FOREMAN_FQDN PUPPET_FQDN CA_FQDN
-Checks the current machine against the Ubuntu 24.04 amd64 development baseline.
+Checks Ubuntu 24.04 amd64: HOST/CA resolve locally, FOREMAN/PUPPET via NLB.
 Reads OS/resources/DNS/listening ports only; does not install or change anything.
 Exit 0: checks passed (review WARN/manual items); 1: failed check; 2: invalid input.
 HELP
@@ -55,7 +55,11 @@ for name in "$@"; do
       [[ $address == "$local_ip" ]] && matched=true
     done <<< "$local_ips"
   done <<< "$addresses"
-  if [[ $matched == true ]]; then pass "DNS reaches a local interface: $name"; else fail "DNS does not resolve to this VM: $name"; fi
+  if [[ $name == "$1" || $name == "$4" ]]; then
+    if [[ $matched == true ]]; then pass "Host/CA DNS reaches this VM: $name"; else fail "Host/CA DNS does not resolve to this VM: $name"; fi
+  else
+    if [[ $matched == true ]]; then fail "Service DNS bypasses NLB and points to this VM: $name"; else pass "Service DNS resolves off-VM; confirm NLB alias separately: $name"; fi
+  fi
 done
 listeners=$(ss -H -lnt)
 for port in 443 8140 8443 5432; do
