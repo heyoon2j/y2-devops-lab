@@ -1,0 +1,4 @@
+__pycache__/
+*.pyc
+# Keep populated site inputs and any local credentials out of Git.
+local/

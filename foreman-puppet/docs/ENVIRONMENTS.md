@@ -1,0 +1,111 @@
+# Host Group과 Puppet Environment
+
+
+현재 신규 Role 기준은 [서버 Role 구성](ROLES.md)이다. 기존 GPU 흐름은 호환 예제로 유지한다.
+## 확정한 구축 순서
+
+1. 개발·운영 각각 내부 NLB + Server1 + 로컬 PostgreSQL 16을 구성한다. 검증은 개발 먼저 진행한다.
+2. 대표 소수 Agent로 등록·Facts·ENC·설정 적용·Report·멱등성·제외를 검증한다.
+3. 각 환경의 로컬 DB를 각각 RDS PostgreSQL 16으로 이전한다. 이때 Server1과 기존 LB는 유지한다.
+4. 다른 AZ에 각 환경의 Server2를 추가하고 개발 1,000~2,000대·운영 약 250대의 N-1 및 CA 복구를 검증한다. [단계별 구축](PHASED_ROLLOUT.md) 참조.
+
+개발은 `development`, 운영은 `production` Puppet Environment를 사용한다.
+Host Group은 CSP만 표현하며, 개발·운영 표시는 계속 `deploy_env` ENC 파라미터를 사용한다.
+아래는 개발·운영 매핑이다. 두 환경은 단계별로 각각 분리 구축하며 개발 검증을 운영에 선행한다.
+운영 관리 구성의 세부 배치는 HA 문서에 따른다.
+
+| Host Group | `deploy_env` ENC 파라미터 | 호스트의 Puppet Environment | 호스트별 Role |
+| --- | --- | --- | --- |
+| `aws` | `dev` | `development` | 서버 Role 구성표에서 하나 선택 |
+| `aws` | `prd` | `production` | 서버 Role 구성표에서 하나 선택 |
+| `gcp` | `dev` | `development` | 서버 Role 구성표에서 하나 선택 |
+| `gcp` | `prd` | `production` | 서버 Role 구성표에서 하나 선택 |
+| `kc` | `dev` | `development` | 서버 Role 구성표에서 하나 선택 |
+| `kc` | `prd` | `production` | 서버 Role 구성표에서 하나 선택 |
+
+Host Group은 3개이며 개발·운영별 하위 그룹은 만들지 않는다.
+Host Group에 코드 환경을 강하게 결합하지 않고 호스트 등록 시 명시한다.
+개발에서는 development의 Classes를 가져오고, 운영 배포 시 production에서도
+필요한 Role Classes를 가져왔는지 확인한다. CSP Host Group에는 Role을 배정하지 않고
+각 호스트에 서버 Role 구성표의 Role 하나를 명시한다.
+GPU Fact가 들어왔다고 Role을 자동 변경하지 않는다.
+
+Host Group마다 최상위 ENC 파라미터 `csp`를 각각 `aws/gcp/kc`로 설정한다.
+[CSP별 시스템 정책](SYSTEM_POLICIES.md)을 참고한다.
+
+전체 적용 여부는 Foreman Boolean `puppet_managed`로 지정한다.
+전역 true를 준비하고 제외 호스트에 false를 배정한다. Role을 유지해도 본 프로젝트의
+리소스 적용은 건너뛴다. [관리 제어](MANAGEMENT_CONTROLS.md) 참조.
+
+## 등록 입력
+
+등록 템플릿/IaC의 논리 입력 예시는 다음과 같다. 실제 Foreman API 인자 이름은 아니다.
+
+```text
+HOST_GROUP=aws
+PUPPET_MANAGED=true
+PUPPET_ROLE=role::gpu_svr
+DEPLOY_ENV=dev
+TEAM=null
+DR_SITE=primary
+PUPPET_ENV=development
+PUPPET_SERVER=puppet.example.internal
+PUPPET_CA_SERVER=puppet-ca.example.internal
+CERTNAME=aws-dev-node-001.example.internal
+```
+
+`PUPPET_ROLE`은 user-data 등록 자동화의 입력이다. 등록 자동화가 해당 Role Class를
+Foreman 호스트에 배정하도록 구현한다. 변수 선언만으로 배정되지 않으며 등록 스크립트는
+아직 구현하지 않았다. GPU Facts로 Role을 자동 선택하지 않는다.
+
+`TEAM`은 선택적 Foreman team 파라미터이며 null/미설정을 허용한다.
+`DR_SITE`도 Foreman 파라미터로 primary/secondary 또는 미설정이다. Role을 자동 선택하지 않는다.
+
+`PUPPET_ENV`는 별도 Fact로 추가하지 않는다. Foreman 호스트 분류와 Agent 설정에 사용하는
+코드 환경 입력값이다. `PUPPET_CA_SERVER`는 CA를 Compiler에서 분리하기 위한 접속값이다.
+신뢰할 수 있는 IaC/등록 서비스가 환경 매핑을 결정하고 잘못된 조합은 등록 전에 거부한다.
+나중에 노드가 보낸 Fact를 읽어 Foreman의 Puppet Environment를 자동 변경하지 않는다.
+
+개발 노드 Agent 설정 예시는 다음과 같다. 호스트 등록·CA 신뢰 체인·인증서 발급은
+별도로 준비해야 하며 이 설정만으로 등록이 완료되지는 않는다.
+
+```ini
+[main]
+server = puppet.example.internal
+ca_server = puppet-ca.example.internal
+certname = aws-dev-node-001.example.internal
+
+[agent]
+environment = development
+```
+
+Foreman ENC가 반환하는 코드 환경과 Agent 설정을 일치시킨다.
+관리 대상 Role이 포함하는 공통 Profile은 `development/dev`, `production/prd`만 허용한다.
+Foreman·Puppet 논리 DNS는 LB의 해당 target group을 사용하고 CA는 별도 endpoint로 분리한다.
+사내 인증서의 SAN에 실제 사용하는 접속 이름을 포함하고 개발/운영 endpoint는 구분한다.
+이 검증은 잘못된 배정을 차단하기 위한 것이며 노드가 보낸 Fact를 인증 근거로 삼지 않는다.
+
+## 코드 배포와 Hiera의 관계
+
+```text
+/etc/puppetlabs/code/environments/
+├── development/    # 검증할 Git commit의 foreman-puppet/ 내용
+└── production/     # 승인한 Git commit의 foreman-puppet/ 내용
+```
+
+두 코드 환경은 같은 디렉터리 구조를 가지지만 다른 Git commit을 배포할 수 있다.
+저장소에서 파일을 중복 관리하지 않고 동일한 `foreman-puppet/` 하위 트리를 버전별로 배포한다.
+`production`을 개발 작업 디렉터리로 symlink하지 않는다. 실제 코드 배포 자동화는 후속 단계다.
+
+1. 변경 commit을 개발 서버의 `development`에 배포한다.
+2. 개발 노드에서 Catalog·실제 적용·멱등성을 검증한다.
+3. 운영 HA를 구축한 후 승인한 동일 commit을 운영의 모든 Compiler의 `production`에 승격한다.
+4. 문제가 있으면 이전 승인 commit으로 되돌린다.
+
+Hiera는 선택된 코드 환경 안에서 CSP+환경 → CSP → 환경 → 공통 순으로 조회한다.
+예를 들어 `csp/aws/dev.yaml` → `csp/aws.yaml` → `deploy_env/dev.yaml` → `common.yaml`이다.
+코드 환경은 코드 버전, deploy_env ENC 파라미터는 데이터 선택과 표시를 담당한다.
+
+Puppet Environment 분리만으로 개발·운영의 보안 경계가 완성되지는 않는다.
+완전한 신뢰·장애 격리가 필요하면 Foreman/Puppet/DB/CA 관리 클러스터도 분리하고,
+등록 권한과 네트워크 접근을 분리한다. 이 경우에도 위 CSP와 코드 환경 매핑 규약은 유지한다.

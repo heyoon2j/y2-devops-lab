@@ -1,0 +1,5 @@
+#cloud-config
+# Integrate bootstrap/examples/register.sh into your existing user-data.
+# It sets variables, reads the PAT from SSM, then calls foreman_register once.
+# Place the reviewed register.sh function and corporate CA on the node first.
+# No JSON input file, plan/apply mode, agent invocation or CA approval here.

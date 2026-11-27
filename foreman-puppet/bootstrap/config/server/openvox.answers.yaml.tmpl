@@ -1,0 +1,46 @@
+# Native foreman-installer answers overlay. Edit settings here.
+puppet:
+  client_package: openvox-agent
+  server_package: openvox-server
+  manage_packages: false
+  server: true
+  server_ca: true
+  autosign: false
+  dns_alt_names:
+  - '{{puppet_fqdn}}'
+  - '{{ca_fqdn}}'
+  ca_server: '{{ca_fqdn}}'
+  runmode: none
+  server_certname: '{{puppet_certname}}'
+  client_certname: '{{puppet_certname}}'
+  ssldir: /etc/puppetlabs/puppet/ssl
+  server_ssl_dir: /etc/puppetlabs/puppet/ssl
+  server_ssl_key_manage: true
+  server_foreman: true
+  server_foreman_facts: true
+  server_reports:
+  - foreman
+  # TCP 7443 preserves client certificates and uses the shared Foreman pool.
+  server_foreman_url: https://{{foreman_service_fqdn}}:7443
+  server_foreman_ssl_ca: '{{ca_cert}}'
+  server_foreman_ssl_cert: '{{host_cert}}'
+  server_foreman_ssl_key: '{{host_key}}'
+foreman_proxy:
+  # The internal listener passes TLS through instead of terminating at ACM.
+  foreman_base_url: https://{{foreman_service_fqdn}}:7443
+  ssl: true
+  http: false
+  ssl_ca: '{{ca_cert}}'
+  ssl_cert: '{{host_cert}}'
+  ssl_key: '{{host_key}}'
+  puppet: true
+  puppetca: true
+  puppetca_provider: puppetca_http_api
+  puppet_url: https://{{host_fqdn}}:8140
+  puppet_ssl_ca: /etc/puppetlabs/puppet/ssl/certs/ca.pem
+  puppet_ssl_cert: '/etc/puppetlabs/puppet/ssl/certs/{{puppet_certname}}.pem'
+  puppet_ssl_key: '/etc/puppetlabs/puppet/ssl/private_keys/{{puppet_certname}}.pem'
+  register_in_foreman: false
+  dns: false
+  dhcp: false
+  tftp: false

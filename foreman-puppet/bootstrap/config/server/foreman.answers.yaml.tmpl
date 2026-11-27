@@ -1,0 +1,19 @@
+# Native foreman-installer answers overlay. Edit settings here.
+foreman:
+  # Web: NLB TLS:443 (ACM) -> HTTP:80. Internal mTLS: TCP:7443 -> HTTPS:443.
+  # HTTP offload needs the version-validated proxy header setup in docs/NLB_CONFIGURATION.md.
+  server_port: 80
+  ssl: true
+  server_ssl_port: 443
+  server_ssl_verify_client: optional
+  db_manage: true
+  db_host: localhost
+  servername: '{{foreman_fqdn}}'
+  serveraliases:
+  - '{{host_fqdn}}'
+  - '{{foreman_service_fqdn}}'
+  foreman_url: https://{{foreman_fqdn}}
+  server_ssl_ca: '{{ca_cert}}'
+  server_ssl_cert: '{{host_cert}}'
+  server_ssl_key: '{{host_key}}'
+foreman::plugin::puppet: true

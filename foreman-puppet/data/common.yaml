@@ -1,0 +1,22 @@
+---
+# Arrays use first-found lookup: an environment replaces the entire list.
+profile::base::manage: true
+profile::packages::manage: true
+profile::example_file::manage: true
+profile::gpu_system::manage: true
+profile::devops::manage: true
+profile::data_infra::manage: true
+profile::services::manage: true
+# SSH values are agreed; enable only after validating the image Include and access.
+profile::ssh::manage: false
+profile::ssh::banner: /etc/issue.net
+profile::ssh::password_authentication: true
+profile::ssh::permit_root_login: "yes"
+# Explicit opt-in per unit. The default does not manage any service.
+profile::services::units: {}
+profile::packages::packages:
+  - ca-certificates
+  - curl
+
+# Literal file contents, including the final newline. This is not executed.
+profile::example_file::content: "echo xxx\n"

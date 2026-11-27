@@ -1,0 +1,127 @@
+---
+# Planning inputs only. Not a Hiera file, inventory, or executable installer config.
+phase: development_lb_server1_local_db
+aws:
+  region: null
+  use_existing_server: true  # User confirmed a server already exists.
+  existing_instance_id: null
+  vpc_id: null
+  subnet_id: null
+  security_group_id: null
+host:
+  os: ubuntu
+  version: "24.04"
+  architecture: amd64
+  fqdn: null
+  private_ip: null
+  proposed_vcpu: 8
+  proposed_memory_gib: 32
+  proposed_disk_gib: 100
+endpoints:
+  foreman_fqdn: null
+  foreman_service_fqdn: null # Same NLB, TCP 7443, end-to-end service certificates.
+  puppet_fqdn: null
+  ca_fqdn: null
+load_balancer:
+  enabled: true
+  type: internal_nlb
+  initial_targets: [server1]
+  listeners:
+    - port: 443
+      target_group: foreman_web
+      protocol: TLS
+      acm_certificate_arn: null
+      target_protocol: TCP
+      target_port: 80 # HTTP; TLS terminates at the NLB.
+      preserve_client_ip_enabled: false
+      proxy_protocol_v2_enabled: false
+      health_check: {protocol: TCP, port: traffic-port, interval_seconds: 30, healthy_threshold: 3, unhealthy_threshold: 3}
+    - port: 7443
+      target_group: foreman_service
+      protocol: TCP
+      target_protocol: TCP
+      target_port: 443
+      preserve_client_ip_enabled: false # Required for same-instance NLB hairpin.
+      proxy_protocol_v2_enabled: false
+      allowed_clients: management_servers_only
+      health_check: {protocol: TCP, port: traffic-port, interval_seconds: 30, healthy_threshold: 3, unhealthy_threshold: 3}
+    - port: 8140
+      target_group: openvox_agent
+      protocol: TCP
+      target_protocol: TCP
+      target_port: 8140
+      preserve_client_ip_enabled: false
+      proxy_protocol_v2_enabled: false
+      health_check: {protocol: TCP, port: traffic-port, interval_seconds: 30, healthy_threshold: 3, unhealthy_threshold: 3}
+  target_type: instance
+  scheme: internal
+  ip_address_type: ipv4
+  cross_zone_enabled: true # Re-evaluate AZ placement and inter-AZ costs before HA.
+  security_groups:
+    attach_at_creation: true
+    nlb_ingress:
+      web_443: approved_ui_and_registration_clients
+      service_7443: management_servers_only
+      agent_8140: managed_node_networks
+    instance_ingress_from_nlb_sg: [80, 443, 8140]
+    direct_ingress:
+      proxy_8443: foreman_management_servers_only
+      ca_8140: approved_nodes_and_management_servers_on_active_ca_only
+  backend_http_offload:
+    status: requires_foreman_version_validation_before_apply
+    port: 80
+    public_url_scheme: https
+    forwarded_proto: set_https_at_backend_http_vhost
+    clear_untrusted_client_certificate_headers: true
+  ca_uses_separate_dns: true
+  foreman_readiness:
+    protocol: HTTP
+    port: 80
+    path: null # Must validate app + DB, not just an open TCP port.
+    expected_status: 200
+    applies_to: [foreman_web]
+    service_probe: HTTPS_443_same_app_and_db_check_pending
+    status: design_only_not_implemented
+  compiler_readiness:
+    initial_port_check: TCP_8140
+    application_and_enc_probe: null # Required before claiming phase-3 HA.
+    status: integration_probe_pending
+software:
+  foreman_series_candidate: "5.0"
+  engine_choice: openvox  # Open-source product selected.
+  openvox_server_series: "9"
+  foreman_upstream: "5.0.1"
+  openvox_server_upstream: "9.2.0"
+  openvox_agent_upstream: "9.4.0"
+  amazon2_agent_upstream: "8.33.0"
+  postgresql_major_candidate: "16"
+  exact_package_versions: null  # Record signed-repository candidates before install.
+database:
+  placement: local
+  name: foreman
+  # Keep credentials and certificate private keys out of this file and Git.
+pki:
+  foreman_web_trust: acm_listener_chain
+  backend_service_trust: internal_service_ca
+  backend_certificates_supplied_separately: true
+  backend_required_sans: [host.fqdn, endpoints.foreman_service_fqdn]
+  agent_trust: openvox_internal_ca
+  issuance_model: internal_primary
+  autosign: false
+backup:
+  external_destination: null
+required_agent_platforms:
+  ubuntu: ["22.04", "24.04", "26.04"]
+  rocky: ["8", "9"]
+  amazon: ["2", "2023"]
+first_agent:
+  os: ubuntu
+  version: "24.04"
+  certname: null
+  host_group: aws
+  role: role::base
+  parameters:  # Foreman ENC host parameters, not external Facts
+    deploy_env: dev
+    team: null
+    dr_site: primary
+  puppet_environment: development

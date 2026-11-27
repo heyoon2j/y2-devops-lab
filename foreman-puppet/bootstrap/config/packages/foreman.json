@@ -1,0 +1,7 @@
+[
+  "foreman",
+  "foreman-installer",
+  "foreman-proxy",
+  "ruby-foreman-puppet",
+  "postgresql-16"
+]
