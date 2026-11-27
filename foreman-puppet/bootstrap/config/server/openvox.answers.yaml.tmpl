@@ -20,14 +20,14 @@ puppet:
   server_foreman_facts: true
   server_reports:
   - foreman
-  # TCP 8444 preserves client certificates and uses the shared Foreman pool.
-  server_foreman_url: https://{{foreman_service_fqdn}}:8444
+  # TCP 7443 preserves client certificates and uses the shared Foreman pool.
+  server_foreman_url: https://{{foreman_service_fqdn}}:7443
   server_foreman_ssl_ca: '{{ca_cert}}'
   server_foreman_ssl_cert: '{{host_cert}}'
   server_foreman_ssl_key: '{{host_key}}'
 foreman_proxy:
   # The internal listener passes TLS through instead of terminating at ACM.
-  foreman_base_url: https://{{foreman_service_fqdn}}:8444
+  foreman_base_url: https://{{foreman_service_fqdn}}:7443
   ssl: true
   http: false
   ssl_ca: '{{ca_cert}}'

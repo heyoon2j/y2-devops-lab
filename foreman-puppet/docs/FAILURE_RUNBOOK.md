@@ -32,9 +32,9 @@ DB 이전/복구 경계는 [단계별 계획](PHASED_ROLLOUT.md), LB 세부 조�
 
 ## 웹/API·내부 서비스 TLS 장애 구분
 
-- LB 443 장애: ACM ARN·만료/SAN·listener TLS 정책·TLS target 443/health·SG를 확인한다.
+- LB 443 장애: ACM ARN·만료/SAN·listener TLS 정책·TCP target 80/health·SG를 확인한다.
 - backend 장애: 서버 내부용 cert/key/CA·host_fqdn SAN·443/8443 listener와 서비스 허용 목록을 확인한다.
-- ENC/Facts/Report만 실패하면 서비스 URL이 https://foreman_service_fqdn:8444인지, TCP TG가 443으로 전달하며 client IP preservation이 꺼졌는지 확인한다.
+- ENC/Facts/Report만 실패하면 서비스 URL이 https://foreman_service_fqdn:7443인지, TCP TG가 443으로 전달하며 client IP preservation이 꺼졌는지 확인한다.
 - 8140/CSR 장애: TCP passthrough·내장 CA 지문/만료/CRL·CA Active를 확인한다.
 - ACM 갱신, backend PKI 갱신, Agent 내장 CA 갱신은 별도 절차다. 인증 자료를 서로 덮어쓰지 않는다.
 
@@ -46,14 +46,14 @@ DB 이전/복구 경계는 [단계별 계획](PHASED_ROLLOUT.md), LB 세부 조�
 1단계 전체 장애는 로컬 DB/CA까지 복구하고, 2단계는 RDS가 살아 있어도 관리 서버를 복구해야 한다.
 
 3단계에서 Foreman1만 장애이고 Puppet1이 정상이면 Foreman 웹/서비스 TG가 Foreman1을 제외한 뒤
-Puppet1의 새 8444 연결이 Foreman2를 사용한다. 두 Foreman이 같은 RDS·정책·신뢰 체계를 사용해야 한다.
-Puppet1만 장애이면 8140 TG에서만 제외하고 정상 Foreman1은 443/8444 대상에 남길 수 있다.
+Puppet1의 새 7443 연결이 Foreman2를 사용한다. 두 Foreman이 같은 RDS·정책·신뢰 체계를 사용해야 한다.
+Puppet1만 장애이면 8140 TG에서만 제외하고 정상 Foreman1은 443/7443 대상에 남길 수 있다.
 Server1 전체 장애이면 정상 Foreman2/Puppet2가 신규 연결을 받고, Server1의 CA 발급/갱신은 상태 승계 전까지 중단된다.
 기존 노드의 유효 인증서/CRL은 유지하되 만료·폐기 정보 확인 없이 무기한 정상이라고 판단하지 않는다.
 
 앱/DB readiness가 준비돼야 Foreman만 죽은 경우를 감지할 수 있다. 요청 도중 장애는 재연결/다음 실행까지 실패할 수 있다.
 모든 대상 unhealthy 시 NLB fail-open이 가능하며 공통 RDS 장애는 NLB가 복구하지 않는다.
-실제 대상 제외·기존 연결·CA 전환은 [8444 설계의 장애 예시](ACM_AND_BACKEND_TLS.md#장애-예시) 조건으로 리허설한다.
+실제 대상 제외·기존 연결·CA 전환은 [7443 설계의 장애 예시](ACM_AND_BACKEND_TLS.md#장애-예시) 조건으로 리허설한다.
 
 ## CA 장애 상세 절차
 
@@ -62,7 +62,7 @@ Server1 전체 장애이면 정상 Foreman2/Puppet2가 신규 연결을 받고, 
 ## 적용 범위와 현재 구현의 차이
 
 이 절차는 **OpenVox 내장 CA를 서버 1에서만 실행하고, 장애 시 같은 CA 상태를 서버 2로 수동 승계**하는
-구성을 대상으로 한다. Foreman 웹/API는 NLB ACM → TLS backend, 서버간 Foreman 연동은 NLB TCP 8444이며 Agent 내장 CA와 구분한다.
+구성을 대상으로 한다. Foreman 웹/API는 NLB ACM → HTTP backend 80, 서버간 Foreman 연동은 NLB TCP 7443이며 Agent 내장 CA와 구분한다.
 개발/운영 CA는 각각 독립적이며 개발 CA 상태를 운영에 복원하지 않는다.
 
 현재 bootstrap은 Server1의 명시적 ca-init와 내장 CA 설정을 지원한다. 실제 설치 검증과

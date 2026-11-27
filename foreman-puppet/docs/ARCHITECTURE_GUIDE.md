@@ -29,7 +29,7 @@ Smart Proxy를 별도로 설치하지 않는다. 개발·운영 각각 처음부
 ```mermaid
 flowchart LR
     U["운영자"] --> L["환경별 내부 NLB / 대상 Server1 한 대"]
-    L -->|"TLS 443 + ACM → TLS 443"| F
+    L -->|"TLS 443 + ACM → TCP 80 (HTTP)"| F
     L -->|"TCP 8140 passthrough"| P
     subgraph M["환경별 관리 서버 EC2 1대 / 로컬 DB"]
         F["Foreman 5.0.1 + Puppet 플러그인"]
@@ -40,8 +40,8 @@ flowchart LR
         F -->|"호스트·Facts·Report 저장"| D
         F -->|"환경/Class 등 관리 기능 조회"| S
         S -->|"Puppet 관리 API"| P
-        P -->|"8444 / ENC·Facts·Report"| L
-        L -->|"TCP 8444 → TCP 443 / 서비스 TG"| F
+        P -->|"7443 / ENC·Facts·Report"| L
+        L -->|"TCP 7443 → TCP 443 / 서비스 TG"| F
     end
     A["대상 서버: OpenVox Agent
 기본 9.4.0 / AL2 8.33.0"] <-->|"Catalog 요청·수신 / Facts·Report"| L
@@ -171,8 +171,8 @@ flowchart TB
       C2["Puppet Server 2\nCompiler: 설정서 생성"]
       S2["Smart Proxy 2\n관리 기능 중계"]
     end
-    L -->|"TLS 443 + ACM → TLS 443"| F1
-    L -->|"TLS 443 + ACM → TLS 443"| F2
+    L -->|"TLS 443 + ACM → TCP 80 (HTTP)"| F1
+    L -->|"TLS 443 + ACM → TCP 80 (HTTP)"| F2
     L -->|"8140"| C1
     L -->|"8140"| C2
     F1 --> D["공용 RDS PostgreSQL\nMulti-AZ 권장"]
@@ -242,5 +242,5 @@ CA Active/Standby 상태 복구가 구현되기 전에는 신규 등록까지 �
 서버·LB·DB·인증 장애 및 CA 서버 1 장애 시 수동 승계·DNS 전환·복귀는 [장애 대응](FAILURE_RUNBOOK.md)을 따른다.
 내장 CA와 백업 기반 수동 복구가 이 절차의 대상이다. 최초 CA 설정은 bootstrap에 반영했지만 실제 복구·Server2 설정은 별도 구현/검증이 필요하다.
 
-웹/API는 NLB ACM → 서버 내부 HTTPS, ENC/Facts/Report·Proxy→Foreman은 1단계부터 NLB TCP 8444를 사용한다.
+웹/API는 NLB ACM → 서버 내부 HTTPS, ENC/Facts/Report·Proxy→Foreman은 1단계부터 NLB TCP 7443를 사용한다.
 서버 인증서·CA의 분리는 [ACM/내부 TLS](ACM_AND_BACKEND_TLS.md)를 따른다.

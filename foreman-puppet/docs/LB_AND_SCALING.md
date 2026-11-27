@@ -8,22 +8,23 @@
 아래는 3단계 개발·운영 각각의 LB 뒤 고정 EC2 2대 목표다. 각 EC2에 Foreman·Compiler를 함께 배치하고
 공용 RDS PostgreSQL Multi-AZ를 권장한다. LB만으로 DB/CA까지 HA가 되는 것은 아니다.
 
-웹/API는 **NLB TLS 443 + ACM → TLS target 443**, 내부 Foreman 연동은 **TCP 8444 → TCP 443**, Agent는 **TCP 8140 passthrough**를 1단계부터 사용한다.
+웹/API는 **NLB TLS 443 + ACM → TCP target 80 (HTTP)**, 내부 Foreman 연동은 **TCP 7443 → TCP 443**, Agent는 **TCP 8140 passthrough**를 1단계부터 사용한다.
+[NLB/TG·SG·Health 설정](NLB_CONFIGURATION.md)을 따른다. 웹 HTTP offload의 프록시 헤더 검증은 적용 전 필수다.
 [인증서 소유·내부 연동 경로](ACM_AND_BACKEND_TLS.md)가 현재 기준이다.
 
 | 논리 endpoint | listener | target group | 초기 대상 |
 | --- | --- | --- | --- |
-| Foreman 웹/PAT API | TLS 443, ACM 인증서 | TLS 443, 서버 내부용 인증서 | Server1 한 대, 3단계 두 대 |
+| Foreman 웹/PAT API | TLS 443, ACM 인증서 | TCP 80, HTTP | Server1 한 대, 3단계 두 대 |
 | Puppet Agent | TCP 8140 | TCP 8140, 내장 CA mTLS | Server1 한 대, 3단계 두 대 |
 | CA | 별도 CA DNS 8140 | 일반 Compiler pool과 분리 | 단일 Active CA |
-| ENC/Facts/Report·Proxy→Foreman | foreman_service_fqdn:8444 | 별도 TCP 443 TG | Server1 → 3단계 Server1/2 |
+| ENC/Facts/Report·Proxy→Foreman | foreman_service_fqdn:7443 | 별도 TCP 443 TG | Server1 → 3단계 Server1/2 |
 | Foreman→각 Proxy | host_fqdn:8443 직접 | NLB 우회 | Proxy별 고유 주소 |
 
 NLB에서 종료된 TLS 클라이언트 인증서가 backend TLS로 자동 전달된다고 가정하지 않는다.
-Puppet/Proxy의 인증서 인증 경로를 웹/PAT listener로 바꾸지 않는다. NLB가 backend 인증서의 체인/이름을
-검증하는 것도 아니므로 SG와 내부 클라이언트의 CA/이름 검증을 별도로 유지한다.
+Puppet/Proxy의 인증서 인증 경로를 웹/PAT listener로 바꾸지 않는다. 웹 backend는 HTTP 80이며
+내부 서비스 경로의 CA/이름 검증은 클라이언트가 수행한다. SG로 두 경로의 접근 범위를 제한한다.
 여러 AZ의 대상 분산·없는 AZ의 전달·cross-zone과 SG를 검증한다.
-1단계부터 관리 서버가 자신을 대상으로 하는 NLB 8444를 호출하므로 해당 TCP TG의 client IP preservation을 끈다.
+1단계부터 관리 서버가 자신을 대상으로 하는 NLB 7443를 호출하므로 해당 TCP TG의 client IP preservation을 끈다.
 인증서 신원은 TLS로 유지하고 실제 동일 서버 반환·교차 AZ 연결을 검증한다. Proxy Protocol v2는 backend가 준비되지 않으면 켜지 않는다.
 
 CA는 초기에는 Controller의 별도 사설 DNS endpoint로 둘 수 있다. 이후 HA를 정할 때
@@ -35,11 +36,11 @@ CA는 초기에는 Controller의 별도 사설 DNS endpoint로 둘 수 있다. �
 flowchart LR
     A["개발 또는 운영 Agent"] --> L["환경별 내부 NLB"]
     U["운영자 / 등록 자동화"] --> L
-    L -->|"TLS 443 + ACM / TLS 443 TG"| F["Foreman\n고정 EC2 2대의 Foreman"]
+    L -->|"TLS 443 + ACM / TCP 80 TG"| F["Foreman\n고정 EC2 2대의 Foreman"]
     L -->|"TCP 8140 / Compiler TG"| P["Compiler\n같은 고정 EC2 2대의 Compiler"]
     F --> D["PostgreSQL\n공용 RDS PostgreSQL Multi-AZ 권장"]
-    P -->|"8444 / ENC·Facts·Report"| L
-    L -->|"TCP 8444 → TCP 443 / 서비스 TG"| F
+    P -->|"7443 / ENC·Facts·Report"| L
+    L -->|"TCP 7443 → TCP 443 / 서비스 TG"| F
     A -.->|"별도 ca_server"| C["CA endpoint\n단일 Active / 별도 상태 관리"]
 ```
 

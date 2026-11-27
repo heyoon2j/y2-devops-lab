@@ -62,14 +62,14 @@ for name in "$@"; do
   fi
 done
 listeners=$(ss -H -lnt)
-for port in 443 8140 8443 5432; do
+for port in 80 443 8140 8443 5432; do
   if awk -v port="$port" '$4 ~ (":" port "$") { found=1 } END { exit !found }' <<< "$listeners"; then
     fail "Port $port is already listening; inspect existing services before fresh installation"
   else
     pass "Port $port not already listening"
   fi
 done
-warn 'NLB-only 8444 must forward TCP to backend 443; do not start a local 8444 service'
+warn 'NLB-only 7443 must forward TCP to backend 443; do not start a local 7443 service'
 warn 'Manual: dedicated VM, time sync, forward/PTR DNS, SG/routes from Agent, repository access, PKI/SAN, backup destination'
 warn 'This checks local IPv4 only; it does not verify inbound access, AWS resources, package compatibility or TLS'
 printf 'Failed checks: %s\n' "$failures"

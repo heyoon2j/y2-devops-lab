@@ -95,22 +95,23 @@ check(overlay['foreman_proxy']['puppet_ssl_cert'].include?('mgmt.dev.internal'),
 check(overlay['puppet']['server_foreman_ssl_ca'] == '/opt/pki/ca.pem', 'Internal service CA trust lost')
 # Public UI/API uses ACM at the NLB. Certificate-authenticated service calls
 # must bypass that listener or the original client certificate identity is lost.
+check(overlay['foreman']['server_port'] == 80, 'Web offload requires backend HTTP 80')
 check(overlay['foreman']['ssl'] == true && overlay['foreman']['server_ssl_port'] == 443, 'NLB backend must remain HTTPS')
 check(overlay['foreman']['server_ssl_verify_client'] == 'optional', 'PAT/UI path must allow NLB without client cert')
 check(overlay['foreman']['foreman_url'] == 'https://foreman.dev.internal', 'Public Foreman URL lost')
 check(overlay['foreman']['serveraliases'].include?('mgmt.dev.internal') && overlay['foreman']['serveraliases'].include?('foreman-svc.dev.internal'), 'Internal vhost aliases missing')
-check(overlay['puppet']['server_foreman_url'] == 'https://foreman-svc.dev.internal:8444', 'ENC/Facts/Reports must use TCP 8444')
-check(overlay['foreman_proxy']['foreman_base_url'] == 'https://foreman-svc.dev.internal:8444', 'Proxy must use TCP 8444')
+check(overlay['puppet']['server_foreman_url'] == 'https://foreman-svc.dev.internal:7443', 'ENC/Facts/Reports must use TCP 7443')
+check(overlay['foreman_proxy']['foreman_base_url'] == 'https://foreman-svc.dev.internal:7443', 'Proxy must use TCP 7443')
 Dir.mktmpdir do |dir|
   FileUtils.cp_r(File.join(ROOT, 'config'), dir)
   config_root = File.join(dir, 'config')
   template = File.join(config_root, 'server/openvox.answers.yaml.tmpl')
-  File.write(template, File.read(template).gsub('https://{{foreman_service_fqdn}}:8444', 'https://{{foreman_fqdn}}'))
+  File.write(template, File.read(template).gsub('https://{{foreman_service_fqdn}}:7443', 'https://{{foreman_fqdn}}'))
   check(!Bootstrap::Plan.new(fixture, 'openvox-config', config_root: config_root).build.errors.empty?, 'Service mTLS accidentally routed through terminating NLB')
 end
 check(!Bootstrap::Plan.new(fixture.merge('foreman_service_fqdn' => nil), 'openvox-config').build.errors.empty?, 'Missing internal service DNS accepted')
 check(!Bootstrap::Plan.new(fixture.reject { |key, _| key == 'foreman_service_fqdn' }, 'openvox-config').build.errors.empty?, 'Missing internal service DNS accepted')
-check(!Bootstrap::Plan.new(fixture.reject { |key, _| key == 'foreman_service_fqdn' }, 'openvox-config').build.errors.empty?, 'Missing 8444 service DNS accepted')
+check(!Bootstrap::Plan.new(fixture.reject { |key, _| key == 'foreman_service_fqdn' }, 'openvox-config').build.errors.empty?, 'Missing 7443 service DNS accepted')
 Dir.mktmpdir do |dir|
   FileUtils.cp_r(File.join(ROOT, 'config'), dir)
   config_root = File.join(dir, 'config')
@@ -119,12 +120,12 @@ Dir.mktmpdir do |dir|
   check(!Bootstrap::Plan.new(fixture, 'openvox-config', config_root: config_root).build.errors.empty?, 'Missing service vhost alias accepted')
 end
 # The AWS YAML is a plan, not an AWS mutation. Keep its protocols consistent
-# with client URLs: separate TLS web / TCP service / TCP compiler target groups.
+# with client URLs: TLS web listener to HTTP backend, TCP service/compiler passthrough.
 topology = Bootstrap.yaml(File.read(File.expand_path('../server/dev.example.yaml', __dir__)))
 listeners = topology.fetch('load_balancer').fetch('listeners').to_h { |item| [item.fetch('port'), item] }
-check(listeners.keys.sort == [443, 8140, 8444], 'Three-port NLB plan missing')
-check(listeners[443].values_at('protocol', 'target_protocol', 'target_port') == ['TLS', 'TLS', 443], 'Web TLS plan mismatch')
-check(listeners[8444].values_at('protocol', 'target_protocol', 'target_port', 'preserve_client_ip_enabled') == ['TCP', 'TCP', 443, false], '8444 passthrough/hairpin plan mismatch')
+check(listeners.keys.sort == [443, 7443, 8140], 'Three-port NLB plan missing')
+check(listeners[443].values_at('protocol', 'target_protocol', 'target_port') == ['TLS', 'TCP', 80], 'Web TLS offload plan mismatch')
+check(listeners[7443].values_at('protocol', 'target_protocol', 'target_port', 'preserve_client_ip_enabled') == ['TCP', 'TCP', 443, false], '7443 passthrough/hairpin plan mismatch')
 check(listeners[8140].values_at('protocol', 'target_protocol', 'target_port') == ['TCP', 'TCP', 8140], 'Agent passthrough plan mismatch')
 check(Bootstrap::Plan.new(fixture, 'foreman-config').build.operations == server.operations, 'Config aliases diverged')
 check(!Bootstrap::Plan.new(fixture.merge('ca_mode' => 'external'), 'openvox-config').build.errors.empty?, 'Implicit PKI migration accepted')

@@ -237,9 +237,11 @@ Host Group이 CSP만 표현하므로, 같은 CSP에서 모든 노드에 적용�
 필요하면 Puppet/Hiera 조건에도 활용할 수 있지만 환경에 따른 설정 차이는 코드에 명시한다.
 
 개발은 관리 서버 1대에 먼저 구성하고, 검증 후 운영에 이중화 구성을 구축한다.
-웹/API는 NLB ACM과 backend 내부 서비스 인증서, Agent는 OpenVox 내장 CA를 사용한다. 개발·운영의 Host Group 이름은 동일하게 유지한다.
+웹/API는 NLB ACM에서 TLS를 종료하고 backend HTTP 80으로 전달한다. 내부 Foreman 연동은 별도 서비스 인증서, Agent는 OpenVox 내장 CA를 사용한다. 개발·운영의 Host Group 이름은 동일하게 유지한다.
 user-data에는 환경에 맞는 접속 대상을 전달한다. 노드가 보낸 환경 파라미터 자체는
 등록 권한이나 운영 인증서 발급을 허가하는 근거로 사용하지 않는다.
+
+NLB Listener·Target Group·SG 설정은 [NLB 설정](docs/NLB_CONFIGURATION.md)을 참조한다. 웹 HTTP offload는 적용 전 Foreman 프록시 설정 검증이 필요하다.
 
 ## 통신 및 등록 조건
 
@@ -247,12 +249,15 @@ user-data에는 환경에 맞는 접속 대상을 전달한다. 노드가 보낸
 | --- | --- | --- |
 | 노드 → Foreman | 443 | HTTPS 등록 |
 | 노드 → Puppet Server / CA | 8140 | 인증서 요청, Facts, Catalog, Report |
-| Puppet/Proxy → Foreman 서비스 | 8444 | NLB TCP → backend 443으로 ENC/Facts/Report mTLS 유지 |
+| Puppet/Proxy → Foreman 서비스 | 7443 | NLB TCP → backend 443으로 ENC/Facts/Report mTLS 유지 |
 | Foreman → Smart Proxy | 일반적으로 8443 | 활성화한 Puppet/CA 관리 기능. 실제 배포 설정에 맞춰 제한 |
 
 노드와 관리 서버의 DNS, 시간 동기화, TLS 신뢰 체인을 준비한다.
 Agent 패키지 저장소 및 코드 배포 경로의 네트워크 허용은 별도로 구성한다.
 기본 흐름은 Agent의 아웃바운드 연결이며 미등록 서버의 네트워크 스캔을 요구하지 않는다.
+Puppet 설정 적용을 위해 대상 노드의 inbound TCP 22 또는 8140을 열 필요는 없다. Agent가 NLB/CA의 8140으로 접속한다.
+SSH로 Agent를 설치/관리하거나 SSH 기반 Remote Execution을 별도로 사용할 때만 대상 TCP 22가 필요하다.
+user-data 등록은 노드에서 Foreman의 443을 호출하며, 7443은 관리 서버 간 연동용이다.
 Foreman에서 실행을 유도하는 Remote Execution은 선택 기능이며 별도 연결·인증이 필요하다.
 
 등록 토큰은 Facts·Git·로그에 기록하지 않고 수명과 권한을 제한한다.
@@ -307,5 +312,5 @@ API 인증은 [등록 인증 설계](docs/LOOKUP_AND_REGISTRATION.md#최초-user
 최초 등록은 [Bash/Go 직접 API 구현](docs/USER_DATA_REGISTRATION.md)을 제공한다. Bash 함수는 curl+jq를,
 Go 함수는 net/http를 사용한다. 기존 Ruby 등록 실행기는 제거했으며 두 구현은 함수 입력값으로 JSON을 생성하고 POST를 한 번 보낸다. overwrite=false는 함수에서 고정한다.
 
-1단계부터 같은 NLB의 웹 443(ACM)·내부 연동 8444(TCP → 443)·Agent 8140(TCP)을 사용한다.
+1단계부터 같은 NLB의 웹 443(ACM)·내부 연동 7443(TCP → 443)·Agent 8140(TCP)을 사용한다.
 [구간별 인증서·설치 연결 경로](docs/ACM_AND_BACKEND_TLS.md)를 따른다.

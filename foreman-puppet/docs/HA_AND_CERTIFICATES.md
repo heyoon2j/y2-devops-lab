@@ -9,7 +9,7 @@ Katello를 추가할 경우 동일한 HA 구조가 지원된다고 가정하지 
 
 ## 최신 장애 대응 방향
 
-2026-11-24 기준, Foreman 웹/API는 NLB ACM → TLS backend, 내부 서비스는 별도 인증서와 NLB TCP 8444,
+2026-11-24 기준, Foreman 웹/API는 NLB ACM → HTTP backend 80, 내부 서비스는 별도 인증서와 NLB TCP 7443,
 Agent는 내장 CA의 TCP passthrough를 사용한다. [ACM/내부 TLS](ACM_AND_BACKEND_TLS.md)를 따른다. 내장 CA는 서버 1 단일 실행·외부 백업, 장애 시 서버 2로 수동 복구·DNS 전환한다.
 세부 절차와 현재 구현의 차이는 [장애 대응](FAILURE_RUNBOOK.md)에 정리했다.
 아래 사내 CA 직접 발급/위임 제안은 이전 설계 대안이다. 내장 CA에 그대로 적용된다고 가정하지 않는다.
@@ -52,8 +52,8 @@ Agent↔OpenVox Server는 내장 CA가 발급한 노드별 인증서로 상호 �
 
 | 구간 | 인증 자료 |
 | --- | --- |
-| 사용자/user-data → Foreman | NLB ACM 체인 검증 + 전용 계정/PAT, backend는 TLS 443 |
-| Puppet/Proxy → Foreman | ACM 종료 우회, NLB TCP 8444·내부 서비스 CA/인증서·허용 목록 |
+| 사용자/user-data → Foreman | NLB ACM 체인 검증 + 전용 계정/PAT, backend는 HTTP 80 |
+| Puppet/Proxy → Foreman | ACM 종료 우회, NLB TCP 7443·내부 서비스 CA/인증서·허용 목록 |
 | Foreman → 각 Proxy | 해당 host_fqdn:8443 직접 HTTPS·고유 인증서 |
 | Proxy → Puppet 관리 API | 내장 CA 신원·Server/CA API의 별도 인가 |
 | Agent ↔ OpenVox Server/CA | 내장 CA의 노드별 인증서·체인·CRL |
@@ -108,10 +108,10 @@ CA는 해당 EC2 중 한 곳 또는 별도 위치에서 단일 Active로 운영�
 
 ```mermaid
 flowchart TB
-    A["Agents: AWS / GCP / KC"] -->|"443 등록"| FLB["같은 NLB / 443 ACM·8444 TCP·8140 TCP"]
+    A["Agents: AWS / GCP / KC"] -->|"443 등록"| FLB["같은 NLB / 443 ACM·7443 TCP·8140 TCP"]
     U["운영자"] -->|"443"| FLB
-    FLB -->|"443 TLS / 8444 TCP → 443"| F1["Foreman 1"]
-    FLB -->|"443 TLS / 8444 TCP → 443"| F2["Foreman 2"]
+    FLB -->|"443 TLS → 80 / 7443 TCP → 443"| F1["Foreman 1"]
+    FLB -->|"443 TLS → 80 / 7443 TCP → 443"| F2["Foreman 2"]
     F1 --> DB["PostgreSQL HA endpoint"]
     F2 --> DB
     F1 --> R["필요한 경우 Redis HA / 작업 실행 계층"]
@@ -119,8 +119,8 @@ flowchart TB
     A -->|"8140 TCP / TLS passthrough"| FLB
     FLB --> P1["Puppet Compiler 1"]
     FLB --> P2["Puppet Compiler 2"]
-    P1 -->|"8444 / ENC·Facts·Reports"| FLB
-    P2 -->|"8444 / ENC·Facts·Reports"| FLB
+    P1 -->|"7443 / ENC·Facts·Reports"| FLB
+    P2 -->|"7443 / ENC·Facts·Reports"| FLB
     A -->|"ca_server / 인증서 요청"| C["안정적인 Puppet CA endpoint"]
     C --> CA1["CA Active"]
     CA1 -.->|"상태 복제 / 백업과 fencing 기반 전환"| CA2["CA Standby"]
@@ -128,7 +128,7 @@ flowchart TB
     G --> P2
 ```
 
-내부 Foreman 주소는 1단계부터 foreman_service_fqdn:8444로 고정한다. 3단계에는 정상 Foreman으로 새 연결을 분산하되 앱/DB health·Compiler 통합 readiness를 검증해야 한다. [장애 예시](ACM_AND_BACKEND_TLS.md#장애-예시)를 따른다.
+내부 Foreman 주소는 1단계부터 foreman_service_fqdn:7443로 고정한다. 3단계에는 정상 Foreman으로 새 연결을 분산하되 앱/DB health·Compiler 통합 readiness를 검증해야 한다. [장애 예시](ACM_AND_BACKEND_TLS.md#장애-예시)를 따른다.
 
 ### 구성 요소별 방식
 

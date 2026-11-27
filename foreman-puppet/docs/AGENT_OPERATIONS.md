@@ -12,6 +12,16 @@
 | `--noop` | 예상 리소스 변경 확인 | 실제 적용 성공 판정 아님. 리소스별 noop override와 검증 명령의 동작도 검토 |
 | cron/systemd timer에서 일회 실행 | 서비스 대신 사용할 수 있는 대안 | Agent 서비스와 스케줄러를 중복 운영하지 않음 |
 
+## SSH 포트가 필요한가
+
+Puppet Agent는 노드에서 NLB의 TCP 8140으로 연결해 Catalog를 받아 적용하고 Report를 전송한다.
+발급/갱신은 별도 CA endpoint의 TCP 8140을 사용한다. 응답을 위한 연결은 같은 세션으로 돌아오므로
+Puppet 적용용으로 노드의 inbound 22/8140을 새로 열지 않는다(라우팅·방화벽·stateful SG는 별도 확인).
+SSH로 초기 설치/관리하거나 SSH 기반 Foreman Remote Execution을 선택한 경우에만 대상 22가 필요하다.
+cloud-init/user-data로 Agent를 설치하면 그 설치를 위한 SSH도 필수는 아니다.
+등록 API용 노드→Foreman 443, 패키지·비밀 저장소·DNS 등의 접근은 별도로 준비한다.
+내부 Foreman 서비스용 NLB 7443은 관리 서버용이며 일반 Agent가 직접 호출하지 않는다.
+
 ## 접속과 노드 신원
 
 - `server`: 실제 Compiler EC2 이름 대신 Puppet LB의 논리 DNS 이름

@@ -65,7 +65,7 @@ bash scripts/server-preflight.sh \
   foreman-svc-dev.example.internal
 ```
 
-확인 대상은 OS/아키텍처, CPU·메모리·/var 여유 공간, hostname -f, 다섯 이름의 IPv4 주소 해석(host/CA는 VM, Foreman/Puppet/Foreman 서비스는 NLB 경로), 443/8140/8443/5432 기존 리스너다. 이미 서비스가 있는 서버는 새 설치를 멈추고
+확인 대상은 OS/아키텍처, CPU·메모리·/var 여유 공간, hostname -f, 다섯 이름의 IPv4 주소 해석(host/CA는 VM, Foreman/Puppet/Foreman 서비스는 NLB 경로), 80/443/8140/8443/5432 기존 리스너다. 이미 서비스가 있는 서버는 새 설치를 멈추고
 상태를 확인한다. AWS API·SG·상대 노드 연결·IPv6·TLS·PKI·패키지 가용성은 점검하지 않는다.
 이 스크립트의 자원 임계치는 프로젝트의 소수 노드 검증 기준이며 벤더 공식 최소 사양이 아니다.
 
@@ -92,5 +92,7 @@ bash scripts/server-preflight.sh \
 위 절차 중 저장소·패키지·설정 실행기는 bootstrap에 분리 구현했다. 실제 입력값·PKI 발급·분류 자동화와 OS 설치 검증은 남아 있다. 실제 입력이 준비되면 계획을 검토하고 bootstrap의 개별 단계를 대상 서버에서 검증한다.
 Foreman 웹/API는 NLB ACM, backend/Proxy 서비스는 별도 내부 인증서, Agent 통신은 OpenVox 내장 CA를 사용한다. [연결 경로](ACM_AND_BACKEND_TLS.md)를 따른다. bootstrap은 별도 ca-init에서 최초 CA를 명시적으로 초기화하며 configure는 기존 CA를 검증한다. Agent 서명·갱신·정기 실행은 별도 검증 후 진행한다.
 
-내부 서비스 FQDN은 서버 입력의 foreman_service_fqdn이다. NLB 8444의 대상은 backend 443이며
-VM에서 새 8444 프로세스를 띄우지 않는다. 서비스 TG의 client IP preservation 해제와 readiness는 별도 확인한다.
+내부 서비스 FQDN은 서버 입력의 foreman_service_fqdn이다. NLB 7443의 대상은 backend 443이며
+VM에서 새 7443 프로세스를 띄우지 않는다. 서비스 TG의 client IP preservation 해제와 readiness는 별도 확인한다.
+
+웹 TLS offload 적용 전 [HTTP 80 프록시 설정 검증](NLB_CONFIGURATION.md#foreman-http-backend-적용-전-필수-확인)을 완료한다. 현재 installer 템플릿은 이 헤더 설정을 자동 적용하지 않는다.

@@ -200,9 +200,9 @@ module Bootstrap
           end
           required = { 'puppet' => { 'server' => true, 'server_ca' => true, 'autosign' => false, 'manage_packages' => false,
                                      'client_package' => 'openvox-agent', 'server_package' => 'openvox-server',
-                                     'server_foreman_url' => 'https://' + v['foreman_service_fqdn'] + ':8444' },
-                       'foreman' => { 'db_manage' => true, 'ssl' => true, 'server_ssl_port' => 443, 'server_ssl_verify_client' => 'optional' },
-                       'foreman_proxy' => { 'puppetca' => true, 'foreman_base_url' => 'https://' + v['foreman_service_fqdn'] + ':8444' } }
+                                     'server_foreman_url' => 'https://' + v['foreman_service_fqdn'] + ':7443' },
+                       'foreman' => { 'db_manage' => true, 'ssl' => true, 'server_port' => 80, 'server_ssl_port' => 443, 'server_ssl_verify_client' => 'optional' },
+                       'foreman_proxy' => { 'puppetca' => true, 'foreman_base_url' => 'https://' + v['foreman_service_fqdn'] + ':7443' } }
           required.each do |mod, entries|
             entries.each { |key, value| errors << "Required answers setting: #{mod}.#{key}" unless overlay.fetch(mod, {})[key] == value }
           end
